@@ -1,0 +1,9 @@
+model AuditLog {
+  id         String   @id @default(cuid())
+  user_id    String
+  action     String
+  ip_address String?
+  user_agent String?
+  created_on DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}

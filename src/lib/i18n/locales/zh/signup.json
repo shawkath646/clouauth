@@ -1,0 +1,22 @@
+{
+  "title": "创建账户",
+  "subtitle": "开始使用您的免费账户",
+  "firstNameLabel": "名字",
+  "firstNamePlaceholder": "John",
+  "lastNameLabel": "姓氏",
+  "lastNamePlaceholder": "Doe",
+  "usernameLabel": "用户名",
+  "usernamePlaceholder": "johndoe",
+  "emailLabel": "电子邮件",
+  "emailPlaceholder": "name@example.com",
+  "passwordLabel": "密码",
+  "passwordPlaceholder": "••••••••",
+  "submitBtn": "创建账户",
+  "alreadyHaveAccount": "已有账户？",
+  "signIn": "登录",
+  "pitchTitle1": "一个账户。",
+  "pitchTitle2": "所有无缝访问。",
+  "pitchSubtitle": "加入 CloudburstLab 生态系统，解锁专为现代专业人士设计的强大工具套件。",
+  "usernameAvailable": "用户名可用！",
+  "usernameTaken": "用户名已被占用。"
+}

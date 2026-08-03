@@ -1,0 +1,22 @@
+{
+  "title": "Crear una cuenta",
+  "subtitle": "Comienza con tu cuenta gratuita",
+  "firstNameLabel": "Nombre",
+  "firstNamePlaceholder": "Juan",
+  "lastNameLabel": "Apellido",
+  "lastNamePlaceholder": "Pérez",
+  "usernameLabel": "Nombre de usuario",
+  "usernamePlaceholder": "juanperez",
+  "emailLabel": "Correo electrónico",
+  "emailPlaceholder": "nombre@ejemplo.com",
+  "passwordLabel": "Contraseña",
+  "passwordPlaceholder": "••••••••",
+  "submitBtn": "Crear Cuenta",
+  "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+  "signIn": "Iniciar sesión",
+  "pitchTitle1": "Una cuenta.",
+  "pitchTitle2": "Acceso total y fluido.",
+  "pitchSubtitle": "Únete al ecosistema CloudburstLab y desbloquea un conjunto de herramientas potentes diseñadas para profesionales modernos.",
+  "usernameAvailable": "¡El nombre de usuario está disponible!",
+  "usernameTaken": "El nombre de usuario ya está en uso."
+}

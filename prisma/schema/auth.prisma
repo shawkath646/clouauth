@@ -1,0 +1,109 @@
+model PasswordCredential {
+  user_id         String    @id
+  password_hash   String
+  last_changed_on DateTime  @default(now())
+  force_change    Boolean   @default(false)
+  failed_attempts Int       @default(0)
+  locked_until    DateTime?
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model PasswordHistory {
+  id            String   @id @default(cuid())
+  user_id       String
+  password_hash String
+  created_on    DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model RecoveryCode {
+  id         String    @id @default(cuid())
+  user_id    String
+  code_hash  String
+  used       Boolean   @default(false)
+  created_on DateTime  @default(now())
+  used_on    DateTime?
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model TwoFactorMethod {
+  id       String              @id @default(cuid())
+  user_id  String
+  type     String
+  enabled  Boolean             @default(false)
+  added_on DateTime            @default(now())
+  passkeys PasskeyCredential[]
+  totp     TotpCredential?
+  user     User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model TotpCredential {
+  two_factor_method_id String          @id
+  secret               String
+  algorithm            String
+  digits               Int
+  period               Int
+  two_factor_method    TwoFactorMethod @relation(fields: [two_factor_method_id], references: [id], onDelete: Cascade)
+}
+
+model PasskeyCredential {
+  id                   String          @id @default(cuid())
+  two_factor_method_id String
+  credential_id        String          @unique
+  public_key           String          @db.Text
+  sign_count           Int             @default(0)
+  device_name          String?
+  created_on           DateTime        @default(now())
+  last_used_on         DateTime?
+  two_factor_method    TwoFactorMethod @relation(fields: [two_factor_method_id], references: [id], onDelete: Cascade)
+}
+
+model VerificationCode {
+  id              String    @id @default(cuid())
+  user_id         String
+  type            String
+  destination     String
+  code_hash       String
+  failed_attempts Int       @default(0)
+  locked_until    DateTime?
+  expires_on      DateTime
+  consumed_on     DateTime?
+  created_on      DateTime  @default(now())
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model OAuthAccount {
+  id               String   @id @default(cuid())
+  user_id          String
+  provider         String
+  provider_user_id String
+  access_token     String?  @db.Text
+  refresh_token    String?  @db.Text
+  expires_at       Int?
+  created_on       DateTime @default(now())
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([provider, provider_user_id])
+}
+
+model SigningKey {
+  id          String   @id @default(cuid())
+
+  kid         String   @unique
+
+  kty         String
+  alg         String
+  use         String   @default("sig")
+
+  publicKey   String   @db.Text
+  privateKey  String   @db.Text
+
+  jwk         String   @db.NVarChar(Max)
+
+  active      Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+}

@@ -1,0 +1,46 @@
+model UserSession {
+  id                      String    @id @default(cuid())
+  user_id                 String
+  
+  session_token_hash      String    @unique
+  refresh_token_hash      String    @unique
+    
+  created_on              DateTime  @default(now())
+  updated_on              DateTime  @updatedAt
+  session_expires_on      DateTime
+  expires_on              DateTime
+  revoked_on              DateTime?
+  
+  ip_address              String?
+  user_agent              String?
+  device_name             String?
+  
+  user                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model TempSession {
+  id         String   @id @default(cuid())
+  user_id    String
+  created_on DateTime @default(now())
+  expires_on DateTime
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model OAuthSession {
+  id                      String    @id @default(cuid())
+  user_id                 String
+  client_id               String
+  
+  access_token_hash       String    @unique
+  refresh_token_hash      String    @unique
+  
+  scope                   String
+  
+  created_on              DateTime  @default(now())
+  updated_on              DateTime  @updatedAt
+  access_expires_on       DateTime
+  refresh_expires_on      DateTime
+  revoked_on              DateTime?
+  
+  user                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}

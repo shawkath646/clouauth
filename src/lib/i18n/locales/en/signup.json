@@ -1,0 +1,22 @@
+{
+  "title": "Create an account",
+  "subtitle": "Get started with your free account",
+  "firstNameLabel": "First Name",
+  "firstNamePlaceholder": "John",
+  "lastNameLabel": "Last Name",
+  "lastNamePlaceholder": "Doe",
+  "usernameLabel": "Username",
+  "usernamePlaceholder": "johndoe",
+  "emailLabel": "Email",
+  "emailPlaceholder": "name@example.com",
+  "passwordLabel": "Password",
+  "passwordPlaceholder": "••••••••",
+  "submitBtn": "Create Account",
+  "alreadyHaveAccount": "Already have an account?",
+  "signIn": "Sign in",
+  "pitchTitle1": "One account.",
+  "pitchTitle2": "All seamless access.",
+  "pitchSubtitle": "Join the CloudburstLab ecosystem and unlock a suite of powerful tools designed for modern professionals.",
+  "usernameAvailable": "Username is available!",
+  "usernameTaken": "Username is already taken."
+}

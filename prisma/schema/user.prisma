@@ -1,0 +1,54 @@
+model User {
+  id                 String                  @id @default(cuid())
+  username           String                  @unique
+  first_name         String
+  last_name          String
+  avatar             String
+  bio                String?
+  date_of_birth      String?
+  is_active          Boolean                 @default(true)
+  username_last_changed DateTime?
+  pronouns           String?
+  created_on         DateTime                @default(now())
+  updated_on         DateTime                @updatedAt
+  addresses          Address[]
+  audit_logs         AuditLog[]
+  notifications      NotificationPreference?
+  oauth_accounts     OAuthAccount[]
+  password           PasswordCredential?
+  password_history   PasswordHistory[]
+  recovery_codes     RecoveryCode[]
+  temp_sessions      TempSession[]
+  two_factor_methods TwoFactorMethod[]
+  emails             UserEmail[]
+  preferences        UserPreference?
+  sessions           UserSession[]
+  verification_codes VerificationCode[]
+  apps               UserApp[]               @relation("UserApps")
+  oauth_sessions     OAuthSession[]
+}
+
+model UserEmail {
+  id          String    @id @default(cuid())
+  user_id     String
+  address     String
+  verified    Boolean   @default(false)
+  is_primary  Boolean   @default(false)
+  added_on    DateTime  @default(now())
+  verified_on DateTime?
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  user_id    String
+  type       String
+  address_1  String
+  address_2  String?
+  city       String
+  state      String?
+  zip_code   String
+  country    String
+  is_default Boolean @default(false)
+  user       User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,16 @@
+model NotificationPreference {
+  user_id         String  @id
+  email_security  Boolean @default(true)
+  email_marketing Boolean @default(false)
+  login_alerts    Boolean @default(true)
+  product_updates Boolean @default(true)
+  user            User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  user_id  String @id
+  theme    String @default("system")
+  language String @default("en")
+  timezone String @default("UTC")
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}

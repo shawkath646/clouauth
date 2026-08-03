@@ -1,0 +1,29 @@
+model UserApp {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  website     String?
+
+  author_id   String
+  author      User     @relation("UserApps", fields: [author_id], references: [id], onDelete: Cascade)
+
+  oauth       OAuthClientConfig?
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model OAuthClientConfig {
+  app_id                     String   @id
+  enabled                    Boolean  @default(true)
+  client_id                  String   @unique
+  client_secret_hash         String
+  client_type                String
+  redirect_uris              String   @db.Text // Serialized JSON array of strings
+  scopes                     String   @db.Text // Serialized JSON array of strings or space-separated
+  pkce_required              Boolean  @default(true)
+  token_endpoint_auth_method String
+
+  app                        UserApp  @relation(fields: [app_id], references: [id], onDelete: Cascade)
+}

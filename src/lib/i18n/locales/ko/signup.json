@@ -1,0 +1,22 @@
+{
+  "title": "계정 만들기",
+  "subtitle": "무료 계정으로 시작하세요",
+  "firstNameLabel": "이름",
+  "firstNamePlaceholder": "John",
+  "lastNameLabel": "성",
+  "lastNamePlaceholder": "Doe",
+  "usernameLabel": "사용자 이름",
+  "usernamePlaceholder": "johndoe",
+  "emailLabel": "이메일",
+  "emailPlaceholder": "name@example.com",
+  "passwordLabel": "비밀번호",
+  "passwordPlaceholder": "••••••••",
+  "submitBtn": "계정 만들기",
+  "alreadyHaveAccount": "이미 계정이 있으신가요?",
+  "signIn": "로그인",
+  "pitchTitle1": "하나의 계정.",
+  "pitchTitle2": "모든 원활한 액세스.",
+  "pitchSubtitle": "CloudburstLab 에코시스템에 가입하여 현대 전문가를 위해 설계된 강력한 도구 모음을 잠금 해제하세요.",
+  "usernameAvailable": "사용 가능한 사용자 이름입니다!",
+  "usernameTaken": "이미 사용 중인 사용자 이름입니다."
+}

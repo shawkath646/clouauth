@@ -14,5 +14,5 @@ export default async function DangerZonePage() {
     redirect("/signin");
   }
 
-  return <DangerZoneSection profile={result.data} />;
+  return <DangerZoneSection />;
 }

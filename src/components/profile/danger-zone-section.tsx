@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
-import type { FullProfile } from "@/types/profile.types";
 import { disableAccount } from "@/actions/profile/danger-zone.actions";
 import { toast } from "sonner";
 import { useTranslations } from "@/lib/i18n/hooks";
 
-export function DangerZoneSection({ profile: _profile }: { profile: FullProfile }) {
+export function DangerZoneSection() {
   const { t } = useTranslations("profile_security");
   const [disableStep, setDisableStep] = useState<1 | 2>(1);
   const [isDisabling, setIsDisabling] = useState(false);

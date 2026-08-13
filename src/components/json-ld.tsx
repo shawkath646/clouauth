@@ -1,9 +1,9 @@
 import type { Thing, WithContext, Graph } from "schema-dts";
 
-export default function JsonLd<T extends Thing | Graph>({
+export default function JsonLd({
   schema
 }: {
-  schema: WithContext<T>
+  schema: any
 }) {
   const safeJsonLd = JSON.stringify(schema)
     .replace(/</g, "\\u003c")

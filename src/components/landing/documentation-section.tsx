@@ -27,7 +27,7 @@ export function DocumentationSection() {
             </h2>
             
             <p className="text-lg text-muted-foreground mb-8">
-              Everything you need to integrate Clou Auth into your application, from OAuth flows to API references and step-by-step implementation guides.
+              Everything you need to integrate ClouAuth into your application, from OAuth flows to API references and step-by-step implementation guides.
             </p>
 
             <div className="flex flex-wrap gap-4">

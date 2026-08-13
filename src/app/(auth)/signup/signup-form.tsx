@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signUpSchema, type SignUpValues } from "@/schema/auth.schema";
+import { getSignUpSchema, type SignUpValues } from "@/schema/auth.schema";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,19 +23,20 @@ import SignUpPromotion from "./signup-promotion";
 import { signUp } from "@/actions/auth/signup.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
 import SocialProviders from "@/components/social-providers";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
 export default function SignUpForm() {
   const router = useRouter();
   const { t } = useTranslations("signup");
   const { t: tCommon } = useTranslations("common");
+  const { t: tSchema } = useTranslations("schema_auth");
   
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm<SignUpValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(getSignUpSchema(tSchema)),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -55,9 +56,9 @@ export default function SignUpForm() {
         setErrorMsg(response.error || "Failed to create account.");
       }
     } catch (e: unknown) {
-      const em = getErrorMessage(e);
-      setErrorMsg(em);
-    } finally {
+        const em = handleError(e, "Failed to execute onSubmit");
+        setErrorMsg(em);
+      } finally {
       setIsLoading(false);
     }
   }
@@ -190,10 +191,10 @@ export default function SignUpForm() {
               try {
                 await continueWithProvider(p);
               } catch (e: unknown) {
-                const em = getErrorMessage(e);
-                setIsLoading(false);
-                setErrorMsg(em);
-              }
+                                      const em = handleError(e, "Failed to execute SignUpForm");
+                                      setIsLoading(false);
+                                      setErrorMsg(em);
+                                    }
             }} 
             isLoading={isLoading}
           />

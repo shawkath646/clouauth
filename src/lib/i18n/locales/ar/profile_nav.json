@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "title": "إعدادات الحساب"
+  },
+  "nav": {
+    "profile": "المعلومات الشخصية",
+    "security": "الأمان",
+    "devices": "الأجهزة",
+    "applications": "التطبيقات",
+    "connected": "الحسابات المرتبطة",
+    "notifications": "الإشعارات",
+    "preferences": "التفضيلات",
+    "privacy": "الخصوصية والبيانات",
+    "danger": "منطقة الخطر"
+  }
+}

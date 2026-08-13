@@ -2,10 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
-const DEV_URL = process.env.NEXT_PUBLIC_DEV_URL as string
-if (!DEV_URL) {
-  throw Error("DEV_URL not configured!");
-}
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Page Not Found",
+  description: "The page you are looking for does not exist or has been moved.",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
+
+const DEV_URL = process.env.NEXT_PUBLIC_DEV_URL || "https://shawkath646.dev";
 
 export default function NotFound() {
   return (
@@ -15,7 +23,7 @@ export default function NotFound() {
         <Link href="/" className="group block">
           <Image
             src={`${process.env.R2_PUBLIC_URL}/branding/icon_light.png`}
-            alt="CloudburstLab"
+            alt="clouburstlab"
             width={180}
             height={24}
             priority
@@ -23,7 +31,7 @@ export default function NotFound() {
           />
           <Image
             src={`${process.env.R2_PUBLIC_URL}/branding/icon_dark.png`}
-            alt="CloudburstLab"
+            alt="clouburstlab"
             width={180}
             height={24}
             priority

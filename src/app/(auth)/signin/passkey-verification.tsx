@@ -5,22 +5,58 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2, Fingerprint } from "lucide-react";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { resolvePasskeyVerification, triggerVerificationMethod } from "@/actions/auth/verification.actions";
+import { toast } from "sonner";
+import { handleError } from "@/utils/utils";
 
 interface PasskeyVerificationProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onComplete: (result: any) => void;
   tempSessionId: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options?: any;
 }
 
-export default function PasskeyVerification({ onComplete, tempSessionId }: PasskeyVerificationProps) {
+export default function PasskeyVerification({ onComplete, tempSessionId, options }: PasskeyVerificationProps) {
   const { t } = useTranslations("signin");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleVerify = async () => {
+    if (!tempSessionId) {
+      toast.error("Error", { description: "No active verification session" });
+      return;
+    }
     setIsLoading(true);
-    // Simulate API call
-    const response = await new Promise((resolve) => setTimeout(() => resolve({ success: true, data: "token" }), 1500));
-    setIsLoading(false);
-    onComplete(response);
+    try {
+      let authOptions = options;
+      if (!authOptions) {
+        const res = await triggerVerificationMethod(tempSessionId, "passkey");
+        if (!res.success || !("payload" in res)) {
+          toast.error("Error", { description: res.error || "Failed to get passkey challenge" });
+          setIsLoading(false);
+          return;
+        }
+        authOptions = res.payload;
+      }
+
+      const assertionResponse = await startAuthentication({ optionsJSON: authOptions });
+
+      const result = await resolvePasskeyVerification(tempSessionId, assertionResponse);
+
+      if (result.success) {
+        onComplete(result);
+      } else {
+        toast.error("Error", { description: result.error || "Passkey verification failed" });
+      }
+    } catch (e: unknown) {
+        const em = handleError(e, "Failed to execute PasskeyVerification");
+        if (!em.toLowerCase().includes("cancelled") && !em.toLowerCase().includes("not allowed")) {
+          toast.error("Verification failed", { description: em });
+        }
+      } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -42,14 +78,14 @@ export default function PasskeyVerification({ onComplete, tempSessionId }: Passk
 
       <div className="space-y-6 flex flex-col items-center">
         <div className="bg-primary/10 p-6 rounded-full">
-        <Fingerprint className="h-12 w-12 text-primary" />
-      </div>
-      <p className="text-sm text-muted-foreground text-center">
-        {t("passkeyDesc")}
-      </p>
-      <Button className="w-full" onClick={handleVerify} disabled={isLoading}>
-        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        {t("verify")}
+          <Fingerprint className="h-12 w-12 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground text-center">
+          {t("passkeyDesc")}
+        </p>
+        <Button className="w-full" onClick={handleVerify} disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {t("verify")}
         </Button>
       </div>
     </motion.div>

@@ -18,8 +18,17 @@ export function useTranslations<T extends Namespace>(_namespace?: T) {
   const dict = messages as Dictionary<T>;
 
   // Return a translation function that takes a key from the dictionary
-  const t = (key: TranslationKey<T>): string => {
-    return (dict[key as keyof typeof dict] as string) || (key as string);
+  const t = (key: TranslationKey<T> | string): string => {
+    const keys = (key as string).split('.');
+    let value: unknown = dict;
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = (value as Record<string, unknown>)[k];
+      } else {
+        return key as string;
+      }
+    }
+    return typeof value === 'string' ? value : (key as string);
   };
 
   return { t, locale, setLocale };

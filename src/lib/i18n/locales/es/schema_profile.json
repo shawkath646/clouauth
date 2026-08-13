@@ -1,0 +1,34 @@
+{
+  "noHtml": "No se permiten etiquetas HTML",
+  "name": {
+    "firstNameRequired": "El nombre es obligatorio",
+    "firstNameMax": "El nombre no puede exceder los 50 caracteres",
+    "firstNameFormat": "El nombre solo puede contener letras, espacios y guiones",
+    "lastNameRequired": "El apellido es obligatorio",
+    "lastNameMax": "El apellido no puede exceder los 50 caracteres",
+    "lastNameFormat": "El apellido solo puede contener letras, espacios y guiones"
+  },
+  "username": {
+    "min": "El nombre de usuario debe tener al menos 3 caracteres",
+    "max": "El nombre de usuario no puede exceder los 30 caracteres",
+    "format": "El nombre de usuario solo puede contener letras, números y guiones bajos"
+  },
+  "bio": {
+    "max": "La biografía no puede exceder los 500 caracteres"
+  },
+  "pronouns": {
+    "max": "Los pronombres no pueden exceder los 20 caracteres"
+  },
+  "address": {
+    "line1Required": "La línea de dirección 1 es obligatoria",
+    "line1Max": "La línea de dirección 1 no puede exceder los 100 caracteres",
+    "line2Max": "La línea de dirección 2 no puede exceder los 100 caracteres",
+    "cityRequired": "La ciudad es obligatoria",
+    "cityMax": "La ciudad no puede exceder los 50 caracteres",
+    "stateMax": "El estado no puede exceder los 50 caracteres",
+    "zipRequired": "El código postal es obligatorio",
+    "zipMax": "El código postal no puede exceder los 20 caracteres",
+    "countryRequired": "El país es obligatorio",
+    "countryMax": "El país no puede exceder los 50 caracteres"
+  }
+}

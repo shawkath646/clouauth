@@ -1,0 +1,156 @@
+{
+  "navigation": {
+    "developers": "개발자",
+    "documentation": "문서",
+    "toggleTheme": "테마 변경"
+  },
+  "hero": {
+    "subtitle": "아이덴티티 플랫폼",
+    "titleLine1": "하나의 계정.",
+    "titleLine2": "모든",
+    "titleLine2Service": "서비스.",
+    "description": "최신 애플리케이션을 위한 OAuth 2.0 및 OpenID Connect를 지원하는",
+    "descriptionSuffix": "의 안전한 인증 및 ID 관리.",
+    "createAccount": "계정 만들기",
+    "signIn": "로그인",
+    "viewApps": "앱 및 서비스 보기"
+  },
+  "trustSection": {
+    "title": "신뢰를 바탕으로",
+    "description": "ClouAuth는 보안, 개인 정보 보호 및 원활한 사용자 경험을 기반으로 구축되어 귀하의 신원이 항상 보호되도록 합니다.",
+    "features": {
+      "secureByDesign": {
+        "title": "설계에 의한 보안",
+        "description": "무단 액세스로부터 계정을 안전하게 유지하는 최신 보안 방식과 강력한 인증."
+      },
+      "unifiedIdentity": {
+        "title": "통합된 신원",
+        "description": "모든 CloudBurst 서비스에 걸친 하나의 계정. 단일하고 안전한 신원으로 디지털 라이프를 단순화하세요."
+      },
+      "fastAuth": {
+        "title": "빠른 인증",
+        "description": "고성능 인프라를 기반으로 하는 빠르고 안정적이며 매끄러운 로그인 경험."
+      },
+      "privacyFocused": {
+        "title": "개인 정보 보호 중심",
+        "description": "투명한 데이터 정책과 함께 신원과 계정은 귀하의 엄격한 통제하에 유지됩니다."
+      }
+    }
+  },
+  "featureGrid": {
+    "title": "플랫폼 기능",
+    "description": "신원을 안전하게 관리하고 인증을 자체 애플리케이션에 통합하는 데 필요한 모든 것.",
+    "capabilities": {
+      "accountManagement": {
+        "title": "계정 관리",
+        "description": "중앙 허브에서 신원, 프로필, 기본 설정 및 보안 설정을 관리하세요."
+      },
+      "sessionManagement": {
+        "title": "세션 관리",
+        "description": "모든 신뢰할 수 있는 장치에서 활성 세션을 실시간으로 검토하고 관리합니다."
+      },
+      "mfa": {
+        "title": "다중 요소 인증(MFA)",
+        "description": "업계 표준 2FA 방법을 사용하여 민감한 계정을 보호하는 추가 계층."
+      },
+      "oauth": {
+        "title": "OAuth 2.0 통합",
+        "description": "타사 애플리케이션이 ClouAuth 플랫폼을 통해 사용자를 안전하게 인증할 수 있도록 합니다."
+      },
+      "oidc": {
+        "title": "OpenID Connect",
+        "description": "강력한 애플리케이션 통합을 위해 OAuth 2.0 위에 구축된 최신 표준 ID 계층."
+      },
+      "passkey": {
+        "title": "패스키 지원",
+        "description": "최고의 보안을 위해 최신 WebAuthn 표준을 사용하는 비밀번호 없는 인증."
+      }
+    }
+  },
+  "developerSection": {
+    "badge": "개발자 생태계",
+    "title": "개발자를 위해 구축됨",
+    "description": "ClouAuth는 단순한 계정 포털이 아닙니다. 표준 프로토콜을 사용하여 애플리케이션과 원활하게 통합되도록 설계된 포괄적인 인증 플랫폼입니다.",
+    "features": {
+      "oauthOidc": {
+        "title": "OAuth 2.0 및 OpenID Connect",
+        "description": "표준화되고 안전한 권한 부여 흐름."
+      },
+      "apiSupport": {
+        "title": "향후 API 지원",
+        "description": "강력한 REST API 및 SDK가 곧 제공됩니다."
+      }
+    },
+    "developerGuide": "개발자 가이드",
+    "apiReference": "API 참조"
+  },
+  "securitySection": {
+    "title": "타협 없는 보안",
+    "description": "우리는 투명하고 업계 표준인 보안 구현을 통해 신뢰를 구축하는 데 중점을 둡니다. ClouAuth는 사용자를 보호하므로 애플리케이션 개발에 집중할 수 있습니다.",
+    "features": {
+      "encryptedComm": {
+        "title": "암호화된 통신",
+        "description": "종단 간 암호화 및 엄격한 HTTPS 시행으로 이동 중인 데이터가 안전하게 보호됩니다."
+      },
+      "sessionProtection": {
+        "title": "세션 보호",
+        "description": "무단 세션 하이재킹을 감지하고 방지하기 위한 고급 휴리스틱 및 기기 핑거프린팅."
+      },
+      "identityVerification": {
+        "title": "신원 확인",
+        "description": "강력한 이메일 확인, 복구 흐름 및 계정 보호 메커니즘."
+      },
+      "modernArchitecture": {
+        "title": "최신 아키텍처",
+        "description": "검증된 표준과 개인 정보 보호를 최우선으로 하는 아키텍처 패턴을 기반으로 구축되었습니다."
+      }
+    },
+    "statusSecure": "시스템 상태: 안전함"
+  },
+  "futureVision": {
+    "titleLine1": "하나의 신원.",
+    "titleLine2": "다양한 애플리케이션.",
+    "descriptionPart1": "auth는 성장하는",
+    "descriptionPart2": "생태계의 중앙 인증 플랫폼이 되도록 설계되어 네이티브 서비스와 타사 애플리케이션 모두가 안전하고 표준화된 신원을 공유할 수 있도록 합니다."
+  },
+  "callToAction": {
+    "loggedIn": {
+      "title": "애플리케이션 탐색",
+      "titleSuffix": "",
+      "description": "이 계정을 사용하면 원활하게 애플리케이션을 사용하고 문제 없이 동기화할 수 있습니다.",
+      "button": "프로필로 이동"
+    },
+    "loggedOut": {
+      "title": "시작할 준비가 되셨나요?",
+      "descriptionPart1": "오늘 안전한 신원을 만들거나 문서를 살펴보고",
+      "descriptionPart2": "인증을 다음 프로젝트에 통합하는 방법을 알아보세요.",
+      "createAccount": "계정 만들기",
+      "signIn": "로그인",
+      "documentation": "문서"
+    }
+  },
+  "footer": {
+    "brandDescription": "타사 애플리케이션을 지원하는 모든",
+    "brandDescriptionSuffix": "서비스를 위한 하나의 안전한 신원.",
+    "sections": {
+      "platform": "플랫폼",
+      "developers": "개발자",
+      "company": "회사"
+    },
+    "links": {
+      "features": "기능",
+      "security": "보안",
+      "status": "상태",
+      "pricing": "가격",
+      "documentation": "문서",
+      "oauth2": "OAuth 2.0",
+      "oidc": "OpenID Connect",
+      "apiReference": "API 참조",
+      "privacyPolicy": "개인정보처리방침",
+      "termsOfService": "서비스 약관",
+      "support": "지원"
+    },
+    "copyright": "© {{year}} clouburstlab. 판권 소유.",
+    "developedBy": "개발자:"
+  }
+}

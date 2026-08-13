@@ -2,18 +2,68 @@ import Link from "next/link";
 import Image from "next/image";
 import iconLight from "@/assets/icon_light.png";
 import iconDark from "@/assets/icon_dark.png";
-import { buttonVariants } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BackgroundStars } from "@/components/landing/background-stars";
-import { LogOut } from "lucide-react";
+import { I18nProvider } from "@/lib/i18n/provider";
+import { getLocale, getDictionary } from "@/lib/i18n/server";
+import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { redirect } from "next/navigation";
+import { ProfileLayoutClient } from "@/components/profile/profile-layout-client";
+import { SignOutButton } from "@/components/profile/sign-out-button";
+import type { Metadata } from "next";
 
-export default function ProfileLayout({
+export const metadata: Metadata = {
+  title: {
+    template: "%s — My Account | clouburstlab",
+    default: "My Account",
+  },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+  openGraph: null,
+  twitter: null,
+};
+
+export default async function ProfileLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  
+  const [schemaProfile, schemaSecurity, schemaApp, profilePersonal, profileSecurity, profileApps, profileNav, result] = await Promise.all([
+    getDictionary(locale, "schema_profile"),
+    getDictionary(locale, "schema_security"),
+    getDictionary(locale, "schema_app"),
+    getDictionary(locale, "profile_personal"),
+    getDictionary(locale, "profile_security"),
+    getDictionary(locale, "profile_apps"),
+    getDictionary(locale, "profile_nav"),
+    getFullProfile()
+  ]);
+
+  const allMessages = {
+    ...schemaProfile,
+    ...schemaSecurity,
+    ...schemaApp,
+    ...profilePersonal,
+    ...profileSecurity,
+    ...profileApps,
+    ...profileNav
+  };
+  
+  if (!result.success || !result.data) {
+    redirect("/signin");
+  }
+
   return (
-    <div className="min-h-screen flex flex-col relative bg-primary/5 dark:bg-primary/5">
+    <I18nProvider messages={allMessages}>
+      <div className="min-h-screen flex flex-col relative bg-primary/5 dark:bg-primary/5">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <BackgroundStars />
@@ -26,11 +76,11 @@ export default function ProfileLayout({
       <header className="sticky top-0 z-30 w-full border-b border-primary/20 bg-background/70 dark:bg-card/40 backdrop-blur-xl">
         <div className="w-full max-w-360 mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
 
-          <Link href="/profile" className="flex items-center">
+          <Link href="https://clouburstlab.com"  className="flex items-center">
             {/* Dark Mode Logo */}
             <Image
               src={iconDark}
-              alt="CloudburstLab"
+              alt="clouburstlab"
               width={144}
               height={40}
               priority
@@ -39,7 +89,7 @@ export default function ProfileLayout({
             {/* Light Mode Logo */}
             <Image
               src={iconLight}
-              alt="CloudburstLab"
+              alt="clouburstlab"
               width={144}
               height={40}
               priority
@@ -47,21 +97,18 @@ export default function ProfileLayout({
             />
           </Link>
 
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Link href="/signin" className={buttonVariants({ variant: "ghost", size: "sm", className: "text-destructive hover:text-destructive hover:bg-destructive/10" })}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </Link>
-          </div>
+            <SignOutButton />
 
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 w-full max-w-360 mx-auto p-4 sm:p-8">
-        {children}
-      </main>
+      <div className="flex-1 relative z-10 w-full max-w-360 mx-auto p-4 sm:p-8">
+        <ProfileLayoutClient profile={result.data}>
+          {children}
+        </ProfileLayoutClient>
+      </div>
     </div>
+    </I18nProvider>
   );
 }

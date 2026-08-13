@@ -1,17 +1,40 @@
 import { z } from "zod";
+import type { TranslationKey } from "@/types/i18n.types";
 
-export const signInSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters"),
-  rememberMe: z.boolean().default(false).optional(),
+const noHtmlRegex = /<[a-z\/][^>]*>/i;
+
+export const getSignInSchema = (t: (key: TranslationKey<"schema_auth">) => string) => z.object({
+  username: z.string()
+    .trim()
+    .min(1, t("signIn.usernameRequired"))
+    .max(100),
+  password: z.string()
+    .min(1, t("signIn.passwordRequired"))
+    .max(100),
+  rememberMe: z.boolean().default(true),
 });
 
-export const signUpSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+export const getSignUpSchema = (t: (key: TranslationKey<"schema_auth">) => string) => z.object({
+  firstName: z.string()
+    .trim()
+    .min(1, t("signUp.firstNameRequired"))
+    .max(50)
+    .refine((val) => !noHtmlRegex.test(val), { message: "HTML is not allowed!" }),
+  lastName: z.string()
+    .trim()
+    .min(1, t("signUp.lastNameRequired"))
+    .max(50)
+    .refine((val) => !noHtmlRegex.test(val), { message: "HTML is not allowed!" }),
+  email: z.string()
+    .trim()
+    .toLowerCase()
+    .min(1, t("signUp.emailRequired")) 
+    .email(t("signUp.emailInvalid"))
+    .max(100),
+  password: z.string()
+    .min(6, t("signUp.passwordMin"))
+    .max(100),
 });
 
-export type SignInValues = z.infer<typeof signInSchema>;
-export type SignUpValues = z.infer<typeof signUpSchema>;
+export type SignInValues = z.infer<ReturnType<typeof getSignInSchema>>;
+export type SignUpValues = z.infer<ReturnType<typeof getSignUpSchema>>;

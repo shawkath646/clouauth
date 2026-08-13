@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "title": "Configuración de la cuenta"
+  },
+  "nav": {
+    "profile": "Información personal",
+    "security": "Seguridad",
+    "devices": "Dispositivos",
+    "applications": "Aplicaciones",
+    "connected": "Cuentas conectadas",
+    "notifications": "Notificaciones",
+    "preferences": "Preferencias",
+    "privacy": "Privacidad y datos",
+    "danger": "Zona de peligro"
+  }
+}

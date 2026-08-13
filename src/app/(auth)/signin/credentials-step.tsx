@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signInSchema, type SignInValues } from "@/schema/auth.schema";
+import { getSignInSchema, type SignInValues } from "@/schema/auth.schema";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -22,10 +23,10 @@ import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { signIn } from "@/actions/auth/auth.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
-import { VerificationMethod } from "@/types/auth.types";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
+import { BrandName } from "@/components/ui/brand-name";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface CredentialsStepProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onNext: (result: any) => void;
@@ -34,34 +35,36 @@ interface CredentialsStepProps {
 export default function CredentialsStep({ onNext }: CredentialsStepProps) {
   const { t } = useTranslations("signin");
   const { t: tCommon } = useTranslations("common");
+  const { t: tSchema } = useTranslations("schema_auth");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const form = useForm<SignInValues>({
-    resolver: zodResolver(signInSchema),
+  const form = useForm<z.input<ReturnType<typeof getSignInSchema>>>({
+    resolver: zodResolver(getSignInSchema(tSchema)) as any,
     defaultValues: {
       username: "",
       password: "",
-      rememberMe: false,
+      rememberMe: true,
     },
   });
 
-  async function onSubmit(data: SignInValues) {
+  async function onSubmit(data: z.input<ReturnType<typeof getSignInSchema>>) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await signIn(data);
+      const response = await signIn(data as SignInValues);
       if (response.success) {
         onNext(response);
       } else {
-        setErrorMsg(response.error || "Invalid credentials");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setErrorMsg((response as any).error || "Invalid credentials");
       }
     } catch (e: unknown) {
-      const em = getErrorMessage(e);
-      setErrorMsg(em);
+        const em = handleError(e, true);
+        setErrorMsg(em);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }
 
@@ -76,7 +79,7 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
     >
       <div className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t('title')}</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">{t('subtitle')} <span className="text-primary">{tCommon('clouburstlab')}</span> {t('account')}</p>
+        <p className="text-sm sm:text-base text-muted-foreground">{t('subtitle')} <BrandName className="text-primary font-semibold" /> {t('account')}</p>
       </div>
 
       {errorMsg && (
@@ -166,7 +169,7 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -191,10 +194,10 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
             try {
               await continueWithProvider(p);
             } catch (e: unknown) {
-                      const em = getErrorMessage(e);
-              setIsLoading(false);
-              setErrorMsg(em);
-            }
+                                        const em = handleError(e, true);
+                                setIsLoading(false);
+                                setErrorMsg(em);
+                              }
           }} 
           isLoading={isLoading} 
         />

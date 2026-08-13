@@ -1,0 +1,21 @@
+{
+  "password": {
+    "min": "Password must be at least 8 characters",
+    "max": "Password cannot exceed 100 characters",
+    "uppercase": "Password must contain at least one uppercase letter",
+    "lowercase": "Password must contain at least one lowercase letter",
+    "number": "Password must contain at least one number",
+    "special": "Password must contain at least one special character",
+    "confirm": "Please confirm your new password",
+    "mismatch": "Passwords do not match"
+  },
+  "email": {
+    "required": "Email is required",
+    "invalid": "Please enter a valid email address",
+    "max": "Email cannot exceed 100 characters"
+  },
+  "phone": {
+    "invalid": "Phone must be in E.164 format (e.g. +1234567890)",
+    "max": "Phone number is too long"
+  }
+}

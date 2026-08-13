@@ -1,0 +1,84 @@
+{
+  "title": "Documentación de la API",
+  "descriptionPart1": "Referencia oficial de la API y documentación de descubrimiento OIDC para",
+  "descriptionPart2": "el proveedor de identidad.",
+  "quickLinks": "Enlaces Rápidos",
+  "parameters": "Parámetros",
+  "response": "Respuesta",
+  "table": {
+    "name": "Nombre",
+    "type": "Tipo",
+    "required": "Requerido",
+    "description": "Descripción",
+    "requiredBadge": "Requerido",
+    "optionalBadge": "Opcional"
+  },
+  "endpoints": {
+    "oidc": {
+      "name": "Descubrimiento OIDC",
+      "description": "Devuelve el documento de descubrimiento de OpenID Connect que contiene el emisor, los endpoints y los alcances/reclamaciones admitidos.",
+      "response": "Objeto JSON con metadatos del Proveedor OpenID."
+    },
+    "auth": {
+      "name": "Endpoint de Autorización",
+      "description": "Inicia el flujo de Código de Autorización OAuth 2.0.",
+      "params": {
+        "client_id": "El Client ID de su aplicación.",
+        "redirect_uri": "A dónde redirigir al usuario después de la autorización.",
+        "response_type": "Debe ser 'code'.",
+        "scope": "Alcances separados por espacios (por ejemplo, 'openid profile email').",
+        "state": "Valor opaco para mantener el estado y mitigar CSRF.",
+        "code_challenge": "Desafío de código PKCE.",
+        "code_challenge_method": "Debe ser 'S256'."
+      },
+      "response": "Redirige a la redirect_uri con un `code` y un `state`."
+    },
+    "token": {
+      "name": "Endpoint de Token",
+      "description": "Intercambia un código de autorización o un token de actualización por tokens de acceso.",
+      "params": {
+        "grant_type": "'authorization_code' o 'refresh_token'.",
+        "code": "El código de autorización (si grant_type es authorization_code).",
+        "redirect_uri": "Debe coincidir con la URI de redirección original.",
+        "client_id": "El Client ID de su aplicación.",
+        "client_secret": "El Client Secret de su aplicación.",
+        "code_verifier": "Verificador de código PKCE."
+      },
+      "response": "Objeto JSON que contiene access_token, id_token y refresh_token."
+    },
+    "userinfo": {
+      "name": "Endpoint de Información de Usuario",
+      "description": "Recupera reclamaciones sobre el usuario final autenticado.",
+      "params": {
+        "authorization": "Token Bearer que contiene el token de acceso."
+      },
+      "response": "Objeto JSON que contiene las reclamaciones del usuario (sub, name, email, etc.)."
+    },
+    "jwks": {
+      "name": "Endpoint JWKS",
+      "description": "Devuelve el Conjunto de Claves Web JSON utilizado para firmar los ID tokens.",
+      "response": "Conjunto de Claves Web JSON que contiene las claves públicas."
+    },
+    "revoke": {
+      "name": "Endpoint de Revocación de Token",
+      "description": "Revoca un token de acceso o actualización activo.",
+      "params": {
+        "client_id": "El Client ID de su aplicación.",
+        "client_secret": "El Client Secret de su aplicación.",
+        "token": "El token que desea revocar.",
+        "token_type_hint": "Pista opcional ('access_token' o 'refresh_token')."
+      },
+      "response": "Respuesta vacía 200 OK en caso de éxito."
+    },
+    "logout": {
+      "name": "Endpoint de Cierre de Sesión",
+      "description": "Finaliza la sesión del usuario en el proveedor de identidad.",
+      "params": {
+        "id_token_hint": "El ID Token emitido previamente al cliente.",
+        "post_logout_redirect_uri": "A dónde redirigir después de cerrar sesión.",
+        "state": "Valor opaco devuelto a la URI de redirección."
+      },
+      "response": "Redirige a la post_logout_redirect_uri."
+    }
+  }
+}

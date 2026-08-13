@@ -1,0 +1,9 @@
+{
+  "nameMin": "应用程序名称必须至少 2 个字符",
+  "nameMax": "应用程序名称不能超过 50 个字符",
+  "descriptionMax": "描述太长",
+  "websiteUrl": "必须是有效的 URL",
+  "redirectUriUrl": "必须是有效的 URL",
+  "redirectUriMin": "至少需要一个重定向 URI",
+  "scopesMin": "至少需要一个作用域"
+}

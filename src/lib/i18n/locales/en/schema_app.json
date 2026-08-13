@@ -1,0 +1,9 @@
+{
+  "nameMin": "Application name must be at least 2 characters",
+  "nameMax": "Application name cannot exceed 50 characters",
+  "descriptionMax": "Description is too long",
+  "websiteUrl": "Must be a valid URL",
+  "redirectUriUrl": "Must be a valid URL",
+  "redirectUriMin": "At least one redirect URI is required",
+  "scopesMin": "At least one scope is required"
+}

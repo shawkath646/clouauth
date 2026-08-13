@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserSession } from "@/lib/session";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
 export async function GET() {
     try {
@@ -12,8 +12,7 @@ export async function GET() {
         
         return NextResponse.json({ success: true, data: sessionData });
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
-        console.error("Session API Error:", e);
+    const em = handleError(e, "Failed to execute GET");
         return NextResponse.json({ success: false, error: em }, { status: 500 });
     }
 }

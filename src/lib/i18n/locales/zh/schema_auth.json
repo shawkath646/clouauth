@@ -1,0 +1,14 @@
+{
+  "signIn": {
+    "usernameRequired": "用户名是必填项",
+    "passwordRequired": "密码是必填项",
+    "passwordMin": "密码必须至少 6 个字符"
+  },
+  "signUp": {
+    "firstNameRequired": "名字是必填项",
+    "lastNameRequired": "姓氏是必填项",
+    "emailRequired": "电子邮件是必填项",
+    "emailInvalid": "无效的电子邮件地址",
+    "passwordMin": "密码必须至少 6 个字符"
+  }
+}

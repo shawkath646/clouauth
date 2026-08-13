@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext } from 'react';
+import React, { createContext, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Namespace, Locale } from './config';
 import { defaultLocale } from './config';
 import type { Dictionary } from '@/types/i18n.types';
@@ -25,6 +26,8 @@ export function I18nProvider<T extends Namespace>({
   locale?: Locale;
   messages: Dictionary<T>;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const existingContext = React.useContext(I18nContext);
   
   const mergedLocale = locale || existingContext?.locale || defaultLocale;
@@ -33,8 +36,24 @@ export function I18nProvider<T extends Namespace>({
     ...messages
   };
 
+  const handleSetLocale = React.useCallback((newLocale: string) => {
+    setUserLocale(newLocale);
+    startTransition(() => {
+      import("@/actions/profile/personal-info.actions").then(m => {
+        m.updateProfilePreferences({ language: newLocale }).catch(() => {});
+      });
+      router.refresh();
+    });
+  }, [router]);
+
+  const contextValue = React.useMemo(() => ({
+    locale: mergedLocale,
+    messages: mergedMessages,
+    setLocale: handleSetLocale
+  }), [mergedLocale, mergedMessages, handleSetLocale]);
+
   return (
-    <I18nContext.Provider value={{ locale: mergedLocale, messages: mergedMessages, setLocale: setUserLocale }}>
+    <I18nContext.Provider value={contextValue}>
       {children}
     </I18nContext.Provider>
   );

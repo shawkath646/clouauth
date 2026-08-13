@@ -1,8 +1,8 @@
-import { cn } from "@/misc/utils";
+import { cn } from "@/utils/utils";
 
 interface SectionCardProps {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   headerAction?: React.ReactNode;

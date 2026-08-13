@@ -49,7 +49,7 @@ export default async function AuthLayout({
             {/* Light Mode Logo */}
             <Image
               src={iconLight}
-              alt="CloudburstLab Logo"
+              alt="clouburstlab Logo"
               width={288}
               height={64}
               className="w-32 sm:w-40 h-auto object-contain dark:hidden"
@@ -58,7 +58,7 @@ export default async function AuthLayout({
             {/* Dark Mode Logo */}
             <Image
               src={iconDark}
-              alt="CloudburstLab Logo"
+              alt="clouburstlab Logo"
               width={288}
               height={64}
               className="w-40 sm:w-48 h-auto object-contain hidden dark:block"

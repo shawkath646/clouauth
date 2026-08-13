@@ -1,0 +1,21 @@
+{
+  "password": {
+    "min": "La contraseña debe tener al menos 8 caracteres",
+    "max": "La contraseña no puede exceder los 100 caracteres",
+    "uppercase": "La contraseña debe contener al menos una letra mayúscula",
+    "lowercase": "La contraseña debe contener al menos una letra minúscula",
+    "number": "La contraseña debe contener al menos un número",
+    "special": "La contraseña debe contener al menos un carácter especial",
+    "confirm": "Please confirm your new password",
+    "mismatch": "Passwords do not match"
+  },
+  "email": {
+    "required": "El correo electrónico es obligatorio",
+    "invalid": "Introduzca una dirección de correo electrónico válida",
+    "max": "El correo electrónico no puede exceder los 100 caracteres"
+  },
+  "phone": {
+    "invalid": "El teléfono debe estar en formato E.164 (ej. +1234567890)",
+    "max": "El número de teléfono es demasiado largo"
+  }
+}

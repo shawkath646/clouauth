@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "title": "Account Settings"
+  },
+  "nav": {
+    "profile": "Personal Info",
+    "security": "Security",
+    "devices": "Devices",
+    "applications": "Applications",
+    "connected": "Connected Accounts",
+    "notifications": "Notifications",
+    "preferences": "Preferences",
+    "privacy": "Privacy & Data",
+    "danger": "Danger Zone"
+  }
+}

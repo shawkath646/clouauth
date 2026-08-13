@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/profile/section-card";
 import { ProfileFieldLink } from "@/components/profile/profile-field-link";
@@ -10,8 +9,10 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronRight } from "lucide-react";
 import type { FullProfile } from "@/types/profile.types";
 import { DBAddress } from "@/types/user.types";
+import { useTranslations } from "@/lib/i18n/hooks";
 
 export function PersonalInfoSection({ profile }: { profile: FullProfile }) {
+  const { t } = useTranslations("profile_personal");
 
   const initials = `${profile.user.first_name[0] || ""}${profile.user.last_name[0] || ""}`.toUpperCase();
   const primaryEmail = profile.emails.find(e => e.is_primary) || profile.emails[0];
@@ -19,7 +20,7 @@ export function PersonalInfoSection({ profile }: { profile: FullProfile }) {
   const joinDate = new Date(profile.user.created_on).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
   const formatAddress = (addr: DBAddress) => {
-    if (!addr) return "Not set";
+    if (!addr) return t('infoSection.notSet');
     const parts = [addr.address_1, addr.address_2, addr.city, addr.state, addr.zip_code, addr.country].filter(Boolean);
     return parts.join(", ");
   };
@@ -27,15 +28,15 @@ export function PersonalInfoSection({ profile }: { profile: FullProfile }) {
   return (
     <div className="space-y-6">
       <SectionCard 
-        title="Personal Information" 
-        description="Manage your fundamental account details and personalization."
+        title={t('infoSection.title')} 
+        description={t('infoSection.desc')}
         noPadding
       >
         <Link 
           href="/profile/edit?field=avatar"
           className="w-full flex items-center justify-between px-5 py-4 sm:px-6 gap-4 text-left transition-colors hover:bg-muted/10 cursor-pointer"
         >
-          <span className="text-sm font-medium text-foreground shrink-0">Profile Picture</span>
+          <span className="text-sm font-medium text-foreground shrink-0">{t('infoSection.profilePic')}</span>
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 border border-primary/10 shadow-sm">
               <AvatarImage src={profile.user.avatar} alt={profile.user.first_name} />
@@ -47,41 +48,43 @@ export function PersonalInfoSection({ profile }: { profile: FullProfile }) {
         <Separator className="opacity-50" />
         
         <ProfileFieldLink 
-          label="Full Name" 
+          label={t('infoSection.fullName')} 
           value={`${profile.user.first_name} ${profile.user.last_name}`} 
           href="/profile/edit?field=name"
         />
         <ProfileFieldLink 
-          label="Username" 
+          label={t('infoSection.username')} 
           value={`@${profile.user.username}`} 
           href="/profile/edit?field=username"
         />
         <ProfileFieldLink 
-          label="Pronouns" 
-          value={profile.user.pronouns || "Not set"} 
+          label={t('infoSection.pronouns')} 
+          value={profile.user.pronouns || t('infoSection.notSet')} 
           href="/profile/edit?field=pronouns"
         />
         <ProfileFieldLink 
-          label="Email Address" 
-          value={primaryEmail?.address || "Not set"} 
-          badge={primaryEmail?.verified ? <Badge variant="outline" className="border-green-500/30 text-green-600 dark:text-green-400 bg-green-500/10">Verified</Badge> : <Badge variant="outline" className="border-yellow-500/30 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10">Unverified</Badge>}
+          label={t('infoSection.email')} 
+          value={primaryEmail?.address || t('infoSection.notSet')} 
+          badge={primaryEmail?.verified ? <Badge variant="outline" className="border-green-500/30 text-green-600 dark:text-green-400 bg-green-500/10">{t('infoSection.verified')}</Badge> : <Badge variant="outline" className="border-yellow-500/30 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10">{t('infoSection.unverified')}</Badge>}
         />
         <ProfileFieldLink 
-          label="Phone Number" 
-          value="Not set" 
+          label={t('infoSection.phone')} 
+          value={
+            profile.two_factor_methods?.some(m => m.type === "phone" || (m.type as string) === "sms") ? t('infoSection.phoneAdded') : t('infoSection.notSet')
+          } 
         />
         <ProfileFieldLink 
-          label="Address" 
+          label={t('infoSection.address')} 
           value={formatAddress(defaultAddress)} 
           href="/profile/edit?field=address"
         />
         <ProfileFieldLink 
-          label="Bio" 
-          value={profile.user.bio || "Not provided."} 
+          label={t('infoSection.bio')} 
+          value={profile.user.bio || t('infoSection.notProvided')} 
           href="/profile/edit?field=bio"
         />
         <ProfileFieldLink 
-          label="Joined Date" 
+          label={t('infoSection.joined')} 
           value={joinDate} 
           showSeparator={false}
         />

@@ -1,0 +1,112 @@
+{
+  "editName": {
+    "title": "이름 수정",
+    "desc": "이름과 성을 업데이트하세요.",
+    "firstLabel": "이름",
+    "lastLabel": "성",
+    "cancel": "취소",
+    "save": "변경 사항 저장"
+  },
+  "editUsername": {
+    "title": "사용자 이름 수정",
+    "desc": "고유한 사용자 이름을 변경하세요. 이것은 공개적으로 표시되는 방식입니다.",
+    "label": "사용자 이름",
+    "cancel": "취소",
+    "save": "변경 사항 저장",
+    "lockedMsg": "최근에 사용자 이름을 변경했습니다. 다시 변경하려면 {days}일 더 기다려야 합니다.",
+    "warningMsg": "참고: 사용자 이름을 한 번 변경하면 60일 동안 다시 변경할 수 없습니다."
+  },
+  "editBio": {
+    "title": "소개 수정",
+    "desc": "자신에 대한 짧은 소개를 작성하세요.",
+    "label": "소개",
+    "placeholder": "자신에 대해 조금 알려주세요",
+    "cancel": "취소",
+    "save": "변경 사항 저장"
+  },
+  "editPronouns": {
+    "title": "대명사 수정",
+    "desc": "다른 사람들이 당신을 어떻게 불러야 할지 알려주세요.",
+    "label": "대명사",
+    "placeholder": "대명사 선택",
+    "cancel": "취소",
+    "save": "변경 사항 저장"
+  },
+  "editAddress": {
+    "title": "주소 수정",
+    "desc": "기본 청구/배송 주소를 업데이트하세요.",
+    "addr1": "주소 1",
+    "addr2": "주소 2 (선택 사항)",
+    "city": "시",
+    "state": "주/도",
+    "zip": "우편번호",
+    "country": "국가",
+    "cancel": "취소",
+    "save": "변경 사항 저장"
+  },
+  "infoSection": {
+    "title": "개인 정보",
+    "desc": "기본 계정 세부 정보 및 개인 설정을 관리하세요.",
+    "profilePic": "프로필 사진",
+    "fullName": "성명",
+    "username": "사용자 이름",
+    "pronouns": "대명사",
+    "email": "이메일 주소",
+    "verified": "인증됨",
+    "unverified": "미인증",
+    "phone": "전화번호",
+    "phoneAdded": "인증된 전화번호 추가됨",
+    "address": "주소",
+    "bio": "자기소개",
+    "notProvided": "제공되지 않음.",
+    "joined": "가입일",
+    "notSet": "설정되지 않음"
+  },
+  "preferencesSection": {
+    "title1": "테마",
+    "desc1": "사용자에게",
+    "desc1b": "어떻게 보일지 맞춤 설정하세요.",
+    "light": "라이트",
+    "dark": "다크",
+    "system": "시스템",
+    "title2": "언어 및 지역",
+    "desc2": "선호하는 언어 및 지역 설정을 구성하세요.",
+    "langTitle": "언어",
+    "langDesc": "언어 선택",
+    "langPlaceholder": "언어 선택",
+    "tzTitle": "시간대",
+    "tzDesc": "현지 시간 선택",
+    "tzPlaceholder": "시간대 선택",
+    "dateFormatTitle": "날짜 형식",
+    "dateFormatDesc": "날짜 표시 방식",
+    "dateFormatPlaceholder": "형식 선택"
+  },
+  "notificationsSection": {
+    "title": "알림 기본 설정",
+    "desc": "계정 활동에 대한 알림을 받는 방법을 선택하세요.",
+    "securityAlerts": "보안 알림",
+    "securityAlertsDesc": "의심스러운 로그인 및 유출된 비밀번호에 대한 알림을 받으세요.",
+    "loginAlerts": "로그인 알림",
+    "loginAlertsDesc": "새 기기에서 로그인할 때 이메일을 받으세요.",
+    "productUpdates": "제품 업데이트",
+    "productUpdatesDesc": "다음의 새로운 기능 및 도구에 대해 알아보세요.",
+    "marketing": "마케팅 이메일",
+    "marketingDesc": "프로모션 이메일 및 특별 혜택을 받으세요.",
+    "newsletter": "뉴스레터",
+    "newsletterDesc": "팁, 뉴스, 제품 업데이트에 대한 주간 요약."
+  },
+  "privacySection": {
+    "title": "개인정보 및 데이터",
+    "desc": "데이터 및 개인정보 설정을 관리하세요.",
+    "downloadData": "데이터 다운로드",
+    "downloadDataDesc": "다음의",
+    "downloadDataDesc2": "데이터 사본을 가져옵니다.",
+    "requestDownload": "다운로드 요청",
+    "privacyPolicy": "개인정보 처리방침",
+    "privacyPolicyDesc": "정보 처리 방식을 확인하세요.",
+    "viewPolicy": "정책 보기",
+    "activityVisibility": "활동 공개 범위",
+    "activityVisibilityDesc": "내 활동을 볼 수 있는 사람을 관리하세요.",
+    "manage": "관리"
+  }
+}

@@ -4,6 +4,7 @@ model UserSession {
   
   session_token_hash      String    @unique
   refresh_token_hash      String    @unique
+  previous_refresh_token_hash String?
     
   created_on              DateTime  @default(now())
   updated_on              DateTime  @updatedAt
@@ -21,6 +22,7 @@ model UserSession {
 model TempSession {
   id         String   @id @default(cuid())
   user_id    String
+  challenge  String?
   created_on DateTime @default(now())
   expires_on DateTime
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)

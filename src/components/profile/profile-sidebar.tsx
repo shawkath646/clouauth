@@ -1,10 +1,13 @@
+"use client";
+
 import Link from "next/link";
-import { cn } from "@/misc/utils";
-import { Separator } from "@/components/ui/separator";
+import { cn } from "@/utils/utils";
+import { useTranslations } from "@/lib/i18n/hooks";
 import {
   UserCircle,
   Shield,
   MonitorSmartphone,
+  AppWindow,
   Link2,
   Bell,
   Palette,
@@ -16,6 +19,7 @@ export type ProfileSection =
   | "profile"
   | "security"
   | "devices"
+  | "applications"
   | "connected"
   | "notifications"
   | "preferences"
@@ -33,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "profile", label: "Personal Info", icon: UserCircle, group: "Account" },
   { id: "security", label: "Security", icon: Shield, group: "Account" },
   { id: "devices", label: "Devices", icon: MonitorSmartphone, group: "Access" },
+  { id: "applications", label: "Applications", icon: AppWindow, group: "Access" },
   { id: "connected", label: "Connected Accounts", icon: Link2, group: "Access" },
   { id: "notifications", label: "Notifications", icon: Bell, group: "Preferences" },
   { id: "preferences", label: "Preferences", icon: Palette, group: "Preferences" },
@@ -49,6 +54,8 @@ export function ProfileSidebar({
   activeSection,
   className,
 }: ProfileSidebarProps) {
+  const { t } = useTranslations();
+
   return (
     <div className={cn("h-full", className)}>
       <nav className="flex flex-col gap-1.5 p-2" role="navigation" aria-label="Profile settings">
@@ -60,8 +67,7 @@ export function ProfileSidebar({
           return (
             <Link
               key={item.id}
-              href={`/profile?tab=${item.id}`}
-              scroll={false}
+              href={item.id === "profile" ? "/profile" : `/profile/${item.id}`}
               className={cn(
                 "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all outline-none relative",
                 "hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -77,7 +83,7 @@ export function ProfileSidebar({
               aria-current={isActive ? "page" : undefined}
             >
               <Icon className="h-4.5 w-4.5 shrink-0" />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{t(`nav.${item.id}`)}</span>
             </Link>
           );
         })}
@@ -90,6 +96,8 @@ export function ProfileSidebar({
 export function ProfileMobileTabs({
   activeSection,
 }: ProfileSidebarProps) {
+  const { t } = useTranslations();
+
   return (
     <nav className="flex gap-1 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-8 sm:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" role="tablist" aria-label="Profile sections">
       {NAV_ITEMS.map((item) => {
@@ -100,8 +108,7 @@ export function ProfileMobileTabs({
         return (
           <Link
             key={item.id}
-            href={`/profile?tab=${item.id}`}
-            scroll={false}
+            href={item.id === "profile" ? "/profile" : `/profile/${item.id}`}
             role="tab"
             aria-selected={isActive}
             className={cn(
@@ -116,7 +123,7 @@ export function ProfileMobileTabs({
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span>{item.label}</span>
+            <span>{t(`nav.${item.id}`)}</span>
           </Link>
         );
       })}

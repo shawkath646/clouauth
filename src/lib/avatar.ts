@@ -1,5 +1,5 @@
-import { createAvatar } from "@dicebear/core";
-import { initials } from "@dicebear/collection";
+import { Style, Avatar } from "@dicebear/core";
+import initialsDef from "@dicebear/styles/initials.json";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
@@ -50,16 +50,15 @@ export async function generateAndUploadAvatar(
     const hash = crypto.createHash("sha256").update(seed).digest();
     const backgroundColor = gradients[hash[0] % gradients.length];
 
-    const avatar = createAvatar(initials, {
+    const avatar = new Avatar(new Style(initialsDef), {
         seed,
         size: 512,
-        radius: 256,
-        scale: 82,
+        borderRadius: 50,
+        scale: 0.82,
         fontWeight: 700,
-        fontSize: 46,
-        backgroundType: ["gradientLinear"],
-        backgroundColor,
         textColor: ["FFFFFF"],
+        backgroundColor,
+        backgroundColorFill: ["linear"]
     });
 
     const svg = avatar.toString();

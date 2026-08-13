@@ -1,0 +1,112 @@
+{
+  "editName": {
+    "title": "Edit Name",
+    "desc": "Update your first and last name.",
+    "firstLabel": "First Name",
+    "lastLabel": "Last Name",
+    "cancel": "Cancel",
+    "save": "Save Changes"
+  },
+  "editUsername": {
+    "title": "Edit Username",
+    "desc": "Change your unique username. This is how you appear publicly.",
+    "label": "Username",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "lockedMsg": "You recently changed your username. You must wait {days} more days before you can change it again.",
+    "warningMsg": "Please note: Once you change your username, you will not be able to change it again for 60 days."
+  },
+  "editBio": {
+    "title": "Edit Bio",
+    "desc": "Write a short biography about yourself.",
+    "label": "Bio",
+    "placeholder": "Tell us a little bit about yourself",
+    "cancel": "Cancel",
+    "save": "Save Changes"
+  },
+  "editPronouns": {
+    "title": "Edit Pronouns",
+    "desc": "Let others know how to refer to you.",
+    "label": "Pronouns",
+    "placeholder": "Select your pronouns",
+    "cancel": "Cancel",
+    "save": "Save Changes"
+  },
+  "editAddress": {
+    "title": "Edit Address",
+    "desc": "Update your primary billing/shipping address.",
+    "addr1": "Address Line 1",
+    "addr2": "Address Line 2 (Optional)",
+    "city": "City",
+    "state": "State / Province",
+    "zip": "ZIP / Postal Code",
+    "country": "Country",
+    "cancel": "Cancel",
+    "save": "Save Changes"
+  },
+  "infoSection": {
+    "title": "Personal Information",
+    "desc": "Manage your fundamental account details and personalization.",
+    "profilePic": "Profile Picture",
+    "fullName": "Full Name",
+    "username": "Username",
+    "pronouns": "Pronouns",
+    "email": "Email Address",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "phone": "Phone Number",
+    "phoneAdded": "Verified phone added",
+    "address": "Address",
+    "bio": "Bio",
+    "notProvided": "Not provided.",
+    "joined": "Joined Date",
+    "notSet": "Not set"
+  },
+  "preferencesSection": {
+    "title1": "Appearance",
+    "desc1": "Customize how",
+    "desc1b": "looks for you.",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "title2": "Language & Region",
+    "desc2": "Set your preferred language and regional settings.",
+    "langTitle": "Language",
+    "langDesc": "Select your language",
+    "langPlaceholder": "Select Language",
+    "tzTitle": "Timezone",
+    "tzDesc": "Select your local time",
+    "tzPlaceholder": "Select Timezone",
+    "dateFormatTitle": "Date Format",
+    "dateFormatDesc": "How dates are displayed",
+    "dateFormatPlaceholder": "Select Format"
+  },
+  "notificationsSection": {
+    "title": "Notification Preferences",
+    "desc": "Choose how you want to be notified about activity on your account.",
+    "securityAlerts": "Security Alerts",
+    "securityAlertsDesc": "Get notified about suspicious logins and compromised passwords.",
+    "loginAlerts": "Login Notifications",
+    "loginAlertsDesc": "Receive an email when a new device signs in.",
+    "productUpdates": "Product Updates",
+    "productUpdatesDesc": "Hear about new features and tools from",
+    "marketing": "Marketing Emails",
+    "marketingDesc": "Receive promotional emails and special offers.",
+    "newsletter": "Newsletter",
+    "newsletterDesc": "Weekly digest of tips, news, and product updates."
+  },
+  "privacySection": {
+    "title": "Privacy & Data",
+    "desc": "Manage your data and privacy settings.",
+    "downloadData": "Download Your Data",
+    "downloadDataDesc": "Get a copy of your",
+    "downloadDataDesc2": "data.",
+    "requestDownload": "Request Download",
+    "privacyPolicy": "Privacy Policy",
+    "privacyPolicyDesc": "Review how we handle your information.",
+    "viewPolicy": "View Policy",
+    "activityVisibility": "Activity Visibility",
+    "activityVisibilityDesc": "Control who can see your activity.",
+    "manage": "Manage"
+  }
+}

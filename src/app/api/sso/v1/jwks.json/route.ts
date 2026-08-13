@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
 export async function GET() {
     try {
@@ -15,10 +15,16 @@ export async function GET() {
 
         const jwks = keys.map((k) => JSON.parse(k.jwk));
 
-        return NextResponse.json({ keys: jwks });
+        return NextResponse.json(
+            { keys: jwks },
+            {
+                headers: {
+                    "Cache-Control": "public, max-age=3600, s-maxage=3600",
+                },
+            }
+        );
     } catch (e: unknown) {
-        const em = getErrorMessage(e);
-        console.error("Error generating JWKS:", em);
+        const em = handleError(e, "Failed to execute GET");
         return NextResponse.json({ error: em }, { status: 500 });
     }
 }

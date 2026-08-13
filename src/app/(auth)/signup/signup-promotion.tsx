@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { cn } from "@/misc/utils";
+import { cn } from "@/utils/utils";
 import { useTranslations } from "@/lib/i18n/hooks";
 
-import { PROVIDERS, SOCIAL_PROVIDERS } from "@/constant/providers.constant";
+import { PROVIDERS, SOCIAL_PROVIDERS } from "@/constants/providers.constant";
 
 const ANIMATION_CONFIG: Record<PROVIDERS, { y: number[]; scale: number[]; duration: number; delay: number }> = {
   google: { y: [-4, 4, -4], scale: [0.95, 1.05, 0.95], duration: 5, delay: 0 },

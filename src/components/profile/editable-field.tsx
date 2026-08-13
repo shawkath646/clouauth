@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/misc/utils";
+import { cn } from "@/utils/utils";
 import { ChevronRight } from "lucide-react";
 import React from "react";
 

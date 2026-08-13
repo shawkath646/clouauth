@@ -12,6 +12,8 @@ export interface FullProfile {
     notifications: DBNotificationPreference;
     password: DBPasswordCredential | null;
     two_factor_methods: DBTwoFactorMethod[];
+    passkeys?: import("./auth.types").DBPasskeyCredential[];
+    recovery_codes?: { id: string; used: boolean; created_on: Date | string }[];
     sessions: DBUserSession[];
     oauth_accounts: DBOAuthAccount[];
 }

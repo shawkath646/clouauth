@@ -69,7 +69,8 @@ export class GithubOAuthProvider implements IOAuthProvider {
           },
         });
         const emailsData = await emailsResponse.json();
-        const primaryEmail = emailsData.find((e: unknown) => e.primary);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const primaryEmail = emailsData.find((e: any) => e.primary);
         if (primaryEmail) email = primaryEmail.email;
       } catch {}
     }

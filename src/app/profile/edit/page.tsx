@@ -1,13 +1,17 @@
-import { getExtendedProfile } from "@/actions/profile/get-profile";
-import { EditNameForm } from "./components/edit-name-form";
-import { EditUsernameForm } from "./components/edit-username-form";
-import { EditBioForm } from "./components/edit-bio-form";
-import { EditAddressForm } from "./components/edit-address-form";
-import { EditAvatarForm } from "./components/edit-avatar-form";
-import { EditPronounsForm } from "./components/edit-pronouns-form";
+import { getExtendedProfile } from "@/actions/profile/get-profile.actions";
+import { EditNameForm } from "@/components/profile/edit/edit-name-form";
+import { EditUsernameForm } from "@/components/profile/edit/edit-username-form";
+import { EditBioForm } from "@/components/profile/edit/edit-bio-form";
+import { EditAddressForm } from "@/components/profile/edit/edit-address-form";
+import { EditAvatarForm } from "@/components/profile/edit/edit-avatar-form";
+import { EditPronounsForm } from "@/components/profile/edit/edit-pronouns-form";
 import { redirect, notFound } from "next/navigation";
 
-export default async function ProfileEditPage({ searchParams }: PageProps<'/profile/edit'>) {
+interface ProfileEditPageProps {
+  searchParams: Promise<{ field?: string | string[] }>;
+}
+
+export default async function ProfileEditPage({ searchParams }: ProfileEditPageProps) {
   const res = await getExtendedProfile();
 
   if (!res.success || !res.data) {
@@ -43,8 +47,10 @@ export default async function ProfileEditPage({ searchParams }: PageProps<'/prof
   }
 
   return (
-    <main className="max-w-4xl mx-auto w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl">
-      {formContent}
-    </main>
+    <div className="space-y-6 max-w-3xl">
+      <main className="w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl border border-border/50 shadow-sm">
+        {formContent}
+      </main>
+    </div>
   );
 }

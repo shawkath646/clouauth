@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "title": "계정 설정"
+  },
+  "nav": {
+    "profile": "개인 정보",
+    "security": "보안",
+    "devices": "기기",
+    "applications": "애플리케이션",
+    "connected": "연결된 계정",
+    "notifications": "알림",
+    "preferences": "환경설정",
+    "privacy": "개인정보 및 데이터",
+    "danger": "위험 구역"
+  }
+}

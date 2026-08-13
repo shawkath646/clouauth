@@ -6,7 +6,7 @@ model User {
   avatar             String
   bio                String?
   date_of_birth      String?
-  is_active          Boolean                 @default(true)
+  account_status     AccountStatus?
   username_last_changed DateTime?
   pronouns           String?
   created_on         DateTime                @default(now())
@@ -52,3 +52,14 @@ model Address {
   is_default Boolean @default(false)
   user       User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
+
+model AccountStatus {
+  id          String   @id @default(cuid())
+  user_id     String   @unique
+  is_active   Boolean  @default(true)
+  self_enable Boolean  @default(false)
+  reason      String?
+  updated_on  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+

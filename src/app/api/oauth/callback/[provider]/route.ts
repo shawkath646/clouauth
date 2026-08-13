@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { getUserSession } from "@/lib/session";
 import prisma from "@/lib/prisma";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
+import crypto from "crypto";
 
 export async function GET(
   request: NextRequest,
@@ -31,7 +32,7 @@ export async function GET(
     }
 
     const savedState = request.cookies.get(`oauth_state_${provider}`)?.value;
-    if (!savedState || savedState !== state) {
+    if (!savedState || savedState.length !== state.length || !crypto.timingSafeEqual(Buffer.from(savedState), Buffer.from(state))) {
       redirectUrl.searchParams.set("error", "invalid_state");
       return NextResponse.redirect(redirectUrl);
     }
@@ -81,7 +82,7 @@ export async function GET(
         user: {
           select: {
             id: true,
-            is_active: true,
+            account_status: true,
             two_factor_methods: {
               where: { enabled: true },
               select: { id: true, type: true }
@@ -117,11 +118,16 @@ export async function GET(
               refresh_token: tokens.refreshToken,
               expires_at: tokens.expiresAt,
             }
+          },
+          account_status: {
+            create: {
+              is_active: true
+            }
           }
         },
         select: {
           id: true,
-          is_active: true,
+          account_status: true,
           two_factor_methods: {
             where: { enabled: true },
             select: { id: true, type: true }
@@ -157,8 +163,7 @@ export async function GET(
     return response;
 
   } catch (e: unknown) {
-    const em = getErrorMessage(e);
-    console.error(`OAuth callback error for ${provider}:`, em);
+    handleError(e, "Failed to execute GET");
     redirectUrl.searchParams.set("error", "connection_failed");
     return NextResponse.redirect(redirectUrl);
   }

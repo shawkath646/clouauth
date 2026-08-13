@@ -1,0 +1,21 @@
+{
+  "password": {
+    "min": "비밀번호는 최소 8자 이상이어야 합니다",
+    "max": "비밀번호는 100자를 초과할 수 없습니다",
+    "uppercase": "비밀번호에는 대문자가 하나 이상 포함되어야 합니다",
+    "lowercase": "비밀번호에는 소문자가 하나 이상 포함되어야 합니다",
+    "number": "비밀번호에는 숫자가 하나 이상 포함되어야 합니다",
+    "special": "비밀번호에는 특수 문자가 하나 이상 포함되어야 합니다",
+    "confirm": "Please confirm your new password",
+    "mismatch": "Passwords do not match"
+  },
+  "email": {
+    "required": "이메일은 필수입니다",
+    "invalid": "유효한 이메일 주소를 입력해주세요",
+    "max": "이메일은 100자를 초과할 수 없습니다"
+  },
+  "phone": {
+    "invalid": "전화번호는 E.164 형식이어야 합니다 (예: +1234567890)",
+    "max": "전화번호가 너무 깁니다"
+  }
+}

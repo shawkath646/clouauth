@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshSession } from "@/lib/session";
-import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME, SESSION_TOKEN_TTL, REFRESH_TOKEN_TTL, REFRESH_TOKEN_TTL_REMEMBER_ME } from "@/constant/session.constants";
-import { getErrorMessage } from "@/misc/utils";
+import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME, SESSION_TOKEN_TTL, REFRESH_TOKEN_TTL, REFRESH_TOKEN_TTL_REMEMBER_ME } from "@/constants/session.constants";
+import { handleError } from "@/utils/utils";
 
 // POST /v1/auth/refresh
 // Pure API endpoint - takes RT in JSON body, returns new ST/RT pair as JSON
@@ -18,11 +18,13 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({
             sessionToken: newTokens.sessionToken,
-            refreshToken: newTokens.refreshToken
+            refreshToken: newTokens.refreshToken,
+            sessionExpiresOn: newTokens.sessionExpiresOn.toISOString(),
+            refreshExpiresOn: newTokens.refreshExpiresOn.toISOString()
         });
 
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
+    const em = handleError(e, "Failed to execute POST");
         if (e instanceof Error && e.message === "replay_attack_detected") {
             return NextResponse.json({ error: em }, { status: 401 });
         }
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
 
         return response;
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
+    const em = handleError(e, "Failed to execute GET");
         // Clear cookies on failure (especially replay attack)
         const response = NextResponse.redirect(new URL("/login", request.url));
         response.cookies.delete(COOKIE_SESSION_TOKEN_NAME);

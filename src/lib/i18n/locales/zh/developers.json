@@ -1,0 +1,89 @@
+{
+  "title": "开发者集成指南",
+  "descriptionPart1": "按照此分步教程将您的应用程序集成到",
+  "descriptionPart2": "我们支持具有 PKCE 的行业标准 OAuth 2.0 授权码流程以实现安全身份验证。",
+  "steps": {
+    "step1": {
+      "title": "注册您的应用程序",
+      "description": "获取您的客户端凭据",
+      "content": {
+        "intro": "要开始与身份提供商通信，您需要注册您的应用程序。",
+        "list": {
+          "0": "登录到您的帐户。",
+          "1": {
+            "part1": "前往 个人资料仪表板 >",
+            "bold": "开发者应用程序"
+          },
+          "2": {
+            "part1": "点击",
+            "bold": "注册新应用程序"
+          },
+          "3": {
+            "part1": "填写详细信息并保存您的",
+            "code1": "Client ID",
+            "part2": "和",
+            "code2": "Client Secret"
+          }
+        }
+      }
+    },
+    "step2": {
+      "title": "配置重定向 URI",
+      "description": "保护您的身份验证流程",
+      "content": {
+        "intro": "身份提供商只会将用户重定向回您明确授权的 URL。这可防止开放重定向攻击。",
+        "list": {
+          "0": "导航到您的应用程序设置。",
+          "1": {
+            "part1": "将您的回调 URL 添加到",
+            "bold": "授权重定向 URI"
+          },
+          "2": {
+            "part1": "对于本地开发，您可以使用",
+            "code": "http://localhost:3000/..."
+          }
+        }
+      }
+    },
+    "step3": {
+      "title": "实施授权流程",
+      "description": "重定向以进行授权",
+      "content": {
+        "intro": "将用户重定向到授权端点。确保生成 PKCE code_challenge。"
+      }
+    },
+    "step4": {
+      "title": "用代码交换令牌",
+      "description": "处理回调",
+      "content": {
+        "intro": {
+          "part1": "用户进行身份验证后，他们将被重定向回您的应用并带有",
+          "code": "code",
+          "part2": "用它交换访问令牌。"
+        }
+      }
+    },
+    "step5": {
+      "title": "获取用户资料",
+      "description": "使用访问令牌",
+      "content": {
+        "intro": {
+          "part1": "现在您已经有了",
+          "code": "access_token",
+          "part2": "，使用它从 /api/sso/v1/userinfo 端点获取用户资料。"
+        }
+      }
+    },
+    "step6": {
+      "title": "处理令牌刷新",
+      "description": "保持离线访问",
+      "content": {
+        "intro": {
+          "part1": "当访问令牌过期时，使用",
+          "code": "refresh_token",
+          "part2": "请求新的访问令牌，而无需用户重新登录。"
+        }
+      }
+    }
+  }
+}

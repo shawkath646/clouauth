@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
+
+import crypto from "crypto";
 
 export async function GET(request: Request) {
     try {
         const authHeader = request.headers.get("authorization");
         const cronSecret = process.env.CRON_SECRET;
         
-        // Simple Bearer token check for the cron secret
-        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        if (!cronSecret || !authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const providedSecret = authHeader.substring(7);
+        if (providedSecret.length !== cronSecret.length || !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(cronSecret))) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -41,8 +47,7 @@ export async function GET(request: Request) {
         });
 
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
-        console.error("Cron Cleanup Error:", e);
+    const em = handleError(e, "Failed to execute GET");
         return NextResponse.json({ error: em }, { status: 500 });
     }
 }

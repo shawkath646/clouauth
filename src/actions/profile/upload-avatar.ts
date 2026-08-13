@@ -5,7 +5,7 @@ import { getUserSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
 export async function uploadCustomAvatar(formData: FormData) {
   try {
@@ -46,9 +46,8 @@ export async function uploadCustomAvatar(formData: FormData) {
             Key: oldKey,
           })
         );
-      } catch (e: unknown) {
-        const em = getErrorMessage(e);
-        console.error("Failed to delete old avatar", e);
+      } catch {
+        // Ignore deletion errors
       }
     }
 
@@ -77,8 +76,7 @@ export async function uploadCustomAvatar(formData: FormData) {
     revalidatePath("/profile");
     return { success: true, data: { avatarUrl } };
   } catch (e: unknown) {
-    const em = getErrorMessage(e);
-    console.error("Avatar upload failed:", e);
+    const em = handleError(e, "Failed to execute uploadCustomAvatar");
     return { success: false, error: em };
   }
 }

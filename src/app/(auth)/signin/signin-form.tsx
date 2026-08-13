@@ -9,14 +9,15 @@ import CodeVerification from "./code-verification";
 import PasskeyVerification from "./passkey-verification";
 import PhoneVerification from "./phone-verification";
 import AgreementStep from "./agreement-step";
+import ReenableAccountStep from "./reenable-account-step";
 import { VerificationMethod } from "@/types/auth.types";
 import { triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
 import { getAvailableMethods } from "@/actions/auth/auth.actions";
 import { toast } from "sonner";
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
-type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT";
+type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | "REENABLE_ACCOUNT";
 
 export default function SignInForm() {
   const searchParams = useSearchParams();
@@ -24,12 +25,23 @@ export default function SignInForm() {
   const [selectedMethod, setSelectedMethod] = useState<VerificationMethod | null>(null);
   const [tempSessionId, setTempSessionId] = useState<string | null>(null);
   const [availableMethods, setAvailableMethods] = useState<VerificationMethod[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [passkeyOptions, setPasskeyOptions] = useState<any>(null);
 
   useEffect(() => {
     const require2FA = searchParams.get("require2FA");
     const sessionId = searchParams.get("tempSessionId");
     const consent = searchParams.get("consent");
     const error = searchParams.get("error");
+
+    if (require2FA || sessionId || consent || error) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("require2FA");
+      url.searchParams.delete("tempSessionId");
+      url.searchParams.delete("consent");
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
 
     if (error) {
       toast.error("Error", { description: error });
@@ -55,6 +67,9 @@ export default function SignInForm() {
       setTempSessionId(result.tempSessionId || null);
       setAvailableMethods(result.methods || []);
       setCurrentStep("METHOD_SELECTION");
+    } else if (result.requireReenable) {
+      setTempSessionId(result.tempSessionId || null);
+      setCurrentStep("REENABLE_ACCOUNT");
     } else {
       // If 2FA is not required, check if we need consent or redirect
       if (result.action === "CONSENT_SCREEN") {
@@ -70,7 +85,17 @@ export default function SignInForm() {
     
     if (method.type === "code" || method.type === "totp") {
       if (tempSessionId) {
-        await triggerVerificationMethod(tempSessionId, "email");
+        await triggerVerificationMethod(tempSessionId, method.type === "totp" ? "totp" : "email");
+      }
+    } else if (method.type === "passkey") {
+      if (tempSessionId) {
+        const res = await triggerVerificationMethod(tempSessionId, "passkey");
+        if (res.success && "payload" in res) {
+          setPasskeyOptions(res.payload);
+        } else {
+          toast.error("Error", { description: res.error || "Failed to trigger passkey verification" });
+          return;
+        }
       }
     }
     
@@ -79,7 +104,9 @@ export default function SignInForm() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleVerificationComplete = (result: any) => {
-    if (result.action === "CONSENT_SCREEN") {
+    if (result.requireReenable) {
+      setCurrentStep("REENABLE_ACCOUNT");
+    } else if (result.action === "CONSENT_SCREEN") {
       setCurrentStep("AGREEMENT");
     } else {
       window.location.href = result.redirectUrl || "/profile";
@@ -99,10 +126,10 @@ export default function SignInForm() {
         setCurrentStep("CREDENTIALS");
       }
     } catch (e: unknown) {
-      const em = getErrorMessage(e);
-      toast.error("Error", { description: em });
-      setCurrentStep("CREDENTIALS");
-    } finally {
+        const em = handleError(e, true);
+        toast.error("Error", { description: em });
+        setCurrentStep("CREDENTIALS");
+      } finally {
       setIsGranting(false);
     }
   };
@@ -120,19 +147,21 @@ export default function SignInForm() {
         {currentStep === "METHOD_SELECTION" && (
           <VerificationMethodStep
             onSelectMethod={handleMethodSelect}
-            availableMethods={availableMethods} // Pass methods down if the component accepts them
+            availableMethods={availableMethods}
           />
         )}
         {currentStep === "VERIFICATION" && (selectedMethod?.type === "code" || selectedMethod?.type === "totp") && (
           <CodeVerification 
             onComplete={handleVerificationComplete} 
             tempSessionId={tempSessionId}
+            methodType={selectedMethod.type}
           />
         )}
         {currentStep === "VERIFICATION" && selectedMethod?.type === "passkey" && (
           <PasskeyVerification 
             onComplete={handleVerificationComplete} 
             tempSessionId={tempSessionId}
+            options={passkeyOptions}
           />
         )}
         {currentStep === "VERIFICATION" && selectedMethod?.type === "phone" && (
@@ -147,6 +176,9 @@ export default function SignInForm() {
             onCancel={handleAgreementCancel}
             isLoading={isGranting}
           />
+        )}
+        {currentStep === "REENABLE_ACCOUNT" && (
+          <ReenableAccountStep tempSessionId={tempSessionId} />
         )}
       </AnimatePresence>
     </div>

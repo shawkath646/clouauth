@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import prisma from "@/lib/prisma";
-import { getErrorMessage } from "@/misc/utils";
-
-const getSecret = () => new TextEncoder().encode(process.env.JWT_SECRET || "default_development_secret_only");
+import { handleError } from "@/utils/utils";
+import { getSecret } from "@/lib/jwt-secret";
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,6 +15,7 @@ export async function GET(request: NextRequest) {
         const code_challenge = searchParams.get("code_challenge");
         const code_challenge_method = searchParams.get("code_challenge_method");
         const scope = searchParams.get("scope");
+        const nonce = searchParams.get("nonce");
 
         if (!client_id || !redirect_uri || !response_type) {
             return NextResponse.json({ error: "missing_required_parameters" }, { status: 400 });
@@ -34,9 +34,9 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "invalid_client" }, { status: 401 });
         }
 
-        // Validate redirect_uri (in production, ensure it matches registered URIs)
+        // Validate redirect_uri
         const allowedUris = JSON.parse(clientApp.redirect_uris || "[]");
-        if (!allowedUris.includes(redirect_uri) && process.env.NODE_ENV === "production") {
+        if (!allowedUris.includes(redirect_uri)) {
             return NextResponse.json({ error: "invalid_redirect_uri" }, { status: 400 });
         }
 
@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
             code_challenge,
             code_challenge_method,
             scope,
+            nonce,
             type: "oauth_auth_request"
         })
         .setProtectedHeader({ alg: "HS256" })
@@ -69,8 +70,7 @@ export async function GET(request: NextRequest) {
         return response;
 
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
-        console.error("Authorize Endpoint Error:", e);
+    const em = handleError(e, "Failed to execute GET");
         return NextResponse.json({ error: em }, { status: 500 });
     }
 }

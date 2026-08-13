@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@/misc/utils";
+import { handleError } from "@/utils/utils";
 
 export type TemplateId =
   | 'welcome'
@@ -47,8 +47,7 @@ export async function sendEmail({ to, subject, templateId, data }: EmailPayload)
     const result = await response.json();
     return result.success;
   } catch (e: unknown) {
-    const em = getErrorMessage(e);
-    console.error("Error sending email via external API:", e);
+    handleError(e, "Failed to execute sendEmail");
     return false;
   }
 }

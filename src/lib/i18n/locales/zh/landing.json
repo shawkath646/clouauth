@@ -1,0 +1,156 @@
+{
+  "navigation": {
+    "developers": "开发者",
+    "documentation": "文档",
+    "toggleTheme": "切换主题"
+  },
+  "hero": {
+    "subtitle": "身份验证平台，专为",
+    "titleLine1": "一个账户。",
+    "titleLine2": "所有的",
+    "titleLine2Service": "服务。",
+    "description": "安全认证与身份管理服务，专为",
+    "descriptionSuffix": "设计，支持现代应用程序的OAuth 2.0和OpenID Connect。",
+    "createAccount": "创建账户",
+    "signIn": "登录",
+    "viewApps": "查看应用与服务"
+  },
+  "trustSection": {
+    "title": "核心信任",
+    "description": "ClouAuth建立在安全、隐私和无缝用户体验的基础上，确保您的身份始终受到保护。",
+    "features": {
+      "secureByDesign": {
+        "title": "安全设计",
+        "description": "使用现代安全实践进行强身份验证，保护账户免受未经授权的访问。"
+      },
+      "unifiedIdentity": {
+        "title": "统一身份",
+        "description": "在所有CloudBurst服务中使用一个账户。通过单一安全的身份简化您的数字生活。"
+      },
+      "fastAuth": {
+        "title": "快速验证",
+        "description": "基于高性能基础设施构建的快速、可靠且无缝的登录体验。"
+      },
+      "privacyFocused": {
+        "title": "注重隐私",
+        "description": "您的身份和账户将受到您的严格控制，数据政策透明。"
+      }
+    }
+  },
+  "featureGrid": {
+    "title": "平台功能",
+    "description": "安全管理身份和将身份验证集成到您自己的应用程序中所需的一切。",
+    "capabilities": {
+      "accountManagement": {
+        "title": "账户管理",
+        "description": "在中央中心管理您的身份、配置文件、首选项和安全设置。"
+      },
+      "sessionManagement": {
+        "title": "会话管理",
+        "description": "实时审查和管理您所有受信任设备上的活动会话。"
+      },
+      "mfa": {
+        "title": "多重身份验证",
+        "description": "使用行业标准的2FA方法为敏感账户提供额外的保护层。"
+      },
+      "oauth": {
+        "title": "OAuth 2.0 集成",
+        "description": "允许第三方应用程序通过ClouAuth平台安全地验证用户。"
+      },
+      "oidc": {
+        "title": "OpenID Connect",
+        "description": "建立在OAuth 2.0之上，用于强大应用程序集成的现代标准身份层。"
+      },
+      "passkey": {
+        "title": "Passkey 支持",
+        "description": "使用现代WebAuthn标准实现无密码认证，以获得极致的安全性。"
+      }
+    }
+  },
+  "developerSection": {
+    "badge": "开发者生态系统",
+    "title": "为开发者而建",
+    "description": "ClouAuth不仅仅是一个账户门户。它是一个综合的身份验证平台，旨在通过标准协议与您的应用程序无缝集成。",
+    "features": {
+      "oauthOidc": {
+        "title": "OAuth 2.0 & OpenID Connect",
+        "description": "标准化、安全的授权流程。"
+      },
+      "apiSupport": {
+        "title": "未来的 API 支持",
+        "description": "强大的 REST API 和 SDK 即将推出。"
+      }
+    },
+    "developerGuide": "开发者指南",
+    "apiReference": "API 参考"
+  },
+  "securitySection": {
+    "title": "不折不扣的安全",
+    "description": "我们专注于通过透明的行业标准安全实施来建立信任。ClouAuth保护您的用户，让您可以专注于构建您的应用程序。",
+    "features": {
+      "encryptedComm": {
+        "title": "加密通信",
+        "description": "端到端加密和严格的HTTPS强制执行，确保您的数据在传输过程中的安全。"
+      },
+      "sessionProtection": {
+        "title": "会话保护",
+        "description": "先进的启发式和设备指纹技术可检测并防止未经授权的会话劫持。"
+      },
+      "identityVerification": {
+        "title": "身份验证",
+        "description": "强大的电子邮件验证、恢复流程和账户保护机制。"
+      },
+      "modernArchitecture": {
+        "title": "现代架构",
+        "description": "建立在经过实战检验的标准和隐私至上的架构模式之上。"
+      }
+    },
+    "statusSecure": "系统状态：安全"
+  },
+  "futureVision": {
+    "titleLine1": "一个身份。",
+    "titleLine2": "多个应用。",
+    "descriptionPart1": "auth 旨在成为不断发展的",
+    "descriptionPart2": "生态系统的中央认证平台，允许原生服务和第三方应用程序共享一个安全、标准化的身份。"
+  },
+  "callToAction": {
+    "loggedIn": {
+      "title": "探索",
+      "titleSuffix": "应用程序",
+      "description": "有了这个账户，您可以无缝使用应用程序并毫无问题地同步它们。",
+      "button": "转到个人资料"
+    },
+    "loggedOut": {
+      "title": "准备好开始了吗？",
+      "descriptionPart1": "立即创建您的安全身份，或探索文档以了解如何将",
+      "descriptionPart2": "身份验证集成到您的下一个项目中。",
+      "createAccount": "创建账户",
+      "signIn": "登录",
+      "documentation": "文档"
+    }
+  },
+  "footer": {
+    "brandDescription": "为所有的",
+    "brandDescriptionSuffix": "服务提供一个安全的身份，并支持第三方应用程序。",
+    "sections": {
+      "platform": "平台",
+      "developers": "开发者",
+      "company": "公司"
+    },
+    "links": {
+      "features": "功能",
+      "security": "安全",
+      "status": "状态",
+      "pricing": "定价",
+      "documentation": "文档",
+      "oauth2": "OAuth 2.0",
+      "oidc": "OpenID Connect",
+      "apiReference": "API 参考",
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款",
+      "support": "支持"
+    },
+    "copyright": "© {{year}} clouburstlab。保留所有权利。",
+    "developedBy": "开发由"
+  }
+}

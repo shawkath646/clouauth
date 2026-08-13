@@ -1,20 +1,11 @@
-import { ProfileShell } from "@/components/profile/profile-shell";
+import { PersonalInfoSection } from "@/components/profile/personal-info-section";
+import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Account Settings",
-  description: "Manage your CloudburstLab account settings, privacy, and security.",
-  alternates: {
-    canonical: "/profile",
-  },
-  robots: {
-    index: false, // Do not index private authenticated pages
-    follow: false,
-  },
+  title: "Personal Info - Account Settings",
 };
-
-import { getFullProfile } from "@/actions/profile/get-profile";
-import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
   const result = await getFullProfile();
@@ -23,5 +14,5 @@ export default async function ProfilePage() {
     redirect("/signin");
   }
 
-  return <ProfileShell profile={result.data} />;
+  return <PersonalInfoSection profile={result.data} />;
 }

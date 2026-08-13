@@ -1,0 +1,16 @@
+{
+  "layout": {
+    "title": "账户设置"
+  },
+  "nav": {
+    "profile": "个人信息",
+    "security": "安全",
+    "devices": "设备",
+    "applications": "应用程序",
+    "connected": "已连接账户",
+    "notifications": "通知",
+    "preferences": "偏好设置",
+    "privacy": "隐私与数据",
+    "danger": "危险区域"
+  }
+}

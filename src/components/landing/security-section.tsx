@@ -2,31 +2,19 @@
 
 import { motion } from "framer-motion";
 import { ShieldCheck, Network, LockKeyhole, UserCheck } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/hooks";
 
-const securityFeatures = [
-  {
-    icon: LockKeyhole,
-    title: "Encrypted Communication",
-    description: "End-to-end encryption and strict HTTPS enforcement ensure your data is secure in transit."
-  },
-  {
-    icon: Network,
-    title: "Session Protection",
-    description: "Advanced heuristics and device fingerprinting to detect and prevent unauthorized session hijacking."
-  },
-  {
-    icon: UserCheck,
-    title: "Identity Verification",
-    description: "Robust email verification, recovery flows, and account protection mechanisms."
-  },
-  {
-    icon: ShieldCheck,
-    title: "Modern Architecture",
-    description: "Built on battle-tested standards and privacy-first architectural patterns."
-  }
+const securityFeaturesKeys = [
+  { icon: LockKeyhole, key: "encryptedComm" },
+  { icon: Network, key: "sessionProtection" },
+  { icon: UserCheck, key: "identityVerification" },
+  { icon: ShieldCheck, key: "modernArchitecture" }
 ];
 
+
 export function SecuritySection() {
+  const { t } = useTranslations("landing");
+
   return (
     <section className="py-20 md:py-32" id="security">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -40,14 +28,14 @@ export function SecuritySection() {
             className="lg:w-1/2"
           >
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">
-              Security Without Compromise
+              {t('securitySection.title')}
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              We focus on building trust through transparent, industry-standard security implementations. Clou Auth protects your users so you can focus on building your application.
+              {t('securitySection.description')}
             </p>
 
             <div className="space-y-6">
-              {securityFeatures.map((feature, idx) => (
+              {securityFeaturesKeys.map((feature, idx) => (
                 <div key={idx} className="flex gap-4">
                   <div className="flex-shrink-0 mt-1">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -55,8 +43,8 @@ export function SecuritySection() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
+                    <h3 className="font-semibold text-lg">{t(`securitySection.features.${feature.key}.title`)}</h3>
+                    <p className="text-muted-foreground">{t(`securitySection.features.${feature.key}.description`)}</p>
                   </div>
                 </div>
               ))}
@@ -78,7 +66,7 @@ export function SecuritySection() {
                 <div className="bg-background border rounded-xl p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-sm font-medium">System Status: Secure</span>
+                    <span className="text-sm font-medium">{t('securitySection.statusSecure')}</span>
                   </div>
                 </div>
               </div>

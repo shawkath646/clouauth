@@ -1,0 +1,89 @@
+{
+  "title": "Guía de Integración para Desarrolladores",
+  "descriptionPart1": "Siga este tutorial paso a paso para integrar sus aplicaciones con",
+  "descriptionPart2": "Admitimos el flujo de Código de Autorización OAuth 2.0 estándar de la industria con PKCE para una autenticación segura.",
+  "steps": {
+    "step1": {
+      "title": "Registre su Aplicación",
+      "description": "Obtenga sus credenciales de cliente",
+      "content": {
+        "intro": "Para comenzar a comunicarse con el proveedor de identidad, necesita registrar su aplicación.",
+        "list": {
+          "0": "Inicie sesión en su cuenta.",
+          "1": {
+            "part1": "Vaya a Panel de Perfil >",
+            "bold": "Aplicaciones de Desarrollador"
+          },
+          "2": {
+            "part1": "Haga clic en",
+            "bold": "Registrar Nueva Aplicación"
+          },
+          "3": {
+            "part1": "Complete los detalles y guarde su",
+            "code1": "Client ID",
+            "part2": "y",
+            "code2": "Client Secret"
+          }
+        }
+      }
+    },
+    "step2": {
+      "title": "Configure las URIs de Redirección",
+      "description": "Asegure su flujo de autenticación",
+      "content": {
+        "intro": "El proveedor de identidad solo redirigirá a los usuarios a las URLs que usted autorice explícitamente. Esto evita ataques de redirección abierta.",
+        "list": {
+          "0": "Navegue a la configuración de su aplicación.",
+          "1": {
+            "part1": "Agregue su URL de callback en",
+            "bold": "URIs de Redirección Autorizadas"
+          },
+          "2": {
+            "part1": "Para el desarrollo local, puede usar",
+            "code": "http://localhost:3000/..."
+          }
+        }
+      }
+    },
+    "step3": {
+      "title": "Implemente el Flujo de Autorización",
+      "description": "Redirija para autorizar",
+      "content": {
+        "intro": "Redirija al usuario al endpoint de autorización. Asegúrese de generar un code_challenge PKCE."
+      }
+    },
+    "step4": {
+      "title": "Intercambie el Código por un Token",
+      "description": "Maneje el callback",
+      "content": {
+        "intro": {
+          "part1": "Una vez que el usuario se autentica, es redirigido de vuelta a su aplicación con un",
+          "code": "code",
+          "part2": "Intercámbielo por tokens de acceso."
+        }
+      }
+    },
+    "step5": {
+      "title": "Obtenga el Perfil del Usuario",
+      "description": "Use el token de acceso",
+      "content": {
+        "intro": {
+          "part1": "Ahora que tiene el",
+          "code": "access_token",
+          "part2": "úselo para obtener el perfil del usuario desde el endpoint /api/sso/v1/userinfo."
+        }
+      }
+    },
+    "step6": {
+      "title": "Maneje la Actualización del Token",
+      "description": "Mantenga el acceso sin conexión",
+      "content": {
+        "intro": {
+          "part1": "Cuando el token de acceso expire, use el",
+          "code": "refresh_token",
+          "part2": "para solicitar un nuevo token de acceso sin requerir que el usuario inicie sesión nuevamente."
+        }
+      }
+    }
+  }
+}

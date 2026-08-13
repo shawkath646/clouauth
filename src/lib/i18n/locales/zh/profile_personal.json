@@ -1,0 +1,112 @@
+{
+  "editName": {
+    "title": "编辑姓名",
+    "desc": "更新您的名字和姓氏。",
+    "firstLabel": "名字",
+    "lastLabel": "姓氏",
+    "cancel": "取消",
+    "save": "保存更改"
+  },
+  "editUsername": {
+    "title": "编辑用户名",
+    "desc": "更改您唯一的用户名。这是您公开显示的名称。",
+    "label": "用户名",
+    "cancel": "取消",
+    "save": "保存更改",
+    "lockedMsg": "您最近更改了用户名。您必须再等待 {days} 天才能再次更改。",
+    "warningMsg": "请注意：一旦更改用户名，您将在 60 天内无法再次更改。"
+  },
+  "editBio": {
+    "title": "编辑个人简介",
+    "desc": "写一段关于您自己的简短传记。",
+    "label": "个人简介",
+    "placeholder": "告诉我们一些关于您自己的事情",
+    "cancel": "取消",
+    "save": "保存更改"
+  },
+  "editPronouns": {
+    "title": "编辑代词",
+    "desc": "让他人知道如何称呼您。",
+    "label": "代词",
+    "placeholder": "选择您的代词",
+    "cancel": "取消",
+    "save": "保存更改"
+  },
+  "editAddress": {
+    "title": "编辑地址",
+    "desc": "更新您的主要账单/首选邮寄地址。",
+    "addr1": "地址行 1",
+    "addr2": "地址行 2（可选）",
+    "city": "城市",
+    "state": "州/省",
+    "zip": "邮政编码",
+    "country": "国家",
+    "cancel": "取消",
+    "save": "保存更改"
+  },
+  "infoSection": {
+    "title": "个人信息",
+    "desc": "管理您的基本帐户详细信息和个性化设置。",
+    "profilePic": "头像",
+    "fullName": "全名",
+    "username": "用户名",
+    "pronouns": "代词",
+    "email": "电子邮件地址",
+    "verified": "已验证",
+    "unverified": "未验证",
+    "phone": "电话号码",
+    "phoneAdded": "已添加验证电话",
+    "address": "地址",
+    "bio": "个人简介",
+    "notProvided": "未提供。",
+    "joined": "加入日期",
+    "notSet": "未设置"
+  },
+  "preferencesSection": {
+    "title1": "外观",
+    "desc1": "自定义",
+    "desc1b": "在您眼中的样子。",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "系统",
+    "title2": "语言和地区",
+    "desc2": "设置您的首选语言和区域设置。",
+    "langTitle": "语言",
+    "langDesc": "选择您的语言",
+    "langPlaceholder": "选择语言",
+    "tzTitle": "时区",
+    "tzDesc": "选择您的当地时间",
+    "tzPlaceholder": "选择时区",
+    "dateFormatTitle": "日期格式",
+    "dateFormatDesc": "日期的显示方式",
+    "dateFormatPlaceholder": "选择格式"
+  },
+  "notificationsSection": {
+    "title": "通知首选项",
+    "desc": "选择您希望如何接收有关帐户活动的通知。",
+    "securityAlerts": "安全警报",
+    "securityAlertsDesc": "在出现可疑登录和密码泄露时获得通知。",
+    "loginAlerts": "登录通知",
+    "loginAlertsDesc": "在新设备登录时接收电子邮件。",
+    "productUpdates": "产品更新",
+    "productUpdatesDesc": "了解来自的新功能和工具",
+    "marketing": "营销电子邮件",
+    "marketingDesc": "接收促销电子邮件和特别优惠。",
+    "newsletter": "时事通讯",
+    "newsletterDesc": "每周获取提示、新闻和产品更新摘要。"
+  },
+  "privacySection": {
+    "title": "隐私与数据",
+    "desc": "管理您的数据和隐私设置。",
+    "downloadData": "下载您的数据",
+    "downloadDataDesc": "获取您的",
+    "downloadDataDesc2": "数据副本。",
+    "requestDownload": "请求下载",
+    "privacyPolicy": "隐私政策",
+    "privacyPolicyDesc": "查看我们如何处理您的信息。",
+    "viewPolicy": "查看政策",
+    "activityVisibility": "活动可见性",
+    "activityVisibilityDesc": "控制谁可以查看您的活动。",
+    "manage": "管理"
+  }
+}

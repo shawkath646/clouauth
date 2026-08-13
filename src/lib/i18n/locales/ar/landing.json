@@ -1,0 +1,156 @@
+{
+  "navigation": {
+    "developers": "المطورون",
+    "documentation": "التوثيق",
+    "toggleTheme": "تبديل المظهر"
+  },
+  "hero": {
+    "subtitle": "منصة الهوية لـ",
+    "titleLine1": "حساب واحد.",
+    "titleLine2": "كل خدمة من",
+    "titleLine2Service": ".",
+    "description": "مصادقة آمنة وإدارة هوية لـ",
+    "descriptionSuffix": "، مع دعم OAuth 2.0 و OpenID Connect للتطبيقات الحديثة.",
+    "createAccount": "إنشاء حساب",
+    "signIn": "تسجيل الدخول",
+    "viewApps": "عرض التطبيقات والخدمات"
+  },
+  "trustSection": {
+    "title": "الثقة في الصميم",
+    "description": "تم بناء ClouAuth على أساس من الأمان والخصوصية وتجربة مستخدم سلسة، مما يضمن حماية هويتك دائمًا.",
+    "features": {
+      "secureByDesign": {
+        "title": "آمن حسب التصميم",
+        "description": "مصادقة قوية مع ممارسات الأمان الحديثة للحفاظ على الحسابات في مأمن من الوصول غير المصرح به."
+      },
+      "unifiedIdentity": {
+        "title": "هوية موحدة",
+        "description": "حساب واحد عبر جميع خدمات CloudBurst. بسّط حياتك الرقمية بهوية واحدة وآمنة."
+      },
+      "fastAuth": {
+        "title": "مصادقة سريعة",
+        "description": "تجارب تسجيل دخول سريعة وموثوقة وسلسة مبنية على بنية تحتية عالية الأداء."
+      },
+      "privacyFocused": {
+        "title": "التركيز على الخصوصية",
+        "description": "تظل هويتك وحسابك تحت سيطرتك الصارمة، مع سياسات بيانات شفافة."
+      }
+    }
+  },
+  "featureGrid": {
+    "title": "قدرات المنصة",
+    "description": "كل ما تحتاجه لإدارة هويتك بأمان ودمج المصادقة في تطبيقاتك الخاصة.",
+    "capabilities": {
+      "accountManagement": {
+        "title": "إدارة الحساب",
+        "description": "أدر هويتك وملفك الشخصي وتفضيلاتك وإعدادات الأمان من مركز مركزي."
+      },
+      "sessionManagement": {
+        "title": "إدارة الجلسات",
+        "description": "راجع وأدر الجلسات النشطة عبر جميع أجهزتك الموثوقة في الوقت الفعلي."
+      },
+      "mfa": {
+        "title": "المصادقة متعددة العوامل",
+        "description": "طبقات حماية إضافية للحسابات الحساسة باستخدام طرق 2FA المتوافقة مع معايير الصناعة."
+      },
+      "oauth": {
+        "title": "تكامل OAuth 2.0",
+        "description": "اسمح لتطبيقات الطرف الثالث بمصادقة المستخدمين بأمان من خلال منصة ClouAuth."
+      },
+      "oidc": {
+        "title": "OpenID Connect",
+        "description": "طبقة هوية حديثة وقياسية مبنية فوق OAuth 2.0 لتكامل تطبيقات قوي."
+      },
+      "passkey": {
+        "title": "دعم مفتاح المرور",
+        "description": "مصادقة بدون كلمة مرور باستخدام معايير WebAuthn الحديثة لتوفير أقصى درجات الأمان."
+      }
+    }
+  },
+  "developerSection": {
+    "badge": "بيئة المطورين",
+    "title": "صُمم للمطورين",
+    "description": "ليس ClouAuth مجرد بوابة حساب. بل هو منصة مصادقة شاملة مصممة للتكامل بسلاسة مع تطبيقاتك باستخدام بروتوكولات قياسية.",
+    "features": {
+      "oauthOidc": {
+        "title": "OAuth 2.0 و OpenID Connect",
+        "description": "تدفقات تفويض موحدة وآمنة."
+      },
+      "apiSupport": {
+        "title": "دعم API المستقبلي",
+        "description": "واجهات برمجة تطبيقات REST قوية وحزم تطوير برمجيات قريبًا."
+      }
+    },
+    "developerGuide": "دليل المطور",
+    "apiReference": "مرجع API"
+  },
+  "securitySection": {
+    "title": "أمان بلا مساومة",
+    "description": "نحن نركز على بناء الثقة من خلال تطبيقات أمان شفافة ومعتمدة. يحمي ClouAuth مستخدميك حتى تتمكن من التركيز على بناء تطبيقك.",
+    "features": {
+      "encryptedComm": {
+        "title": "اتصال مشفر",
+        "description": "التشفير من طرف إلى طرف والتطبيق الصارم لـ HTTPS يضمن أمان بياناتك أثناء النقل."
+      },
+      "sessionProtection": {
+        "title": "حماية الجلسة",
+        "description": "استدلاليات متقدمة وبصمة الجهاز لاكتشاف ومنع اختطاف الجلسات غير المصرح به."
+      },
+      "identityVerification": {
+        "title": "التحقق من الهوية",
+        "description": "التحقق القوي من البريد الإلكتروني وتدفقات الاسترداد وآليات حماية الحساب."
+      },
+      "modernArchitecture": {
+        "title": "بنية حديثة",
+        "description": "مبني على معايير تم اختبارها وأنماط معمارية تركز على الخصوصية أولاً."
+      }
+    },
+    "statusSecure": "حالة النظام: آمن"
+  },
+  "futureVision": {
+    "titleLine1": "هوية واحدة.",
+    "titleLine2": "تطبيقات متعددة.",
+    "descriptionPart1": "تم تصميم auth ليصبح منصة المصادقة المركزية لنظام",
+    "descriptionPart2": "البيئي المتنامي، مما يتيح لكل من الخدمات الأصلية وتطبيقات الطرف الثالث مشاركة هوية آمنة وموحدة."
+  },
+  "callToAction": {
+    "loggedIn": {
+      "title": "استكشف تطبيقات",
+      "titleSuffix": "",
+      "description": "مع هذا الحساب، يمكنك استخدام التطبيقات بسلاسة ومزامنتها دون أي مشكلة.",
+      "button": "الذهاب إلى الملف الشخصي"
+    },
+    "loggedOut": {
+      "title": "هل أنت مستعد للبدء؟",
+      "descriptionPart1": "قم بإنشاء هويتك الآمنة اليوم، أو استكشف التوثيق لمعرفة كيفية دمج مصادقة",
+      "descriptionPart2": "في مشروعك القادم.",
+      "createAccount": "إنشاء حساب",
+      "signIn": "تسجيل الدخول",
+      "documentation": "التوثيق"
+    }
+  },
+  "footer": {
+    "brandDescription": "هوية واحدة آمنة لكل خدمة من خدمات",
+    "brandDescriptionSuffix": "، مع دعم لتطبيقات الطرف الثالث.",
+    "sections": {
+      "platform": "المنصة",
+      "developers": "المطورون",
+      "company": "الشركة"
+    },
+    "links": {
+      "features": "الميزات",
+      "security": "الأمان",
+      "status": "الحالة",
+      "pricing": "الأسعار",
+      "documentation": "التوثيق",
+      "oauth2": "OAuth 2.0",
+      "oidc": "OpenID Connect",
+      "apiReference": "مرجع API",
+      "privacyPolicy": "سياسة الخصوصية",
+      "termsOfService": "شروط الخدمة",
+      "support": "الدعم"
+    },
+    "copyright": "© {{year}} clouburstlab. جميع الحقوق محفوظة.",
+    "developedBy": "تطوير بواسطة"
+  }
+}

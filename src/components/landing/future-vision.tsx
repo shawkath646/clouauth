@@ -2,12 +2,16 @@
 
 import { motion } from "framer-motion";
 import { Globe2 } from "lucide-react";
+import { BrandName } from "@/components/ui/brand-name";
+import { useTranslations } from "@/lib/i18n/hooks";
 
 export function FutureVision() {
+  const { t } = useTranslations("landing");
+
   return (
     <section className="py-24 bg-zinc-950 text-white dark:bg-background relative overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-        <Globe2 className="w-[800px] h-[800px]" strokeWidth={0.5} />
+        <Globe2 className="w-200 h-200" strokeWidth={0.5} />
       </div>
 
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
@@ -19,11 +23,11 @@ export function FutureVision() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">
-              One identity.<br />Many applications.
+              {t('futureVision.titleLine1')}<br />{t('futureVision.titleLine2')}
             </h2>
             
             <p className="text-xl text-zinc-400 dark:text-muted-foreground leading-relaxed">
-              Clou Auth is designed to become the central authentication platform for the growing CloudBurst ecosystem, allowing both native services and third-party applications to share a secure, standardized identity.
+              <BrandName /> {t('futureVision.descriptionPart1')} <BrandName /> {t('futureVision.descriptionPart2')}
             </p>
           </motion.div>
         </div>

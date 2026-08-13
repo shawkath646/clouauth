@@ -1,0 +1,112 @@
+{
+  "editName": {
+    "title": "Editar Nombre",
+    "desc": "Actualiza tu nombre y apellido.",
+    "firstLabel": "Nombre",
+    "lastLabel": "Apellido",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios"
+  },
+  "editUsername": {
+    "title": "Editar Nombre de Usuario",
+    "desc": "Cambia tu nombre de usuario único. Así es como apareces públicamente.",
+    "label": "Nombre de Usuario",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios",
+    "lockedMsg": "Recientemente cambiaste tu nombre de usuario. Debes esperar {days} días más antes de poder cambiarlo de nuevo.",
+    "warningMsg": "Ten en cuenta: Una vez que cambies tu nombre de usuario, no podrás volver a cambiarlo durante 60 días."
+  },
+  "editBio": {
+    "title": "Editar Biografía",
+    "desc": "Escribe una breve biografía sobre ti.",
+    "label": "Biografía",
+    "placeholder": "Cuéntanos un poco sobre ti",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios"
+  },
+  "editPronouns": {
+    "title": "Editar Pronombres",
+    "desc": "Haz saber a los demás cómo referirse a ti.",
+    "label": "Pronombres",
+    "placeholder": "Selecciona tus pronombres",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios"
+  },
+  "editAddress": {
+    "title": "Editar Dirección",
+    "desc": "Actualiza tu dirección principal de facturación/envío.",
+    "addr1": "Línea de Dirección 1",
+    "addr2": "Línea de Dirección 2 (Opcional)",
+    "city": "Ciudad",
+    "state": "Estado / Provincia",
+    "zip": "Código Postal",
+    "country": "País",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios"
+  },
+  "infoSection": {
+    "title": "Información Personal",
+    "desc": "Administre los detalles fundamentales de su cuenta y la personalización.",
+    "profilePic": "Foto de Perfil",
+    "fullName": "Nombre Completo",
+    "username": "Nombre de Usuario",
+    "pronouns": "Pronombres",
+    "email": "Dirección de Correo Electrónico",
+    "verified": "Verificado",
+    "unverified": "No Verificado",
+    "phone": "Número de Teléfono",
+    "phoneAdded": "Teléfono verificado añadido",
+    "address": "Dirección",
+    "bio": "Biografía",
+    "notProvided": "No proporcionado.",
+    "joined": "Fecha de Registro",
+    "notSet": "No establecido"
+  },
+  "preferencesSection": {
+    "title1": "Apariencia",
+    "desc1": "Personalice cómo se ve",
+    "desc1b": "para usted.",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema",
+    "title2": "Idioma y Región",
+    "desc2": "Configure su idioma y preferencias regionales.",
+    "langTitle": "Idioma",
+    "langDesc": "Seleccione su idioma",
+    "langPlaceholder": "Seleccionar Idioma",
+    "tzTitle": "Zona Horaria",
+    "tzDesc": "Seleccione su hora local",
+    "tzPlaceholder": "Seleccionar Zona Horaria",
+    "dateFormatTitle": "Formato de Fecha",
+    "dateFormatDesc": "Cómo se muestran las fechas",
+    "dateFormatPlaceholder": "Seleccionar Formato"
+  },
+  "notificationsSection": {
+    "title": "Preferencias de Notificación",
+    "desc": "Elija cómo desea ser notificado sobre la actividad en su cuenta.",
+    "securityAlerts": "Alertas de Seguridad",
+    "securityAlertsDesc": "Reciba notificaciones sobre inicios de sesión sospechosos y contraseñas comprometidas.",
+    "loginAlerts": "Notificaciones de Inicio de Sesión",
+    "loginAlertsDesc": "Reciba un correo electrónico cuando inicie sesión un nuevo dispositivo.",
+    "productUpdates": "Actualizaciones de Producto",
+    "productUpdatesDesc": "Entérese de nuevas funciones y herramientas de",
+    "marketing": "Correos de Marketing",
+    "marketingDesc": "Reciba correos promocionales y ofertas especiales.",
+    "newsletter": "Boletín Informativo",
+    "newsletterDesc": "Resumen semanal de consejos, noticias y actualizaciones."
+  },
+  "privacySection": {
+    "title": "Privacidad y Datos",
+    "desc": "Administre sus datos y configuración de privacidad.",
+    "downloadData": "Descargar sus Datos",
+    "downloadDataDesc": "Obtenga una copia de sus datos de",
+    "downloadDataDesc2": ".",
+    "requestDownload": "Solicitar Descarga",
+    "privacyPolicy": "Política de Privacidad",
+    "privacyPolicyDesc": "Revise cómo manejamos su información.",
+    "viewPolicy": "Ver Política",
+    "activityVisibility": "Visibilidad de Actividad",
+    "activityVisibilityDesc": "Controle quién puede ver su actividad.",
+    "manage": "Administrar"
+  }
+}

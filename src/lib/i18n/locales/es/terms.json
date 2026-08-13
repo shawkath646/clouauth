@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "title": "Terms of Service",
+    "description": "Read the Terms of Service for using ClouAuth's identity and authentication platform."
+  },
+  "header": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated: August 2026"
+  },
+  "sections": {
+    "intro": {
+      "title": "1. Acceptance of Terms",
+      "content": "By accessing or using the ClouAuth platform, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+    },
+    "account": {
+      "title": "2. Account Registration and Security",
+      "content": "You must provide accurate and complete information when registering an account. You are responsible for maintaining the confidentiality of your password, passkeys, and backup codes. You agree to notify us immediately of any unauthorized use of your account."
+    },
+    "developer": {
+      "title": "3. Developer Applications and API Usage",
+      "content": "If you register third-party developer applications to use our OAuth 2.0 / OIDC endpoints, you agree to:",
+      "list": [
+        "Provide accurate details regarding your application's purpose and redirect URIs.",
+        "Securely store your Client Secret and never expose it in public repositories or client-side code.",
+        "Respect rate limits and fair usage policies for our API endpoints.",
+        "Ensure your application complies with all applicable privacy laws regarding user data you request access to."
+      ]
+    },
+    "acceptableUse": {
+      "title": "4. Acceptable Use",
+      "content": "You agree not to use ClouAuth for any unlawful purposes or to conduct any activities that may harm, disrupt, or impair our servers, networks, or the experience of other users. This includes, but is not limited to, automated scraping, brute-force attacks, or distributing malware."
+    },
+    "termination": {
+      "title": "5. Termination",
+      "content": "We reserve the right to suspend or terminate your account and access to our services at our sole discretion, without notice, for conduct that we believe violates these Terms of Service or is harmful to other users, us, or third parties."
+    },
+    "changes": {
+      "title": "6. Changes to Terms",
+      "content": "We may modify these Terms of Service from time to time. We will notify you of any significant changes by posting the new terms on this page and updating the 'Last Updated' date. Continued use of the platform after any such changes constitutes your acceptance of the new terms."
+    }
+  }
+}

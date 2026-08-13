@@ -1,16 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { SectionCard } from "@/components/profile/section-card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { FullProfile } from "@/types/profile.types";
-import { SOCIAL_PROVIDERS, DRIVE_PROVIDERS } from "@/constant/providers.constant";
+import { SOCIAL_PROVIDERS, DRIVE_PROVIDERS } from "@/constants/providers.constant";
 import { HardDrive } from "lucide-react";
 import { initializeOAuthProvider } from "@/actions/oauth/oauth.actions";
+import { useTranslations } from "@/lib/i18n/hooks";
 
 export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) {
+  const { t } = useTranslations("profile_security");
   const connectedAccounts = profile.oauth_accounts || [];
 
   const isConnected = (providerId: string) => {
@@ -20,8 +21,8 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
   return (
     <div className="space-y-6">
       <SectionCard 
-        title="Authentication (SSO)" 
-        description="Connect your social accounts to log in faster." 
+        title={t("sso.title")} 
+        description={t("sso.desc")} 
         noPadding
       >
         {SOCIAL_PROVIDERS.map((provider, index) => {
@@ -48,18 +49,18 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                       {provider.name}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {connected ? "Connected" : "Not connected"}
+                      {connected ? t("sso.connected") : t("sso.notConnected")}
                     </p>
                   </div>
                 </div>
                 {connected ? (
                   <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
-                    Disconnect
+                    {t("sso.disconnect")}
                   </Button>
                 ) : (
                   <form action={initializeOAuthProvider.bind(null, provider.id)}>
                     <Button type="submit" variant="outline" size="sm" className="shrink-0">
-                      Connect
+                      {t("sso.connect")}
                     </Button>
                   </form>
                 )}
@@ -71,8 +72,8 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
       </SectionCard>
 
       <SectionCard 
-        title="Cloud Drives" 
-        description="Link your cloud storage to sync files and backups seamlessly." 
+        title={t("cloudDrives.title")} 
+        description={t("cloudDrives.desc")} 
         noPadding
       >
         {DRIVE_PROVIDERS.map((provider, index) => {
@@ -89,18 +90,18 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                       {provider.name}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {connected ? "Connected" : "Not connected"}
+                      {connected ? t("sso.connected") : t("sso.notConnected")}
                     </p>
                   </div>
                 </div>
                 {connected ? (
                   <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
-                    Disconnect
+                    {t("sso.disconnect")}
                   </Button>
                 ) : (
                   <form action={initializeOAuthProvider.bind(null, provider.id)}>
                     <Button type="submit" variant="outline" size="sm" className="shrink-0">
-                      Connect
+                      {t("sso.connect")}
                     </Button>
                   </form>
                 )}

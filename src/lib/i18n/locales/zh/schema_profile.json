@@ -1,0 +1,34 @@
+{
+  "noHtml": "不允许使用 HTML 标签",
+  "name": {
+    "firstNameRequired": "名字是必填项",
+    "firstNameMax": "名字不能超过 50 个字符",
+    "firstNameFormat": "名字只能包含字母、空格和连字符",
+    "lastNameRequired": "姓氏是必填项",
+    "lastNameMax": "姓氏不能超过 50 个字符",
+    "lastNameFormat": "姓氏只能包含字母、空格和连字符"
+  },
+  "username": {
+    "min": "用户名必须至少 3 个字符",
+    "max": "用户名不能超过 30 个字符",
+    "format": "用户名只能包含字母、数字和下划线"
+  },
+  "bio": {
+    "max": "简介不能超过 500 个字符"
+  },
+  "pronouns": {
+    "max": "代词不能超过 20 个字符"
+  },
+  "address": {
+    "line1Required": "地址第一行是必填项",
+    "line1Max": "地址第一行不能超过 100 个字符",
+    "line2Max": "地址第二行不能超过 100 个字符",
+    "cityRequired": "城市是必填项",
+    "cityMax": "城市不能超过 50 个字符",
+    "stateMax": "省/州不能超过 50 个字符",
+    "zipRequired": "邮政编码是必填项",
+    "zipMax": "邮政编码不能超过 20 个字符",
+    "countryRequired": "国家/地区是必填项",
+    "countryMax": "国家/地区不能超过 50 个字符"
+  }
+}

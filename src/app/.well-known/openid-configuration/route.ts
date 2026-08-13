@@ -10,7 +10,6 @@ export function GET() {
         token_endpoint: new URL("/api/sso/v1/token", baseURL),
         userinfo_endpoint: new URL("/api/sso/v1/userinfo", baseURL),
         revocation_endpoint: new URL("/api/sso/v1/revoke", baseURL),
-        end_session_endpoint: new URL("/api/sso/v1/logout", baseURL),
         jwks_uri: new URL("/api/sso/v1/jwks.json", baseURL),
         response_types_supported: [
             "code"
@@ -20,13 +19,10 @@ export function GET() {
             "form_post"
         ],
         subject_types_supported: [
-            "public",
-            "pairwise"
+            "public"
         ],
         id_token_signing_alg_values_supported: [
-            "RS256",
-            "ES256",
-            "EdDSA"
+            "RS256"
         ],
         scopes_supported: [
             "openid",
@@ -63,9 +59,7 @@ export function GET() {
             "S256"
         ],
         grant_types_supported: [
-            "authorization_code",
-            "refresh_token",
-            "client_credentials"
+            "authorization_code"
         ],
         authorization_response_iss_parameter_supported: true
     };

@@ -10,6 +10,7 @@ export interface DBUserSession {
     user_id: string;
     session_token_hash: string;
     refresh_token_hash: string;
+    previous_refresh_token_hash?: string | null;
     created_on: Date;
     updated_on: Date;
     session_expires_on: Date;
@@ -20,11 +21,12 @@ export interface DBUserSession {
     device_name?: string | null;
 }
 
-export type SafeDBUserSession = Omit<DBUserSession, 'session_token_hash' | 'refresh_token_hash'>;
+export type SafeDBUserSession = Omit<DBUserSession, 'session_token_hash' | 'refresh_token_hash' | 'previous_refresh_token_hash'>;
 
 export interface DBTempSession {
     id: string;
     user_id: string;
+    challenge?: string | null;
     created_on: Date;
     expires_on: Date;
 }

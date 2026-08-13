@@ -7,11 +7,11 @@ import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2, Smartphone } from "lucide-react";
 
 interface PhoneVerificationProps {
-  onComplete: (result: any) => void;
+  onComplete: (result: unknown) => void;
   tempSessionId: string | null;
 }
 
-export default function PhoneVerification({ onComplete, tempSessionId }: PhoneVerificationProps) {
+export default function PhoneVerification({ onComplete, tempSessionId: _tempSessionId }: PhoneVerificationProps) {
   const { t } = useTranslations("signin");
   const [isLoading, setIsLoading] = useState(false);
 

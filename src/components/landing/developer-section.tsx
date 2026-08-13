@@ -4,12 +4,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Terminal, Code, Blocks, ArrowRight } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/hooks";
 
 export function DeveloperSection() {
+  const { t } = useTranslations("landing");
+
   return (
     <section className="py-20 md:py-32 bg-zinc-950 text-zinc-50 dark:bg-muted/20 relative overflow-hidden" id="developers">
       {/* Decorative gradient for developer section */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] pointer-events-none opacity-50 translate-x-1/3 -translate-y-1/3" />
+      <div className="absolute top-0 right-0 w-125 h-125 bg-primary/10 rounded-full blur-[100px] pointer-events-none opacity-50 translate-x-1/3 -translate-y-1/3" />
       
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
@@ -22,15 +25,15 @@ export function DeveloperSection() {
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/50 dark:bg-muted border border-zinc-700/50 dark:border-border text-sm font-medium text-zinc-300 dark:text-muted-foreground mb-6">
               <Terminal className="w-4 h-4" />
-              <span>Developer Ecosystem</span>
+              <span>{t('developerSection.badge')}</span>
             </div>
             
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-white dark:text-foreground">
-              Built for Developers
+              {t('developerSection.title')}
             </h2>
             
             <p className="text-lg text-zinc-400 dark:text-muted-foreground mb-8 leading-relaxed">
-              Clou Auth isn&apos;t just an account portal. It&apos;s a comprehensive authentication platform designed to integrate seamlessly with your applications using standard protocols.
+              {t('developerSection.description')}
             </p>
 
             <ul className="space-y-4 mb-10">
@@ -39,8 +42,8 @@ export function DeveloperSection() {
                   <Code className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 dark:text-foreground block">OAuth 2.0 & OpenID Connect</strong>
-                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">Standardized, secure authorization flows.</span>
+                  <strong className="text-zinc-200 dark:text-foreground block">{t('developerSection.features.oauthOidc.title')}</strong>
+                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">{t('developerSection.features.oauthOidc.description')}</span>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -48,18 +51,18 @@ export function DeveloperSection() {
                   <Blocks className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 dark:text-foreground block">Future API Support</strong>
-                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">Robust REST APIs and SDKs coming soon.</span>
+                  <strong className="text-zinc-200 dark:text-foreground block">{t('developerSection.features.apiSupport.title')}</strong>
+                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">{t('developerSection.features.apiSupport.description')}</span>
                 </div>
               </li>
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button render={<Link href="#" />} nativeButton={false} size="lg" className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                Developer Guide
+              <Button render={<Link href="/developers" />} nativeButton={false} size="lg" className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                {t('developerSection.developerGuide')}
               </Button>
-              <Button render={<Link href="#" />} nativeButton={false} size="lg" variant="outline" className="h-12 border-zinc-700 hover:bg-zinc-800 text-zinc-300 dark:border-border dark:hover:bg-muted dark:text-foreground">
-                API Reference
+              <Button render={<Link href="/docs" />} nativeButton={false} size="lg" variant="outline" className="h-12 border-zinc-700 hover:bg-zinc-800 text-zinc-300 dark:border-border dark:hover:bg-muted dark:text-foreground">
+                {t('developerSection.apiReference')}
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </div>
@@ -85,7 +88,7 @@ export function DeveloperSection() {
               <code className="block mb-2"><span className="text-primary/80">const</span> auth = <span className="text-primary/80">new</span> ClouAuth({'{'}</code>
               <code className="block mb-1 pl-4">clientId: process.env.<span className="text-blue-400">CLOU_CLIENT_ID</span>,</code>
               <code className="block mb-1 pl-4">clientSecret: process.env.<span className="text-blue-400">CLOU_CLIENT_SECRET</span>,</code>
-              <code className="block mb-1 pl-4">issuer: <span className="text-green-400">&apos;https://auth.cloudburstlab.com&apos;</span>,</code>
+              <code className="block mb-1 pl-4">issuer: <span className="text-green-400">&apos;https://auth.clouburstlab.com&apos;</span>,</code>
               <code className="block mb-2">{'}'});</code>
               <code className="block mb-2 text-zinc-500">{'// Protect your routes'}</code>
               <code className="block mb-1"><span className="text-primary/80">export</span> <span className="text-primary/80">const</span> middleware = auth.requireSession();</code>

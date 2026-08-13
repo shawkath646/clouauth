@@ -1,0 +1,21 @@
+{
+  "password": {
+    "min": "密码必须至少 8 个字符",
+    "max": "密码不能超过 100 个字符",
+    "uppercase": "密码必须包含至少一个大写字母",
+    "lowercase": "密码必须包含至少一个小写字母",
+    "number": "密码必须包含至少一个数字",
+    "special": "密码必须包含至少一个特殊字符",
+    "confirm": "Please confirm your new password",
+    "mismatch": "Passwords do not match"
+  },
+  "email": {
+    "required": "电子邮件是必填项",
+    "invalid": "请输入有效的电子邮件地址",
+    "max": "电子邮件不能超过 100 个字符"
+  },
+  "phone": {
+    "invalid": "电话必须为 E.164 格式 (例如 +1234567890)",
+    "max": "电话号码太长"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "signIn": {
+    "usernameRequired": "ব্যবহারকারীর নাম আবশ্যক",
+    "passwordRequired": "পাসওয়ার্ড আবশ্যক",
+    "passwordMin": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে"
+  },
+  "signUp": {
+    "firstNameRequired": "নামের প্রথমাংশ আবশ্যক",
+    "lastNameRequired": "নামের শেষাংশ আবশ্যক",
+    "emailRequired": "ইমেইল আবশ্যক",
+    "emailInvalid": "অবৈধ ইমেইল ঠিকানা",
+    "passwordMin": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে"
+  }
+}

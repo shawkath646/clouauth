@@ -8,7 +8,11 @@ export interface DBUser {
     date_of_birth?: string | null;
     pronouns?: string | null;
     username_last_changed?: Date | null;
-    is_active: boolean;
+    account_status?: {
+        is_active: boolean;
+        self_enable: boolean;
+        reason: string | null;
+    } | null;
     created_on: Date;
     updated_on: Date;
 }

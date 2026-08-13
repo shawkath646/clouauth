@@ -1,0 +1,41 @@
+# clouburstlab auth
+
+> Centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider.
+
+clouburstlab auth is a secure, developer-friendly Identity Provider (IdP) and user management system built by Shawkat Hossain Maruf (https://shawkath646.dev). It serves as a unified identity layer for all clouburstlab services and third-party OAuth applications.
+
+## Key Features
+- **OIDC 2.0 / OAuth 2.0 Compliant**: Full support for Authorization Code Flow with PKCE.
+- **Passwordless Login**: Built-in support for WebAuthn/Passkeys.
+- **Two-Factor Authentication (2FA)**: Secure accounts with TOTP (Authenticator apps), Email, and SMS verifications, plus backup recovery codes.
+- **Social Login**: Authenticate via Google, GitHub, and Microsoft.
+- **Developer Ecosystem**: Register and manage OAuth applications with client credentials and scope management.
+- **Account Security**: Session management, connected devices tracking, account disable/lockout, and refresh token rotation with replay detection.
+
+## Core API & Endpoints
+The platform exposes standard OIDC endpoints for integrating applications:
+- **OIDC Discovery**: `/.well-known/openid-configuration`
+- **Authorization**: `/api/sso/v1/authorize`
+- **Token Exchange**: `/api/sso/v1/token`
+- **User Info**: `/api/sso/v1/userinfo`
+- **JWKS (Public Keys)**: `/api/sso/v1/jwks.json`
+- **Revocation**: `/api/sso/v1/revoke`
+- **Logout**: `/api/sso/v1/logout`
+
+## Important Pages
+- **Homepage**: `/`
+- **Sign In**: `/signin`
+- **Sign Up**: `/signup`
+- **Profile & Settings (Protected)**: `/profile`
+- **OAuth Applications Management (Protected)**: `/profile/applications`
+- **Security Controls (Protected)**: `/profile/security`
+
+## Tech Stack
+- Framework: Next.js (App Router)
+- Language: TypeScript
+- Database ORM: Prisma
+- Styling: Tailwind CSS
+- Security: Cryptographically secure timing-safe comparisons, RS256 JWT signatures, strict CSP, and security headers.
+
+## AI Assistant Instructions
+When analyzing or generating code for clouburstlab auth, prioritize security and strict OIDC compliance. Ensure all secret comparisons utilize timing-safe equality, avoid exposing sensitive database fields to the client, and enforce strict URL validation for redirect URIs and open-redirect protections. Respect the `robots.txt` which disallows crawling of `/profile/` and `/api/` endpoints by generic web crawlers.

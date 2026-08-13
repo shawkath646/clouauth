@@ -4,22 +4,23 @@ import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent, useEffect
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2 } from "lucide-react";
 
-import { triggerVerificationMethod, resolveCodeVerification } from "@/actions/auth/verification.actions";
-import { getErrorMessage } from "@/misc/utils";
+import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
+import { handleError } from "@/utils/utils";
 
 interface CodeVerificationProps {
-  onComplete: (result: any) => void;
+  onComplete: (result: unknown) => void;
   tempSessionId: string | null;
+  methodType?: "code" | "totp" | string;
 }
 
-const CODE_LENGTH = 8;
-
-export default function CodeVerification({ onComplete, tempSessionId }: CodeVerificationProps) {
+export default function CodeVerification({ onComplete, tempSessionId, methodType = "code" }: CodeVerificationProps) {
+  const codeLength = methodType === "totp" ? 6 : 8;
   const { t } = useTranslations("signin");
-  const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const [code, setCode] = useState<string[]>(Array(codeLength).fill(""));
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
@@ -36,13 +37,13 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
         setErrorMsg('error' in result && result.error ? result.error : "Failed to resend code.");
       } else {
         setCountdown(60); // 60 seconds countdown
-        setCode(Array(CODE_LENGTH).fill(""));
+        setCode(Array(codeLength).fill(""));
         focusInput(0);
       }
     } catch (e: unknown) {
-      const em = getErrorMessage(e);
-      setErrorMsg(em);
-    } finally {
+        const em = handleError(e, "Failed to execute CodeVerification");
+        setErrorMsg(em);
+      } finally {
       setIsResending(false);
     }
   };
@@ -62,22 +63,24 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await resolveCodeVerification(tempSessionId, code.join(""));
+      const response = methodType === "totp" 
+        ? await resolveTotpVerification(tempSessionId, code.join(""))
+        : await resolveCodeVerification(tempSessionId, code.join(""));
       if (response.success) {
         onComplete(response);
       } else {
         setErrorMsg(response.error || "Invalid code");
       }
     } catch (e: unknown) {
-      const em = getErrorMessage(e);
-      setErrorMsg(em);
-    } finally {
+        const em = handleError(e, "Failed to execute CodeVerification");
+        setErrorMsg(em);
+      } finally {
       setIsLoading(false);
     }
   };
 
   const focusInput = (index: number) => {
-    if (index >= 0 && index < CODE_LENGTH) {
+    if (index >= 0 && index < codeLength) {
       inputRefs.current[index]?.focus();
     }
   };
@@ -101,7 +104,7 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
   };
 
   const processPastedData = (pastedData: string) => {
-    const pastedNumbers = pastedData.replace(/\D/g, "").slice(0, CODE_LENGTH);
+    const pastedNumbers = pastedData.replace(/\D/g, "").slice(0, codeLength);
     if (!pastedNumbers) return;
 
     const newCode = [...code];
@@ -110,7 +113,7 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
     }
     setCode(newCode);
 
-    const nextFocusIndex = Math.min(pastedNumbers.length, CODE_LENGTH - 1);
+    const nextFocusIndex = Math.min(pastedNumbers.length, codeLength - 1);
     focusInput(nextFocusIndex);
   };
 
@@ -146,12 +149,12 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
     newCode[index] = newValue;
     setCode(newCode);
 
-    if (index < CODE_LENGTH - 1) {
+    if (index < codeLength - 1) {
       focusInput(index + 1);
     }
   };
 
-  const isComplete = code.join("").length === CODE_LENGTH;
+  const isComplete = code.join("").length === codeLength;
 
   return (
     <motion.div
@@ -201,7 +204,7 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 onPaste={handlePaste}
-                aria-label={`Digit ${index + 1} of ${CODE_LENGTH}`}
+                aria-label={`Digit ${index + 1} of ${codeLength}`}
                 className="w-9 h-11 sm:w-12 sm:h-14 px-1 text-center text-lg sm:text-xl font-semibold shadow-sm focus-visible:ring-primary focus-visible:ring-offset-2"
               />
             ))}
@@ -218,23 +221,25 @@ export default function CodeVerification({ onComplete, tempSessionId }: CodeVeri
             {t("verify")}
           </Button>
 
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              {t("didntReceiveCode")}{" "}
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={countdown > 0 || isResending}
-                className="text-primary font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-              >
-                {isResending
-                  ? t("resending")
-                  : countdown > 0
-                  ? `${t("resendCode")} (${countdown}s)`
-                  : t("resendCode")}
-              </button>
-            </p>
-          </div>
+          {methodType !== "totp" && (
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                {t("didntReceiveCode")}{" "}
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={countdown > 0 || isResending}
+                  className="text-primary font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                >
+                  {isResending
+                    ? t("resending")
+                    : countdown > 0
+                    ? `${t("resendCode")} (${countdown}s)`
+                    : t("resendCode")}
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

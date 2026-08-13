@@ -1,0 +1,9 @@
+{
+  "nameMin": "El nombre de la aplicación debe tener al menos 2 caracteres",
+  "nameMax": "El nombre de la aplicación no puede exceder los 50 caracteres",
+  "descriptionMax": "La descripción es demasiado larga",
+  "websiteUrl": "Debe ser una URL válida",
+  "redirectUriUrl": "Debe ser una URL válida",
+  "redirectUriMin": "Se requiere al menos una URI de redireccionamiento",
+  "scopesMin": "Se requiere al menos un alcance"
+}

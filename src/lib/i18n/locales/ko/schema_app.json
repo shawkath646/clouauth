@@ -1,0 +1,9 @@
+{
+  "nameMin": "애플리케이션 이름은 최소 2자 이상이어야 합니다",
+  "nameMax": "애플리케이션 이름은 50자를 초과할 수 없습니다",
+  "descriptionMax": "설명이 너무 깁니다",
+  "websiteUrl": "유효한 URL이어야 합니다",
+  "redirectUriUrl": "유효한 URL이어야 합니다",
+  "redirectUriMin": "하나 이상의 리디렉션 URI가 필수입니다",
+  "scopesMin": "하나 이상의 범위가 필수입니다"
+}

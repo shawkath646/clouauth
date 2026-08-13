@@ -1,0 +1,156 @@
+{
+  "navigation": {
+    "developers": "Desarrolladores",
+    "documentation": "Documentación",
+    "toggleTheme": "Cambiar tema"
+  },
+  "hero": {
+    "subtitle": "La Plataforma de Identidad para",
+    "titleLine1": "Una cuenta.",
+    "titleLine2": "Cada servicio de",
+    "titleLine2Service": "",
+    "description": "Autenticación segura y gestión de identidad para",
+    "descriptionSuffix": ", con soporte OAuth 2.0 y OpenID Connect para aplicaciones modernas.",
+    "createAccount": "Crear Cuenta",
+    "signIn": "Iniciar Sesión",
+    "viewApps": "Ver Apps y Servicios"
+  },
+  "trustSection": {
+    "title": "Confianza en el Núcleo",
+    "description": "ClouAuth está construido sobre una base de seguridad, privacidad y experiencia de usuario fluida, asegurando que tu identidad esté siempre protegida.",
+    "features": {
+      "secureByDesign": {
+        "title": "Seguro por Diseño",
+        "description": "Autenticación sólida con prácticas de seguridad modernas para mantener las cuentas a salvo de accesos no autorizados."
+      },
+      "unifiedIdentity": {
+        "title": "Identidad Unificada",
+        "description": "Una cuenta en todos los servicios de CloudBurst. Simplifica tu vida digital con una identidad única y segura."
+      },
+      "fastAuth": {
+        "title": "Autenticación Rápida",
+        "description": "Experiencias de inicio de sesión rápidas, fiables y fluidas construidas sobre una infraestructura de alto rendimiento."
+      },
+      "privacyFocused": {
+        "title": "Enfoque en la Privacidad",
+        "description": "Tu identidad y cuenta permanecen estrictamente bajo tu control, con políticas de datos transparentes."
+      }
+    }
+  },
+  "featureGrid": {
+    "title": "Capacidades de la Plataforma",
+    "description": "Todo lo que necesitas para gestionar tu identidad de forma segura e integrar la autenticación en tus propias aplicaciones.",
+    "capabilities": {
+      "accountManagement": {
+        "title": "Gestión de Cuentas",
+        "description": "Gestiona tu identidad, perfil, preferencias y configuraciones de seguridad desde un centro centralizado."
+      },
+      "sessionManagement": {
+        "title": "Gestión de Sesiones",
+        "description": "Revisa y gestiona sesiones activas en todos tus dispositivos de confianza en tiempo real."
+      },
+      "mfa": {
+        "title": "Autenticación Multifactor",
+        "description": "Capas adicionales de protección para cuentas sensibles utilizando métodos 2FA estándar de la industria."
+      },
+      "oauth": {
+        "title": "Integración OAuth 2.0",
+        "description": "Permite que aplicaciones de terceros autentiquen de forma segura a los usuarios a través de la plataforma ClouAuth."
+      },
+      "oidc": {
+        "title": "OpenID Connect",
+        "description": "Una capa de identidad moderna y estándar construida sobre OAuth 2.0 para una integración de aplicaciones robusta."
+      },
+      "passkey": {
+        "title": "Soporte de Passkey",
+        "description": "Autenticación sin contraseñas utilizando los estándares modernos de WebAuthn para la máxima seguridad."
+      }
+    }
+  },
+  "developerSection": {
+    "badge": "Ecosistema de Desarrolladores",
+    "title": "Creado para Desarrolladores",
+    "description": "ClouAuth no es solo un portal de cuentas. Es una plataforma de autenticación integral diseñada para integrarse sin problemas con tus aplicaciones utilizando protocolos estándar.",
+    "features": {
+      "oauthOidc": {
+        "title": "OAuth 2.0 y OpenID Connect",
+        "description": "Flujos de autorización estandarizados y seguros."
+      },
+      "apiSupport": {
+        "title": "Soporte Futuro de API",
+        "description": "Próximamente APIs REST robustas y SDKs."
+      }
+    },
+    "developerGuide": "Guía del Desarrollador",
+    "apiReference": "Referencia de la API"
+  },
+  "securitySection": {
+    "title": "Seguridad sin Compromisos",
+    "description": "Nos enfocamos en construir confianza a través de implementaciones de seguridad transparentes y estándar de la industria. ClouAuth protege a tus usuarios para que tú puedas enfocarte en construir tu aplicación.",
+    "features": {
+      "encryptedComm": {
+        "title": "Comunicación Encriptada",
+        "description": "La encriptación de extremo a extremo y la aplicación estricta de HTTPS garantizan que tus datos estén seguros en tránsito."
+      },
+      "sessionProtection": {
+        "title": "Protección de Sesión",
+        "description": "Heurísticas avanzadas y huella dactilar de dispositivos para detectar y prevenir secuestros de sesión no autorizados."
+      },
+      "identityVerification": {
+        "title": "Verificación de Identidad",
+        "description": "Verificación de correo electrónico robusta, flujos de recuperación y mecanismos de protección de cuentas."
+      },
+      "modernArchitecture": {
+        "title": "Arquitectura Moderna",
+        "description": "Construido sobre estándares probados en batalla y patrones arquitectónicos centrados en la privacidad."
+      }
+    },
+    "statusSecure": "Estado del Sistema: Seguro"
+  },
+  "futureVision": {
+    "titleLine1": "Una identidad.",
+    "titleLine2": "Muchas aplicaciones.",
+    "descriptionPart1": "auth está diseñado para convertirse en la plataforma de autenticación central para el creciente ecosistema de",
+    "descriptionPart2": ", permitiendo que tanto los servicios nativos como las aplicaciones de terceros compartan una identidad segura y estandarizada."
+  },
+  "callToAction": {
+    "loggedIn": {
+      "title": "Explorar aplicaciones de",
+      "titleSuffix": "",
+      "description": "Con esta cuenta puedes usar aplicaciones sin problemas y sincronizarlas sin ningún problema.",
+      "button": "Ir al Perfil"
+    },
+    "loggedOut": {
+      "title": "¿Listo para empezar?",
+      "descriptionPart1": "Crea tu identidad segura hoy, o explora la documentación para aprender cómo integrar la autenticación de",
+      "descriptionPart2": "en tu próximo proyecto.",
+      "createAccount": "Crear Cuenta",
+      "signIn": "Iniciar Sesión",
+      "documentation": "Documentación"
+    }
+  },
+  "footer": {
+    "brandDescription": "Una identidad segura para cada servicio de",
+    "brandDescriptionSuffix": ", con soporte para aplicaciones de terceros.",
+    "sections": {
+      "platform": "Plataforma",
+      "developers": "Desarrolladores",
+      "company": "Compañía"
+    },
+    "links": {
+      "features": "Características",
+      "security": "Seguridad",
+      "status": "Estado",
+      "pricing": "Precios",
+      "documentation": "Documentación",
+      "oauth2": "OAuth 2.0",
+      "oidc": "OpenID Connect",
+      "apiReference": "Referencia de la API",
+      "privacyPolicy": "Política de Privacidad",
+      "termsOfService": "Términos de Servicio",
+      "support": "Soporte"
+    },
+    "copyright": "© {{year}} clouburstlab. Todos los derechos reservados.",
+    "developedBy": "Desarrollado por"
+  }
+}

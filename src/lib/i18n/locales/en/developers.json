@@ -1,0 +1,89 @@
+{
+  "title": "Developer Integration Guide",
+  "descriptionPart1": "Follow this step-by-step tutorial to integrate your applications with",
+  "descriptionPart2": "We support the industry-standard OAuth 2.0 Authorization Code Flow with PKCE for secure authentication.",
+  "steps": {
+    "step1": {
+      "title": "Register your Application",
+      "description": "Obtain your client credentials",
+      "content": {
+        "intro": "To start communicating with the identity provider, you need to register your application.",
+        "list": {
+          "0": "Sign in to your account.",
+          "1": {
+            "part1": "Go to Profile Dashboard >",
+            "bold": "Developer Applications"
+          },
+          "2": {
+            "part1": "Click",
+            "bold": "Register New Application"
+          },
+          "3": {
+            "part1": "Fill in the details and save your",
+            "code1": "Client ID",
+            "part2": "and",
+            "code2": "Client Secret"
+          }
+        }
+      }
+    },
+    "step2": {
+      "title": "Configure Redirect URIs",
+      "description": "Secure your authentication flow",
+      "content": {
+        "intro": "The identity provider will only redirect users back to URLs that you explicitly authorize. This prevents open-redirect attacks.",
+        "list": {
+          "0": "Navigate to your application settings.",
+          "1": {
+            "part1": "Add your callback URL under",
+            "bold": "Authorized Redirect URIs"
+          },
+          "2": {
+            "part1": "For local development, you can use",
+            "code": "http://localhost:3000/..."
+          }
+        }
+      }
+    },
+    "step3": {
+      "title": "Implement Authorization Flow",
+      "description": "Redirect to authorize",
+      "content": {
+        "intro": "Redirect the user to the authorization endpoint. Make sure to generate a PKCE code_challenge."
+      }
+    },
+    "step4": {
+      "title": "Exchange Code for Token",
+      "description": "Handle the callback",
+      "content": {
+        "intro": {
+          "part1": "Once the user authenticates, they are redirected back to your app with a",
+          "code": "code",
+          "part2": "Exchange it for access tokens."
+        }
+      }
+    },
+    "step5": {
+      "title": "Fetch User Profile",
+      "description": "Use the access token",
+      "content": {
+        "intro": {
+          "part1": "Now that you have the",
+          "code": "access_token",
+          "part2": "use it to fetch the user's profile from the /api/sso/v1/userinfo endpoint."
+        }
+      }
+    },
+    "step6": {
+      "title": "Handle Token Refresh",
+      "description": "Maintain offline access",
+      "content": {
+        "intro": {
+          "part1": "When the access token expires, use the",
+          "code": "refresh_token",
+          "part2": "to request a new access token without requiring the user to sign in again."
+        }
+      }
+    }
+  }
+}

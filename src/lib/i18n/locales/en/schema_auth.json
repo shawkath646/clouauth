@@ -1,0 +1,14 @@
+{
+  "signIn": {
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required",
+    "passwordMin": "Password must be at least 6 characters"
+  },
+  "signUp": {
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Invalid email address",
+    "passwordMin": "Password must be at least 6 characters"
+  }
+}

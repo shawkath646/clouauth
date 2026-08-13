@@ -1,0 +1,84 @@
+{
+  "title": "API 文档",
+  "descriptionPart1": "官方 API 参考和 OIDC 发现文档，适用于",
+  "descriptionPart2": "身份提供商。",
+  "quickLinks": "快速链接",
+  "parameters": "参数",
+  "response": "响应",
+  "table": {
+    "name": "名称",
+    "type": "类型",
+    "required": "必填",
+    "description": "描述",
+    "requiredBadge": "必填",
+    "optionalBadge": "可选"
+  },
+  "endpoints": {
+    "oidc": {
+      "name": "OIDC 发现",
+      "description": "返回包含发行者、端点和支持的范围/声明的 OpenID Connect 发现文档。",
+      "response": "包含 OpenID Provider 元数据的 JSON 对象。"
+    },
+    "auth": {
+      "name": "授权端点",
+      "description": "启动 OAuth 2.0 授权码流程。",
+      "params": {
+        "client_id": "您应用程序的 Client ID。",
+        "redirect_uri": "认证后将用户重定向到的位置。",
+        "response_type": "必须为 'code'。",
+        "scope": "以空格分隔的范围（例如，'openid profile email'）。",
+        "state": "用于保持状态以缓解 CSRF 的不透明值。",
+        "code_challenge": "PKCE 代码挑战。",
+        "code_challenge_method": "必须为 'S256'。"
+      },
+      "response": "使用 `code` 和 `state` 重定向到 redirect_uri。"
+    },
+    "token": {
+      "name": "令牌端点",
+      "description": "用授权码或刷新令牌交换访问令牌。",
+      "params": {
+        "grant_type": "'authorization_code' 或 'refresh_token'。",
+        "code": "授权码（如果 grant_type 为 authorization_code）。",
+        "redirect_uri": "必须与原始重定向 URI 匹配。",
+        "client_id": "您应用程序的 Client ID。",
+        "client_secret": "您应用程序的 Client Secret。",
+        "code_verifier": "PKCE 代码验证器。"
+      },
+      "response": "包含 access_token、id_token 和 refresh_token 的 JSON 对象。"
+    },
+    "userinfo": {
+      "name": "用户信息端点",
+      "description": "检索有关已认证最终用户的声明。",
+      "params": {
+        "authorization": "包含访问令牌的 Bearer 令牌。"
+      },
+      "response": "包含用户声明（sub、name、email 等）的 JSON 对象。"
+    },
+    "jwks": {
+      "name": "JWKS 端点",
+      "description": "返回用于对 ID 令牌签名的 JSON Web Key Set。",
+      "response": "包含公钥的 JSON Web Key Set。"
+    },
+    "revoke": {
+      "name": "令牌撤销端点",
+      "description": "撤销活动的访问令牌或刷新令牌。",
+      "params": {
+        "client_id": "您应用程序的 Client ID。",
+        "client_secret": "您应用程序的 Client Secret。",
+        "token": "您想要撤销的令牌。",
+        "token_type_hint": "可选提示（'access_token' 或 'refresh_token'）。"
+      },
+      "response": "成功时返回空的 200 OK 响应。"
+    },
+    "logout": {
+      "name": "登出端点",
+      "description": "结束身份提供商处的用户会话。",
+      "params": {
+        "id_token_hint": "先前发给客户端的 ID 令牌。",
+        "post_logout_redirect_uri": "登出后重定向到的位置。",
+        "state": "传回重定向 URI 的不透明值。"
+      },
+      "response": "重定向到 post_logout_redirect_uri。"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "signIn": {
+    "usernameRequired": "El nombre de usuario es obligatorio",
+    "passwordRequired": "La contraseña es obligatoria",
+    "passwordMin": "La contraseña debe tener al menos 6 caracteres"
+  },
+  "signUp": {
+    "firstNameRequired": "El nombre es obligatorio",
+    "lastNameRequired": "El apellido es obligatorio",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "emailInvalid": "Dirección de correo electrónico inválida",
+    "passwordMin": "La contraseña debe tener al menos 6 caracteres"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "title": "Privacy Policy",
+    "description": "Learn how ClouAuth collects, uses, and protects your personal data, including information related to OIDC, SSO, and two-factor authentication."
+  },
+  "header": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last Updated: August 2026"
+  },
+  "sections": {
+    "intro": {
+      "title": "1. Introduction",
+      "content": "At ClouAuth, we take your privacy seriously. This Privacy Policy outlines the types of personal information we collect, how it is used, and how it is protected when you use our authentication and Single Sign-On (SSO) services."
+    },
+    "collection": {
+      "title": "2. Information We Collect",
+      "content": "We collect information to provide you with secure and seamless authentication services. This includes:",
+      "list": [
+        "Account Data: Your name, username, email address, phone number, and physical address when provided.",
+        "Security Data: WebAuthn passkeys, TOTP seeds, and hashed backup codes used for Two-Factor Authentication (2FA).",
+        "OAuth Data: Information regarding third-party developer applications you authorize via our OpenID Connect (OIDC) endpoints.",
+        "Device & Session Data: IP addresses, browser types, and session tokens to maintain security and prevent unauthorized access."
+      ]
+    },
+    "usage": {
+      "title": "3. How We Use Your Information",
+      "content": "Your information is used strictly to provide, maintain, and improve our authentication services. Specifically, we use it to:",
+      "list": [
+        "Authenticate your identity across connected applications securely.",
+        "Manage your profile, preferences, and security settings.",
+        "Send critical security alerts (e.g., unrecognized logins or password resets).",
+        "Monitor for fraudulent activity and protect the integrity of our SSO platform."
+      ]
+    },
+    "sharing": {
+      "title": "4. Data Sharing and Third-Party Applications",
+      "content": "ClouAuth acts as an identity provider. We do not sell your personal data. We only share your data with third-party applications when you explicitly grant them permission during the OAuth authorization flow. You can review and revoke these permissions at any time from your Profile Dashboard."
+    },
+    "security": {
+      "title": "5. Data Security",
+      "content": "We implement industry-standard security measures, including encryption in transit and at rest, secure password hashing (bcrypt), and advanced session management, to protect your data from unauthorized access, alteration, or disclosure."
+    },
+    "rights": {
+      "title": "6. Your Privacy Rights",
+      "content": "You have the right to access, update, or delete your personal information at any time. You can manage your data directly through your Profile Dashboard. If you wish to permanently delete your account and all associated data, you may do so in the Danger Zone section of your profile."
+    },
+    "contact": {
+      "title": "7. Contact Us",
+      "content": "If you have any questions or concerns about this Privacy Policy, please contact our privacy team."
+    }
+  }
+}

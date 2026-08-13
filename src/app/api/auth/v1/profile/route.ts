@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSecuredFullProfile } from "@/actions/profile/get-profile";
-import { getErrorMessage } from "@/misc/utils";
+import { getSecuredFullProfile } from "@/actions/profile/get-profile.actions";
+import { handleError } from "@/utils/utils";
 
 export async function GET() {
     try {
@@ -12,8 +12,7 @@ export async function GET() {
         
         return NextResponse.json(result);
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
-        console.error("Profile API Error:", e);
+    const em = handleError(e, "Failed to execute GET");
         return NextResponse.json({ success: false, error: em }, { status: 500 });
     }
 }

@@ -1,0 +1,84 @@
+{
+  "title": "وثائق واجهة برمجة التطبيقات (API)",
+  "descriptionPart1": "المرجع الرسمي لواجهة برمجة التطبيقات ووثائق استكشاف OIDC لـ",
+  "descriptionPart2": "مزود الهوية.",
+  "quickLinks": "روابط سريعة",
+  "parameters": "المعلمات",
+  "response": "الاستجابة",
+  "table": {
+    "name": "الاسم",
+    "type": "النوع",
+    "required": "مطلوب",
+    "description": "الوصف",
+    "requiredBadge": "مطلوب",
+    "optionalBadge": "اختياري"
+  },
+  "endpoints": {
+    "oidc": {
+      "name": "استكشاف OIDC",
+      "description": "يُرجع مستند استكشاف OpenID Connect الذي يحتوي على المُصدر، والنقاط الطرفية، والنطاقات/المطالبات المدعومة.",
+      "response": "كائن JSON يحتوي على بيانات وصفية لمزود OpenID."
+    },
+    "auth": {
+      "name": "النقطة الطرفية للتفويض",
+      "description": "يبدأ تدفق رمز التفويض لـ OAuth 2.0.",
+      "params": {
+        "client_id": "معرف العميل (Client ID) لتطبيقك.",
+        "redirect_uri": "مكان توجيه المستخدم بعد المصادقة.",
+        "response_type": "يجب أن يكون 'code'.",
+        "scope": "النطاقات مفصولة بمسافة (مثل 'openid profile email').",
+        "state": "قيمة مبهمة للحفاظ على الحالة للتخفيف من هجمات CSRF.",
+        "code_challenge": "تحدي رمز PKCE.",
+        "code_challenge_method": "يجب أن يكون 'S256'."
+      },
+      "response": "يعيد التوجيه إلى redirect_uri مع `code` و `state`."
+    },
+    "token": {
+      "name": "النقطة الطرفية للرمز",
+      "description": "يستبدل رمز التفويض أو رمز التحديث برموز وصول.",
+      "params": {
+        "grant_type": "'authorization_code' أو 'refresh_token'.",
+        "code": "رمز التفويض (إذا كان grant_type هو authorization_code).",
+        "redirect_uri": "يجب أن يتطابق مع URI التوجيه الأصلي.",
+        "client_id": "معرف العميل لتطبيقك.",
+        "client_secret": "السر الخاص بالعميل (Client Secret) لتطبيقك.",
+        "code_verifier": "مدقق رمز PKCE."
+      },
+      "response": "كائن JSON يحتوي على access_token، id_token، و refresh_token."
+    },
+    "userinfo": {
+      "name": "النقطة الطرفية لمعلومات المستخدم",
+      "description": "يسترد المطالبات حول المستخدم النهائي المصادق عليه.",
+      "params": {
+        "authorization": "رمز الحامل (Bearer token) الذي يحتوي على رمز الوصول."
+      },
+      "response": "كائن JSON يحتوي على مطالبات المستخدم (sub، name، email، إلخ)."
+    },
+    "jwks": {
+      "name": "النقطة الطرفية لـ JWKS",
+      "description": "يُرجع مجموعة مفاتيح الويب بتنسيق JSON المستخدمة لتوقيع رموز المعرف (ID tokens).",
+      "response": "مجموعة مفاتيح الويب بتنسيق JSON تحتوي على المفاتيح العامة."
+    },
+    "revoke": {
+      "name": "النقطة الطرفية لإبطال الرمز",
+      "description": "يبطل رمز وصول أو رمز تحديث نشط.",
+      "params": {
+        "client_id": "معرف العميل (Client ID) لتطبيقك.",
+        "client_secret": "السر الخاص بالعميل (Client Secret) لتطبيقك.",
+        "token": "الرمز الذي تريد إبطاله.",
+        "token_type_hint": "تلميح اختياري ('access_token' أو 'refresh_token')."
+      },
+      "response": "استجابة 200 OK فارغة عند النجاح."
+    },
+    "logout": {
+      "name": "النقطة الطرفية لتسجيل الخروج",
+      "description": "ينهي جلسة المستخدم عند مزود الهوية.",
+      "params": {
+        "id_token_hint": "رمز المعرف (ID Token) الصادر سابقًا للعميل.",
+        "post_logout_redirect_uri": "مكان توجيه المستخدم بعد تسجيل الخروج.",
+        "state": "قيمة مبهمة يتم إرجاعها إلى URI التوجيه."
+      },
+      "response": "يعيد التوجيه إلى post_logout_redirect_uri."
+    }
+  }
+}

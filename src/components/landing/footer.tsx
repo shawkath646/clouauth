@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { Shield } from "lucide-react";
+import { BrandName } from "@/components/ui/brand-name";
+import { useTranslations } from "@/lib/i18n/hooks";
+import { FooterLinks } from "@/components/landing/footer-links";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { t } = useTranslations("landing");
 
   return (
     <footer className="border-t bg-background/50 backdrop-blur-sm py-12 md:py-16">
@@ -16,46 +22,44 @@ export function Footer() {
               <span className="font-bold tracking-tight text-lg">Clou Auth</span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-xs mb-6">
-              One secure identity for every CloudBurst service, with support for third-party applications.
+              {t('footer.brandDescription')} <BrandName /> {t('footer.brandDescriptionSuffix')}
             </p>
           </div>
           
           <div>
-            <h3 className="font-semibold text-sm mb-4">Platform</h3>
+            <h3 className="font-semibold text-sm mb-4">{t('footer.sections.platform')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#features" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="#security" className="hover:text-foreground transition-colors">Security</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Status</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              <li><Link href="/#features" className="hover:text-foreground transition-colors">{t('footer.links.features')}</Link></li>
+              <li><Link href="/#security" className="hover:text-foreground transition-colors">{t('footer.links.security')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-sm mb-4">Developers</h3>
+            <h3 className="font-semibold text-sm mb-4">{t('footer.sections.developers')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Documentation</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">OAuth 2.0</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">OpenID Connect</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">API Reference</Link></li>
+              <li><Link href="/docs" className="hover:text-foreground transition-colors">{t('footer.links.documentation')}</Link></li>
+              <li><Link href="/developers" className="hover:text-foreground transition-colors">{t('footer.links.apiReference')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-sm mb-4">Company</h3>
+            <h3 className="font-semibold text-sm mb-4">{t('footer.sections.company')}</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">CloudBurstLab</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Support</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground transition-colors">{t('footer.links.privacyPolicy')}</Link></li>
+              <li><Link href="/terms" className="hover:text-foreground transition-colors">{t('footer.links.termsOfService')}</Link></li>
             </ul>
           </div>
         </div>
         
         <div className="pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© {currentYear} CloudBurstLab. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <FooterLinks />
+            <p className="mt-2 sm:mt-0">{t('footer.copyright').replace('{{year}}', currentYear.toString())}</p>
+          </div>
           <div className="flex items-center gap-4">
-            <Link href="#" className="hover:text-foreground transition-colors">GitHub</Link>
-            <Link href="#" className="hover:text-foreground transition-colors">Twitter</Link>
+            <span className="text-muted-foreground">{t('footer.developedBy')} <Link href="https://shawkath646.dev" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors font-medium">Shawkat Hossain Maruf</Link></span>
+            <Link href="https://gh.shawkath646.dev" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors ml-2">GitHub</Link>
+            <Link href="https://li.shawkath646.dev" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Linkedin</Link>
           </div>
         </div>
       </div>

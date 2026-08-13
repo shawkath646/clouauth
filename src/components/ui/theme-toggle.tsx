@@ -2,45 +2,24 @@
 
 import * as React from "react"
 import { Moon, Sun } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { useTheme } from "next-themes"
 
 export function ThemeToggle() {
-  const [isDark, setIsDark] = React.useState(false)
-
-  React.useEffect(() => {
-    // Check initial state
-    setTimeout(() => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    }, 0)
-  }, [])
+  const { resolvedTheme, setTheme } = useTheme()
 
   const toggleTheme = () => {
-    const isCurrentlyDark = document.documentElement.classList.contains('dark')
-    if (isCurrentlyDark) {
-      document.documentElement.classList.remove('dark')
-      localStorage.theme = 'light'
-      setIsDark(false)
-    } else {
-      document.documentElement.classList.add('dark')
-      localStorage.theme = 'dark'
-      setIsDark(true)
-    }
+    setTheme(resolvedTheme === "dark" ? "light" : "dark")
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="w-9 h-9 rounded-full bg-background/50 backdrop-blur border shadow-sm"
+    <button
       onClick={toggleTheme}
+      className="p-2 rounded-full bg-muted/50 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+      aria-label="Toggle theme"
     >
-      {isDark ? (
-        <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
-      ) : (
-        <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />
-      )}
+      <Sun className="h-5 w-5 hidden dark:block" />
+      <Moon className="h-5 w-5 block dark:hidden" />
       <span className="sr-only">Toggle theme</span>
-    </Button>
+    </button>
   )
 }

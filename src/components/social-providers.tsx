@@ -3,9 +3,9 @@ import Image from "next/image";
 
 // 1. Missing imports added
 import { Button } from "@/components/ui/button";
-import { cn } from "@/misc/utils";
+import { cn } from "@/utils/utils";
 
-import { PROVIDERS, SOCIAL_PROVIDERS } from "@/constant/providers.constant";
+import { PROVIDERS, SOCIAL_PROVIDERS } from "@/constants/providers.constant";
 
 interface SocialProvidersProps {
   onClick: (name: PROVIDERS) => void;

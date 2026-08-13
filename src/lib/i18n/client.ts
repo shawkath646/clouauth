@@ -4,7 +4,4 @@ export function setUserLocale(locale: string) {
   
   // 2. Update DB if authenticated
   // TODO: Send request to API to update user language preference
-  
-  // 3. Refresh route
-  window.location.reload();
 }

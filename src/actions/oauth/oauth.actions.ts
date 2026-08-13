@@ -5,9 +5,8 @@ import { redirect } from "next/navigation";
 import { getUserSession } from "@/lib/session";
 import { SignJWT, jwtVerify } from "jose";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
-import { getErrorMessage } from "@/misc/utils";
-
-const getSecret = () => new TextEncoder().encode(process.env.JWT_SECRET || "default_development_secret_only");
+import { handleError } from "@/utils/utils";
+import { getSecret } from "@/lib/jwt-secret";
 
 export async function grantOAuthAccess() {
     try {
@@ -27,7 +26,7 @@ export async function grantOAuthAccess() {
         const { payload } = await jwtVerify(oauthCookie.value, getSecret());
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { client_id, redirect_uri, state, code_challenge, code_challenge_method, scope } = payload as any;
+        const { client_id, redirect_uri, state, code_challenge, code_challenge_method, scope, nonce } = payload as any;
 
         if (!redirect_uri) {
              return { success: false, error: "Invalid OAuth request. Missing redirect URI." };
@@ -41,6 +40,7 @@ export async function grantOAuthAccess() {
             code_challenge,
             code_challenge_method,
             scope,
+            nonce,
             type: "authorization_code"
         })
         .setProtectedHeader({ alg: "HS256" })
@@ -60,8 +60,7 @@ export async function grantOAuthAccess() {
 
         return { success: true, redirectUrl: url.toString() };
     } catch (e: unknown) {
-    const em = getErrorMessage(e);
-        console.error("Failed to grant OAuth access:", e);
+    const em = handleError(e, true);
         return { success: false, error: em };
     }
 }

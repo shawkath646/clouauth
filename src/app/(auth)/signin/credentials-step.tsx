@@ -23,7 +23,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { signIn } from "@/actions/auth/auth.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { BrandName } from "@/components/ui/brand-name";
 
  

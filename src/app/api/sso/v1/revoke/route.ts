@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revokeOAuthSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function POST(request: NextRequest) {
     try {

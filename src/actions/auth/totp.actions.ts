@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { generateSecret, generateURI, verify } from 'otplib';
 import QRCode from 'qrcode';
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
 
 export async function generateTotpSecretAction() {

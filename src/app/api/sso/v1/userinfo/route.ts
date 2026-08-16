@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOAuthSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function GET(request: NextRequest) {
     return handleUserInfo(request);

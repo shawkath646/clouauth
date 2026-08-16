@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { getSignUpSchema, type SignUpValues } from "../../schema/auth.schema";
 import { createSession } from "@/lib/session";
 import { generateAndUploadAvatar } from "@/lib/avatar";
-import { handleError, getErrorCode } from "@/utils/utils";
+import { handleError, getErrorCode } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
 import crypto from "crypto";
 

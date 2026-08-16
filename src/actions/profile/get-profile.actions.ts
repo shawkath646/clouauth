@@ -9,7 +9,7 @@ import type {
     FullProfile 
 } from "@/types/profile.types";
 import type { DBUserPreference } from "@/types/preferences.types";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function getMinimalProfile(): Promise<{ success: boolean, data?: MinimalProfile, error?: string }> {
     try {

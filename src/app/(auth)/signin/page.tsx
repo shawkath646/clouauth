@@ -27,20 +27,22 @@ export default async function SignInPage() {
   const locale = await getLocale();
   const dict = await getDictionary(locale, 'signin');
 
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+
   return (
     <>
       <JsonLd
         schema={{
           "@context": "https://schema.org",
           "@type": "WebPage",
-          "@id": `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signin#webpage`,
+          "@id": `${BASE_URL}/signin#webpage`,
           name: "Sign In — clouburstlab",
           description:
             "Secure sign-in portal for clouburstlab accounts. " +
             "Supports username/password, passkeys, social login, and two-factor authentication.",
-          url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signin`,
+          url: `${BASE_URL}/signin`,
           isPartOf: {
-            "@id": `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/#website`,
+            "@id": `${BASE_URL}/#website`,
           },
           breadcrumb: {
             "@type": "BreadcrumbList",
@@ -49,13 +51,13 @@ export default async function SignInPage() {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com",
+                item: BASE_URL,
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: "Sign In",
-                item: `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signin`,
+                item: `${BASE_URL}/signin`,
               },
             ],
           },

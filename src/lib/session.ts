@@ -3,7 +3,7 @@ import crypto from "crypto";
 import prisma from "./prisma";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME, SESSION_TOKEN_TTL, REFRESH_TOKEN_TTL_REMEMBER_ME } from "@/constants/session.constants";
 import type { SessionData, SafeDBUserSession, DBTempSession, DBUserSession } from "@/types/session.types";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 const generateRandomValue = () => crypto.randomBytes(32).toString("hex");
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");

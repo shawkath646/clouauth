@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getUserSession } from "@/lib/session";
 import { SignJWT, jwtVerify } from "jose";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { getSecret } from "@/lib/jwt-secret";
 
 export async function grantOAuthAccess() {

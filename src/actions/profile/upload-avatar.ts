@@ -5,7 +5,7 @@ import { getUserSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function uploadCustomAvatar(formData: FormData) {
   try {

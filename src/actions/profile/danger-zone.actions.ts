@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { cookies } from "next/headers";
 import { signOutAll } from "@/actions/auth/auth.actions";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME } from "@/constants/session.constants";

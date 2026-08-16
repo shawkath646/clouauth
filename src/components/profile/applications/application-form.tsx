@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import imageCompression from "browser-image-compression";
 import getCroppedImg from "@/utils/crop-image";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import {
   Dialog,
   DialogContent,

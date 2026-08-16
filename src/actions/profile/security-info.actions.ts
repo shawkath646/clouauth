@@ -5,9 +5,9 @@ import { getUserSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
-import { sendVerificationCodeEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 
 import {
   getPasswordSchema,
@@ -243,7 +243,10 @@ export async function sendRecoveryEmailVerificationCodeAction(emailAddress: stri
       }
     });
 
-    await sendVerificationCodeEmail(emailAddress, rawCode);
+    await sendEmail("verification_code", {
+      data: { code: rawCode },
+      userId: sessionData.user.id,
+    });
 
     return { success: true };
   } catch (e: unknown) {

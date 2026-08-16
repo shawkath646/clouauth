@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";

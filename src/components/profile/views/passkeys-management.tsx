@@ -34,7 +34,7 @@ import {
   deletePasskey,
 } from "@/actions/auth/passkey.actions";
 import { toast } from "sonner";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 interface PasskeyItem {
   id: string;

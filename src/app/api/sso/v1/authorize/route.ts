@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import prisma from "@/lib/prisma";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { getSecret } from "@/lib/jwt-secret";
 
 export async function GET(request: NextRequest) {

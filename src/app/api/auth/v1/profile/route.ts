@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSecuredFullProfile } from "@/actions/profile/get-profile.actions";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function GET() {
     try {

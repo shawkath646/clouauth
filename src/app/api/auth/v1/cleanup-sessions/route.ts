@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 import crypto from "crypto";
 

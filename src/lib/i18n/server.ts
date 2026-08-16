@@ -1,32 +1,33 @@
 import { cookies, headers } from 'next/headers';
 import { defaultLocale, locales, type Locale, type Namespace } from './config';
 import type { Dictionary, TranslationKey } from '@/types/i18n.types';
+import { cache } from 'react';
 
 export async function getLocale(): Promise<Locale> {
-  // 1. Authenticated user's language preference (database)
-  // TODO: Fetch user preference from database if logged in
-  
-  // 2. Locale cookie
+  // 1. Check user session cookie FIRST (Not the DB!)
+  // e.g., const session = await getSession(); 
+  // if (session?.user?.locale) return session.user.locale;
+
+  // 2. Locale cookie (manual override)
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
   if (localeCookie && locales.includes(localeCookie as Locale)) {
     return localeCookie as Locale;
   }
-  
-  // 3. Accept-Language request header
+
+  // 3. Accept-Language request header (Safely parsed)
   const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
   if (acceptLanguage) {
-    const preferredLocale = acceptLanguage.split(',')[0].split('-')[0];
-    if (locales.includes(preferredLocale as Locale)) {
+    const preferredLocale = acceptLanguage.split(',')?.[0]?.split('-')?.[0];
+    if (preferredLocale && locales.includes(preferredLocale as Locale)) {
       return preferredLocale as Locale;
     }
   }
-  
+
   // 4. Default locale
   return defaultLocale;
 }
-
 const dictionaries = {
   en: {
     signin: () => import('@/lib/i18n/locales/en/signin.json').then((module) => module.default),
@@ -145,22 +146,33 @@ export async function getDictionary<T extends Namespace>(
   return dictionaries[locale][namespace]() as Promise<Dictionary<T>>;
 }
 
-export async function getServerTranslations<T extends Namespace>(namespace: T) {
-  const locale = await getLocale();
-  const dict = await getDictionary(locale, namespace);
-  
-  const t = (key: TranslationKey<T> | string): string => {
-    const keys = (key as string).split('.');
-    let value: unknown = dict;
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = (value as Record<string, unknown>)[k];
-      } else {
-        return key as string;
-      }
+function flattenDictionary(dict: Record<string, unknown>, prefix = ''): Record<string, string> {
+  return Object.keys(dict).reduce((acc: Record<string, string>, key: string) => {
+    const pre = prefix.length ? prefix + '.' : '';
+    const value = dict[key];
+
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      Object.assign(acc, flattenDictionary(value as Record<string, unknown>, pre + key));
     }
-    return typeof value === 'string' ? value : (key as string);
-  };
-  
-  return { t, locale };
+    else if (typeof value === 'string') {
+      acc[pre + key] = value;
+    }
+
+    return acc;
+  }, {} as Record<string, string>);
 }
+
+export const getServerTranslations = cache(async <T extends Namespace>(
+  namespace: T
+) => {
+  const locale = await getLocale();
+  const rawDict = await getDictionary(locale, namespace);
+
+  const flatDict = flattenDictionary(rawDict);
+
+  const t = (key: TranslationKey<T> | string): string => {
+    return flatDict[key as keyof typeof flatDict] || key;
+  };
+
+  return { t, locale, dict: rawDict };
+});

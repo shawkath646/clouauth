@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { getUserSession, createTempSession, getTempSession, deleteTempSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { getUserSession } from "@/lib/session";
 import prisma from "@/lib/prisma";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import crypto from "crypto";
 
 export async function GET(

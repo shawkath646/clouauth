@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
-import "./globals.css";
-import { cn } from "@/utils/utils";
-import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
+import { cn } from "@/utils/utils";
 import { getLocale } from "@/lib/i18n/server";
+import { Toaster } from "@/components/ui/sonner";
 import JsonLd from "@/components/json-ld";
+import "./globals.css";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -25,12 +25,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: "clouburstlab — Secure Authentication & Identity Provider",
-    template: "%s | clouburstlab",
+    default: "ClouAuth — Secure Authentication & Identity Provider",
+    template: "%s | ClouAuth",
   },
 
   description:
-    "clouburstlab is a centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider. " +
+    "ClouAuth is a centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider for clouburstlab ecosystem. " +
     "Sign in, manage your account, passkeys, and connected applications — all in one place.",
 
   applicationName: "ClouAuth",
@@ -70,17 +70,17 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: BASE_URL,
-    siteName: "clouburstlab",
-    title: "clouburstlab — Secure Authentication & Identity Provider",
+    siteName: "ClouAuth",
+    title: "ClouAuth — Secure Authentication & Identity Provider",
     description:
-      "Centralized authentication, user management, and OIDC 2.0 Identity Provider by clouburstlab. " +
+      "Centralized authentication, user management, and OIDC 2.0 Identity Provider for clouburstlab ecosystem. " +
       "Manage passkeys, OAuth apps, and account security.",
     images: [
       {
         url: "/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: "clouburstlab — Secure Authentication & Identity Provider",
+        alt: "ClouAuth — Secure Authentication & Identity Provider",
         type: "image/png",
       },
     ],
@@ -88,9 +88,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "clouburstlab — Secure Auth & Identity Provider",
+    title: "ClouAuth — Secure Authentication & Identity Provider",
     description:
-      "OIDC 2.0 and OAuth 2.0 compliant Identity Provider. " +
+      "OIDC 2.0 and OAuth 2.0 compliant Identity Provider for clouburstlab ecosystem. " +
       "Secure sign-in, passkeys, 2FA, and developer-friendly OAuth application management.",
     creator: "@shawkath646",
     site: "@clouburstlab",
@@ -143,44 +143,52 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <JsonLd schema={{
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "Organization",
-              "@id": `${BASE_URL}/#organization`,
-              name: "clouburstlab",
-              url: "https://clouburstlab.com",
-              logo: {
-                "@type": "ImageObject",
-                url: `${BASE_URL}/opengraph-image.png`,
-                width: "1200",
-                height: "630",
+        <JsonLd
+          schema={{
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "Organization",
+                "@id": "https://clouburstlab.com/#organization",
+                name: "clouburstlab",
+                url: "https://clouburstlab.com",
+                founder: {
+                  "@id": "https://shawkath646.dev/#person",
+                },
               },
-              founder: {
-                "@type": "Person",
-                name: "Shawkat Hossain Maruf",
-                url: "https://shawkath646.dev",
+              {
+                "@type": "WebSite",
+                "@id": `${BASE_URL}/#website`,
+                url: BASE_URL,
+                name: "ClouAuth",
+                description:
+                  "Centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider by clouburstlab.",
+                publisher: {
+                  "@id": "https://clouburstlab.com/#organization",
+                },
+                about: {
+                  "@id": `${BASE_URL}/#software`,
+                },
+                inLanguage: "en-US",
               },
-              sameAs: [
-                "https://github.com/shawkath646",
-                "https://shawkath646.dev",
-              ],
-            },
-            {
-              "@type": "WebSite",
-              "@id": `${BASE_URL}/#website`,
-              url: BASE_URL,
-              name: "ClouAuth",
-              description:
-                "Centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider by clouburstlab.",
-              publisher: {
-                "@id": `${BASE_URL}/#organization`,
+              {
+                "@type": "SoftwareApplication",
+                "@id": `${BASE_URL}/#software`,
+                name: "ClouAuth",
+                url: BASE_URL,
+                description:
+                  "Centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider by clouburstlab.",
+                applicationCategory: "SecurityApplication",
+                creator: {
+                  "@id": "https://clouburstlab.com/#organization",
+                },
+                sameAs: [
+                  "https://github.com/shawkath646/clouauth",
+                ],
               },
-              inLanguage: "en-US",
-            },
-          ],
-        }} />
+            ],
+          }}
+        />
       </head>
       <body className="min-h-full bg-white text-black dark:bg-black dark:text-white">
         <ThemeProvider

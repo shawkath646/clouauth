@@ -3,13 +3,13 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getTempSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import crypto from "crypto";
-import { sendVerificationCodeEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 import { verify } from "otplib";
 
 const MAX_ATTEMPTS = 5;
@@ -98,7 +98,9 @@ async function sendVerificationCode(userId: string) {
       }
     });
 
-    await sendVerificationCodeEmail(destination, rawCode);
+    await sendEmail("verification_code", {
+      data: { code: rawCode }, userId
+    });
 
     return { success: true };
   } catch (e: unknown) {
@@ -290,9 +292,9 @@ export async function resolveTotpVerification(tempSessionId: string, code: strin
     });
 
     if (!totpCred) return { success: false, error: "Authenticator app not configured." };
-    
+
     const { valid } = await verify({ token: code, secret: totpCred.secret });
-    
+
     if (!valid) {
       return { success: false, error: "Invalid authenticator code." };
     }

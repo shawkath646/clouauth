@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshSession } from "@/lib/session";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME, SESSION_TOKEN_TTL, REFRESH_TOKEN_TTL, REFRESH_TOKEN_TTL_REMEMBER_ME } from "@/constants/session.constants";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 // POST /v1/auth/refresh
 // Pure API endpoint - takes RT in JSON body, returns new ST/RT pair as JSON

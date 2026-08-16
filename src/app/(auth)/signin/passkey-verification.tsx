@@ -8,7 +8,7 @@ import { Loader2, Fingerprint } from "lucide-react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { resolvePasskeyVerification, triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { toast } from "sonner";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 interface PasskeyVerificationProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

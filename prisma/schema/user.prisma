@@ -26,6 +26,7 @@ model User {
   verification_codes VerificationCode[]
   apps               UserApp[]               @relation("UserApps")
   oauth_sessions     OAuthSession[]
+  email_queue        EmailQueue[]
 }
 
 model UserEmail {

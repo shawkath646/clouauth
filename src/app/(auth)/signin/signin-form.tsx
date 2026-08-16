@@ -15,7 +15,7 @@ import { triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
 import { getAvailableMethods } from "@/actions/auth/auth.actions";
 import { toast } from "sonner";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | "REENABLE_ACCOUNT";
 

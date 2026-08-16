@@ -23,7 +23,7 @@ import SignUpPromotion from "./signup-promotion";
 import { signUp } from "@/actions/auth/signup.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
 import SocialProviders from "@/components/social-providers";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export default function SignUpForm() {
   const router = useRouter();

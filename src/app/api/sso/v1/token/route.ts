@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT, importJWK } from "jose";
 import prisma from "@/lib/prisma";
 import { createOAuthSession } from "@/lib/session";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 import { getSecret } from "@/lib/jwt-secret";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";

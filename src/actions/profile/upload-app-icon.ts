@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar"; // R2 is generic
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function uploadAppIcon(formData: FormData, appId: string) {
   try {

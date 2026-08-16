@@ -5,7 +5,7 @@ import { getUserSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getErrorCode, handleError } from "@/utils/utils";
+import { getErrorCode, handleError } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { z } from "zod";
 
@@ -21,6 +21,7 @@ import {
   PronounsValues,
   AddressValues,
 } from "@/schema/profile.schema";
+import { DBUserPreference } from "@/types/preferences.types";
 
 export async function updateProfileName(data: NameValues) {
   try {
@@ -224,7 +225,7 @@ export async function updateProfilePreferences(data: z.infer<typeof preferencesS
     }
     const validatedData = parsed.data;
 
-    const updateData: any = {};
+    const updateData: Partial<DBUserPreference> = {};
     if (validatedData.theme) {
       updateData.theme = validatedData.theme;
       (await cookies()).set("theme_pref", validatedData.theme, { path: "/", httpOnly: false, sameSite: "lax", secure: process.env.NODE_ENV === "production" });

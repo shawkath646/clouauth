@@ -8,6 +8,7 @@ model UserSession {
     
   created_on              DateTime  @default(now())
   updated_on              DateTime  @updatedAt
+  last_authenticated_on   DateTime  @default(now())
   session_expires_on      DateTime
   expires_on              DateTime
   revoked_on              DateTime?

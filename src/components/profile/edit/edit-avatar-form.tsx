@@ -10,7 +10,7 @@ import { Upload, Loader2, ImagePlus } from "lucide-react";
 import { uploadCustomAvatar } from "@/actions/profile/upload-avatar";
 import { toast } from "sonner";
 import getCroppedImg from "@/utils/crop-image";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export function EditAvatarForm() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);

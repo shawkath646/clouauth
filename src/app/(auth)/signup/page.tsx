@@ -25,19 +25,21 @@ export default async function SignUpPage() {
   const locale = await getLocale();
   const dict = await getDictionary(locale, 'signup');
 
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+
   return (
     <>
       <JsonLd
         schema={{
           "@context": "https://schema.org",
           "@type": "WebPage",
-          "@id": `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signup#webpage`,
+          "@id": `${BASE_URL}/signup#webpage`,
           name: "Create an Account — clouburstlab",
           description:
             "Create your free clouburstlab account for a unified identity across all OIDC and OAuth 2.0 applications.",
-          url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signup`,
+          url: `${BASE_URL}/signup`,
           isPartOf: {
-            "@id": `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/#website`,
+            "@id": `${BASE_URL}/#website`,
           },
           breadcrumb: {
             "@type": "BreadcrumbList",
@@ -46,19 +48,19 @@ export default async function SignUpPage() {
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com",
+                item: BASE_URL,
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: "Create Account",
-                item: `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signup`,
+                item: `${BASE_URL}/signup`,
               },
             ],
           },
           potentialAction: {
             "@type": "RegisterAction",
-            target: `${process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com"}/signup`,
+            target: `${BASE_URL}/signup`,
             name: "Create a clouburstlab account",
           },
         }}

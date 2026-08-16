@@ -9,7 +9,7 @@ import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2 } from "lucide-react";
 
 import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 interface CodeVerificationProps {
   onComplete: (result: unknown) => void;

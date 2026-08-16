@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getUserSession, revokeSession, signOut } from "@/lib/session";
 import { revalidatePath } from "next/cache";
-import { handleError } from "@/utils/utils";
+import { handleError } from "@/utils/error";
 
 export async function revokeUserSessionAction(sessionId: string) {
   try {

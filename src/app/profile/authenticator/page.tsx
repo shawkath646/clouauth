@@ -11,8 +11,9 @@ export default async function AuthenticatorPage() {
   const profileRes = await getFullProfile();
   const profile = (profileRes.success && "profile" in profileRes ? profileRes.profile : profileRes.success && "data" in profileRes ? (profileRes as any).data : null) as import("@/types/profile.types").FullProfile | null;
 
-  const methods = profile?.two_factor_methods || [];
-  const authenticator = methods.find(m => m.type === "totp") || null;
+  const hasTotp = !!profile?.has_totp;
+
+  const authenticator = hasTotp ? { id: "totp", enabled: true, added_on: new Date() } : null;
 
   return (
     <div className="space-y-6 max-w-3xl">

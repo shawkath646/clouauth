@@ -1,7 +1,8 @@
+import { getEnv } from "@/utils/env";
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+  const baseUrl = getEnv("NEXT_PUBLIC_BASE_URL");
 
   return [
     {

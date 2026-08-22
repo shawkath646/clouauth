@@ -3,33 +3,28 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getUserSession } from "@/lib/session";
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { handleError } from "@/utils/error";
 import { getSecret } from "@/lib/jwt-secret";
 
-export async function grantOAuthAccess() {
+export async function grantOAuthAccess(
+    client_id: string,
+    redirect_uri: string,
+    state?: string | null,
+    code_challenge?: string | null,
+    code_challenge_method?: string | null,
+    scope?: string | null,
+    nonce?: string | null
+) {
     try {
         const session = await getUserSession();
         if (!session) {
             return { success: false, error: "Unauthorized" };
         }
 
-        const cookieStore = await cookies();
-        const oauthCookie = cookieStore.get("oauth_auth_req");
-        
-        if (!oauthCookie || !oauthCookie.value) {
-            return { success: false, error: "No pending OAuth request found." };
-        }
-
-        // Verify the initial request
-        const { payload } = await jwtVerify(oauthCookie.value, getSecret());
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { client_id, redirect_uri, state, code_challenge, code_challenge_method, scope, nonce } = payload as any;
-
-        if (!redirect_uri) {
-             return { success: false, error: "Invalid OAuth request. Missing redirect URI." };
+        if (!client_id || !redirect_uri) {
+             return { success: false, error: "Invalid OAuth request. Missing required parameters." };
         }
 
         // Generate the Authorization Code (Stateless JWT)
@@ -47,9 +42,6 @@ export async function grantOAuthAccess() {
         .setIssuedAt()
         .setExpirationTime("5m") // Code is valid for 5 minutes
         .sign(getSecret());
-
-        // Clear the temp cookie
-        cookieStore.delete("oauth_auth_req");
 
         // Build the redirect URL
         const url = new URL(redirect_uri);

@@ -17,9 +17,13 @@ export default async function AuthLayout({
 }) {
   const locale = await getLocale();
   const commonDict = await getDictionary(locale, 'common');
+  const schemaAuthDict = await getDictionary(locale, 'schema_auth');
+
+  // Merge common and schema_auth dictionaries for the auth layout
+  const mergedDict = { ...commonDict, ...schemaAuthDict };
 
   return (
-    <I18nProvider locale={locale} messages={commonDict}>
+    <I18nProvider locale={locale} messages={mergedDict as any}>
       <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-primary/5 dark:bg-primary/10 overflow-hidden">
         <BackgroundStars />
         <div className="absolute top-5 right-5 z-50">

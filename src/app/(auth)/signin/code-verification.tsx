@@ -10,9 +10,10 @@ import { Loader2 } from "lucide-react";
 
 import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
 import { handleError } from "@/utils/error";
+import { SignInReturn } from "@/actions/auth/auth.actions";
 
 interface CodeVerificationProps {
-  onComplete: (result: unknown) => void;
+  onComplete: (result: SignInReturn) => void;
   tempSessionId: string | null;
   methodType?: "code" | "totp" | string;
 }
@@ -36,7 +37,7 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
       if (!result.success) {
         setErrorMsg('error' in result && result.error ? result.error : "Failed to resend code.");
       } else {
-        setCountdown(60); // 60 seconds countdown
+        setCountdown(60);
         setCode(Array(codeLength).fill(""));
         focusInput(0);
       }
@@ -66,10 +67,10 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
       const response = methodType === "totp" 
         ? await resolveTotpVerification(tempSessionId, code.join(""))
         : await resolveCodeVerification(tempSessionId, code.join(""));
-      if (response.success) {
-        onComplete(response);
-      } else {
+      if (response && response.action === "ERROR") {
         setErrorMsg(response.error || "Invalid code");
+      } else {
+        onComplete(response);
       }
     } catch (e: unknown) {
         const em = handleError(e, "Failed to execute CodeVerification");

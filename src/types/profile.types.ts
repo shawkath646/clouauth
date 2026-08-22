@@ -1,6 +1,6 @@
 import type { DBUser, DBAddress, DBUserEmail } from "./user.types";
 import type { DBNotificationPreference, DBUserPreference } from "./preferences.types";
-import type { DBPasswordCredential, DBTwoFactorMethod, DBOAuthAccount } from "./auth.types";
+import type { DBPasswordCredential, DBOAuthAccount } from "./auth.types";
 import type { DBUserSession } from "./session.types";
 
 // 1. Full profile
@@ -11,15 +11,15 @@ export interface FullProfile {
     preferences: DBUserPreference;
     notifications: DBNotificationPreference;
     password: DBPasswordCredential | null;
-    two_factor_methods: DBTwoFactorMethod[];
     passkeys?: import("./auth.types").DBPasskeyCredential[];
+    has_totp?: boolean;
     recovery_codes?: { id: string; used: boolean; created_on: Date | string }[];
     sessions: DBUserSession[];
     oauth_accounts: DBOAuthAccount[];
 }
 
 // 2. Secured full profile // remove auth related data
-export type SecuredFullProfile = Omit<FullProfile, 'password' | 'two_factor_methods' | 'sessions'>;
+export type SecuredFullProfile = Omit<FullProfile, 'password' | 'sessions'>;
 
 // 3. Minimal profile // return user basic info, like primary email, username, profile_pic, full name, dob etc
 export interface MinimalProfile {

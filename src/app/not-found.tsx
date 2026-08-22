@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   },
 };
 
-const DEV_URL = process.env.NEXT_PUBLIC_DEV_URL || "https://shawkath646.dev";
+const DEV_URL = getEnv("NEXT_PUBLIC_DEV_URL");
 
 export default function NotFound() {
   return (
@@ -22,7 +23,7 @@ export default function NotFound() {
       <div className="absolute top-8 left-6 z-50 md:top-10 md:left-10 opacity-50">
         <Link href="/" className="group block">
           <Image
-            src={`${process.env.R2_PUBLIC_URL}/branding/icon_light.png`}
+            src={`${getEnv("R2_PUBLIC_URL")}/branding/icon_light.png`}
             alt="clouburstlab"
             width={180}
             height={24}
@@ -30,7 +31,7 @@ export default function NotFound() {
             className="transition-transform duration-500 group-hover:scale-105 dark:hidden object-contain"
           />
           <Image
-            src={`${process.env.R2_PUBLIC_URL}/branding/icon_dark.png`}
+            src={`${getEnv("R2_PUBLIC_URL")}/branding/icon_dark.png`}
             alt="clouburstlab"
             width={180}
             height={24}

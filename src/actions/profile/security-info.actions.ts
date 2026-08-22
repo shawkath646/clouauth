@@ -134,18 +134,7 @@ export async function addPhoneMethodAction(data: PhoneValues) {
       return { success: false, error: parsed.error.issues[0].message };
     }
 
-    await prisma.twoFactorMethod.create({
-      data: {
-        user_id: sessionData.user.id,
-        type: "phone",
-        enabled: true,
-      },
-    });
-
-    revalidatePath("/profile");
-    revalidatePath("/profile/phone");
-    revalidatePath("/profile/authenticator");
-    return { success: true };
+    return { success: false, error: "Not implemented" };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute addPhoneMethodAction");
     return { success: false, error: em };
@@ -157,25 +146,18 @@ export async function removeTwoFactorMethodAction(methodId: string) {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const method = await prisma.twoFactorMethod.findUnique({
-      where: { id: methodId },
-    });
-
-    if (!method || method.user_id !== sessionData.user.id) {
-      return { success: false, error: "Verification method not found or unauthorized" };
+    if (methodId === "totp") {
+      await prisma.totpMethod.deleteMany({
+        where: { two_factor_id: sessionData.user.id }
+      });
+      revalidatePath("/profile");
+      revalidatePath("/profile/authenticator");
+      return { success: true };
     }
 
-    await prisma.twoFactorMethod.delete({
-      where: { id: methodId },
-    });
-
-    revalidatePath("/profile");
-    revalidatePath("/profile/phone");
-    revalidatePath("/profile/authenticator");
-    return { success: true };
+    return { success: false, error: "Invalid method" };
   } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute removeTwoFactorMethodAction");
-    return { success: false, error: em };
+    return { success: false, error: handleError(e, "Failed to remove method") };
   }
 }
 
@@ -227,21 +209,34 @@ export async function sendRecoveryEmailVerificationCodeAction(emailAddress: stri
     const rawCode = Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join("");
     const codeHash = await bcrypt.hash(rawCode, 12);
 
-    await prisma.verificationCode.updateMany({
-      where: { user_id: sessionData.user.id, type: "change_email", consumed_on: null },
-      data: { consumed_on: new Date() }
+    const existingTempSession = await prisma.tempSession.findFirst({
+      where: { user_id: sessionData.user.id, type: "change_email" },
+      orderBy: { created_on: 'desc' }
     });
 
-    await prisma.verificationCode.create({
-      data: {
-        user_id: sessionData.user.id,
-        type: "change_email",
-        destination: emailAddress,
-        code_hash: codeHash,
-        expires_on: new Date(Date.now() + 10 * 60 * 1000),
-        failed_attempts: 0
-      }
-    });
+    if (existingTempSession) {
+      await prisma.tempSession.update({
+        where: { id: existingTempSession.id },
+        data: {
+          destination: emailAddress,
+          code_hash: codeHash,
+          expires_on: new Date(Date.now() + 10 * 60 * 1000),
+          failed_attempts: 0,
+          locked_until: null
+        }
+      });
+    } else {
+      await prisma.tempSession.create({
+        data: {
+          user_id: sessionData.user.id,
+          type: "change_email",
+          destination: emailAddress,
+          code_hash: codeHash,
+          expires_on: new Date(Date.now() + 10 * 60 * 1000),
+          failed_attempts: 0
+        }
+      });
+    }
 
     await sendEmail("verification_code", {
       data: { code: rawCode },
@@ -259,27 +254,29 @@ export async function verifyRecoveryEmailAction(code: string) {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const vCode = await prisma.verificationCode.findFirst({
-      where: { user_id: sessionData.user.id, type: "change_email", consumed_on: null },
+    const tempSession = await prisma.tempSession.findFirst({
+      where: { user_id: sessionData.user.id, type: "change_email" },
       orderBy: { created_on: 'desc' }
     });
 
-    if (!vCode || vCode.expires_on < new Date()) {
+    if (!tempSession || tempSession.expires_on < new Date() || !tempSession.code_hash) {
       return { success: false, error: "Code expired or not found" };
     }
 
-    const isValid = await bcrypt.compare(code, vCode.code_hash);
+    const isValid = await bcrypt.compare(code, tempSession.code_hash);
     if (!isValid) return { success: false, error: "Invalid code" };
 
-    await prisma.verificationCode.update({
-      where: { id: vCode.id },
-      data: { consumed_on: new Date() }
+    // Valid code. Delete the temp session
+    await prisma.tempSession.delete({
+      where: { id: tempSession.id }
     });
 
-    await prisma.userEmail.updateMany({
-      where: { user_id: sessionData.user.id, address: vCode.destination },
-      data: { verified: true }
-    });
+    if (tempSession.destination) {
+      await prisma.userEmail.updateMany({
+        where: { user_id: sessionData.user.id, address: tempSession.destination },
+        data: { verified: true }
+      });
+    }
 
     revalidatePath("/profile");
     revalidatePath("/profile/recovery-email");

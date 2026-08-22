@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -19,7 +20,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

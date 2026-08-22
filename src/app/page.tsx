@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import { Navigation } from "@/components/landing/navigation";
 import { Hero } from "@/components/landing/hero";
 import { TrustSection } from "@/components/landing/trust-section";
@@ -13,7 +14,7 @@ import { getServerTranslations, getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
 
 export default async function Home() {
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+  const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
   
   const [profileResult, { locale }] = await Promise.all([
     getMinimalProfile(),
@@ -32,9 +33,9 @@ export default async function Home() {
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           "@id": `${BASE_URL}/#application`,
-          name: "clouburstlab auth",
+          name: "ClouAuth",
           description:
-            "A centralized authentication and user management system that serves as a fully compliant " +
+            "A centralized authentication and user management system for clouburstlab ecosystem that serves as a fully compliant " +
             "OIDC 2.0 and OAuth 2.0 Identity Provider (IdP). Features include passkey-based " +
             "passwordless login, two-factor authentication (2FA), social login (Google, GitHub, Microsoft), " +
             "developer OAuth application management, and account security controls.",
@@ -71,7 +72,7 @@ export default async function Home() {
           screenshot: {
             "@type": "ImageObject",
             url: `${BASE_URL}/opengraph-image.png`,
-            caption: "clouburstlab auth — sign-in screen",
+            caption: "ClouAuth — sign-in screen",
           },
           softwareVersion: "0.1.0",
           releaseNotes: "Initial release of the clouburstlab identity platform.",

@@ -1,9 +1,15 @@
 import { cookies, headers } from "next/headers";
 import crypto from "crypto";
 import prisma from "./prisma";
-import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME, SESSION_TOKEN_TTL, REFRESH_TOKEN_TTL_REMEMBER_ME } from "@/constants/session.constants";
-import type { SessionData, SafeDBUserSession, DBTempSession, DBUserSession } from "@/types/session.types";
+import {
+    COOKIE_SESSION_TOKEN_NAME,
+    COOKIE_REFRESH_TOKEN_NAME,
+    SESSION_TOKEN_TTL,
+    REFRESH_TOKEN_TTL_REMEMBER_ME
+} from "@/constants/session.constants";
 import { handleError } from "@/utils/error";
+import type { SessionData, SafeDBUserSession, DBTempSession, DBUserSession } from "@/types/session.types";
+import { getSecureCookieOptions } from "@/utils/utils";
 
 const generateRandomValue = () => crypto.randomBytes(32).toString("hex");
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
@@ -16,21 +22,17 @@ function sanitizeSession(session: DBUserSession): SafeDBUserSession {
 
 async function setSessionCookies(sessionToken: string, refreshToken: string | null, maxAgeSession: number, maxAgeRefresh: number) {
     const cookieStore = await cookies();
-    cookieStore.set(COOKIE_SESSION_TOKEN_NAME, sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: maxAgeSession
-    });
+    cookieStore.set(
+        COOKIE_SESSION_TOKEN_NAME,
+        sessionToken,
+        getSecureCookieOptions({ maxAge: maxAgeSession })
+    );
     if (refreshToken && maxAgeRefresh > 0) {
-        cookieStore.set(COOKIE_REFRESH_TOKEN_NAME, refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-            maxAge: maxAgeRefresh
-        });
+        cookieStore.set(
+            COOKIE_REFRESH_TOKEN_NAME,
+            refreshToken,
+            getSecureCookieOptions({ maxAge: maxAgeRefresh })
+        );
     } else {
         cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
     }
@@ -44,19 +46,20 @@ export async function createSession(userId: string, rememberMe: boolean = false)
     const refreshHash = hashToken(rawRefreshToken);
 
     const now = new Date();
-    const sessionTtl = rememberMe ? SESSION_TOKEN_TTL : 30 * 60; // 15 mins with rememberMe, 30 mins without
-    const sessionExpiresOn = new Date(now.getTime() + sessionTtl * 1000);
-    
+    const sessionTtl = SESSION_TOKEN_TTL; // Always 15 min for the short-lived session token
+    // Add 5 minutes grace period to DB expiry to prevent race conditions before browser deletes cookie
+    const sessionExpiresOn = new Date(now.getTime() + sessionTtl * 1000 + 300 * 1000);
+
     const rtTtl = rememberMe ? REFRESH_TOKEN_TTL_REMEMBER_ME : sessionTtl;
     const refreshExpiresOn = new Date(now.getTime() + rtTtl * 1000);
-    
+
     const headersList = await headers();
     const userAgentRaw = headersList.get("user-agent") || "";
     const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || null;
-    
+
     let deviceName = null;
     let browserName = null;
-    
+
     if (userAgentRaw) {
         if (userAgentRaw.includes("Windows")) deviceName = "Windows PC";
         else if (userAgentRaw.includes("Macintosh")) deviceName = "Mac";
@@ -64,7 +67,7 @@ export async function createSession(userId: string, rememberMe: boolean = false)
         else if (userAgentRaw.includes("iPad")) deviceName = "iPad";
         else if (userAgentRaw.includes("Android")) deviceName = "Android Device";
         else if (userAgentRaw.includes("Linux")) deviceName = "Linux PC";
-        
+
         if (userAgentRaw.includes("Edg")) browserName = "Edge";
         else if (userAgentRaw.includes("OPR") || userAgentRaw.includes("Opera")) browserName = "Opera";
         else if (userAgentRaw.includes("Chrome")) browserName = "Chrome";
@@ -72,18 +75,60 @@ export async function createSession(userId: string, rememberMe: boolean = false)
         else if (userAgentRaw.includes("Safari")) browserName = "Safari";
     }
 
-    const session = await prisma.userSession.create({
-        data: {
+    const cookieStore = await cookies();
+    let deviceFingerprint = cookieStore.get("clou_device_id")?.value;
+    if (!deviceFingerprint) {
+        deviceFingerprint = crypto.randomUUID();
+        cookieStore.set("clou_device_id", deviceFingerprint, getSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 * 10 })); // 10 years
+    }
+
+    // Optional: Clean up only EXPIRED sessions for this user to prevent DB bloat
+    await prisma.userSession.deleteMany({
+        where: {
             user_id: userId,
-            session_token_hash: sessionHash,
-            refresh_token_hash: refreshHash,
-            session_expires_on: sessionExpiresOn,
-            expires_on: refreshExpiresOn,
-            device_name: deviceName,
-            user_agent: browserName || userAgentRaw || null,
-            ip_address: ipAddress,
+            expires_on: { lt: new Date() }
         }
     });
+
+    const existingSession = await prisma.userSession.findFirst({
+        where: {
+            user_id: userId,
+            device_fingerprint: deviceFingerprint
+        }
+    });
+
+    let session;
+    if (existingSession) {
+        session = await prisma.userSession.update({
+            where: { id: existingSession.id },
+            data: {
+                session_token_hash: sessionHash,
+                refresh_token_hash: refreshHash,
+                session_expires_on: sessionExpiresOn,
+                expires_on: refreshExpiresOn,
+                revoked_on: null,
+                last_authenticated_on: new Date(),
+                device_name: deviceName,
+                user_agent: browserName || userAgentRaw || null,
+                ip_address: ipAddress,
+            }
+        });
+    } else {
+        session = await prisma.userSession.create({
+            data: {
+                user_id: userId,
+                session_token_hash: sessionHash,
+                refresh_token_hash: refreshHash,
+                session_expires_on: sessionExpiresOn,
+                expires_on: refreshExpiresOn,
+                last_authenticated_on: new Date(),
+                device_name: deviceName,
+                user_agent: browserName || userAgentRaw || null,
+                ip_address: ipAddress,
+                device_fingerprint: deviceFingerprint,
+            }
+        });
+    }
 
     const sessionToken = `${session.id}.${rawSessionToken}`;
     const refreshToken = `${session.id}.${rawRefreshToken}`;
@@ -103,16 +148,16 @@ export async function createSession(userId: string, rememberMe: boolean = false)
     };
 }
 
-export async function refreshSession(presentedRefreshToken: string): Promise<SessionData> {
+export async function refreshSession(presentedRefreshToken: string, setCookies: boolean = true): Promise<SessionData> {
     if (!presentedRefreshToken || typeof presentedRefreshToken !== "string") {
         throw new Error("invalid_token_format");
     }
     const parts = presentedRefreshToken.split('.');
     if (parts.length !== 2) throw new Error("invalid_token_format");
-    
+
     const [sessionId, tokenValue] = parts;
     const presentedHash = hashToken(tokenValue);
-    
+
     const session = await prisma.userSession.findUnique({
         where: { id: sessionId }
     });
@@ -146,9 +191,9 @@ export async function refreshSession(presentedRefreshToken: string): Promise<Ses
     const newRefreshHash = hashToken(rawRefreshToken);
 
     const now = new Date();
-    const sessionExpiresOn = new Date(now.getTime() + SESSION_TOKEN_TTL * 1000);
-    
-    // Maintain the original expiration length by checking the distance from creation
+    // Add 5 minutes grace period to DB expiry
+    const sessionExpiresOn = new Date(now.getTime() + SESSION_TOKEN_TTL * 1000 + 300 * 1000);
+
     const originalTtl = (session.expires_on.getTime() - session.created_on.getTime()) / 1000;
     const refreshExpiresOn = new Date(now.getTime() + originalTtl * 1000);
 
@@ -166,7 +211,7 @@ export async function refreshSession(presentedRefreshToken: string): Promise<Ses
     const newSessionToken = `${session.id}.${rawSessionToken}`;
     const newRefreshToken = `${session.id}.${rawRefreshToken}`;
 
-    await setSessionCookies(newSessionToken, newRefreshToken, SESSION_TOKEN_TTL, originalTtl);
+    if (setCookies) await setSessionCookies(newSessionToken, newRefreshToken, SESSION_TOKEN_TTL, originalTtl);
 
     return {
         sessionToken: newSessionToken,
@@ -187,10 +232,10 @@ export async function getSession(sessionToken: string): Promise<SafeDBUserSessio
     if (!sessionToken || typeof sessionToken !== "string") return null;
     const parts = sessionToken.split('.');
     if (parts.length !== 2) return null;
-    
+
     const [sessionId, tokenValue] = parts;
     const sessionHash = hashToken(tokenValue);
-    
+
     const session = await prisma.userSession.findUnique({
         where: { id: sessionId }
     });
@@ -210,12 +255,12 @@ export async function getSession(sessionToken: string): Promise<SafeDBUserSessio
 export async function getUserSession() {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
-    
+
     if (!sessionToken) return null;
-    
+
     const session = await getSession(sessionToken);
     if (!session) return null;
-    
+
     const user = await prisma.user.findUnique({
         where: { id: session.user_id },
         select: {
@@ -244,7 +289,7 @@ export async function getUserSession() {
 
 export async function signOut(sessionId?: string) {
     const cookieStore = await cookies();
-    
+
     if (sessionId) {
         await revokeSession(sessionId);
     } else {
@@ -261,14 +306,15 @@ export async function signOut(sessionId?: string) {
     cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
 }
 
-export async function createTempSession(userId: string): Promise<DBTempSession> {
+export async function createTempSession(userId: string, rememberMe: boolean = false): Promise<DBTempSession> {
     const now = new Date();
     const expiresOn = new Date(now.getTime() + 15 * 60 * 1000);
-    
+
     return await prisma.tempSession.create({
         data: {
             user_id: userId,
             expires_on: expiresOn,
+            remember_me: rememberMe,
         }
     });
 }
@@ -290,85 +336,99 @@ export async function deleteTempSession(tempSessionId: string): Promise<void> {
 }
 
 export async function createOAuthSession(userId: string, clientId: string, scope: string) {
-    const rawAccessToken = generateRandomValue();
-    const rawRefreshToken = generateRandomValue();
+    const accessExpiresIn = 3600; // 1 hour
+    const refreshExpiresIn = 30 * 24 * 3600; // 30 days
 
-    const accessHash = hashToken(rawAccessToken);
-    const refreshHash = hashToken(rawRefreshToken);
+    const { SignJWT } = await import("jose");
+    const { getSecret } = await import("@/lib/jwt-secret");
+    const secret = getSecret();
 
-    const now = new Date();
-    const accessExpiresOn = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour access token
-    const refreshExpiresOn = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 day refresh token
+    const accessToken = await new SignJWT({
+        sub: userId,
+        client_id: clientId,
+        scope: scope || "openid profile email",
+        type: "access_token"
+    })
+    .setProtectedHeader({ alg: "HS256" })
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(`${accessExpiresIn}s`)
+    .sign(secret);
 
-    const session = await prisma.oAuthSession.create({
-        data: {
-            user_id: userId,
-            client_id: clientId,
-            scope: scope || "openid profile email",
-            access_token_hash: accessHash,
-            refresh_token_hash: refreshHash,
-            access_expires_on: accessExpiresOn,
-            refresh_expires_on: refreshExpiresOn
-        }
-    });
+    const refreshToken = await new SignJWT({
+        sub: userId,
+        client_id: clientId,
+        scope: scope || "openid profile email",
+        type: "refresh_token"
+    })
+    .setProtectedHeader({ alg: "HS256" })
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(`${refreshExpiresIn}s`)
+    .sign(secret);
 
     return {
-        accessToken: `${session.id}.${rawAccessToken}`,
-        refreshToken: `${session.id}.${rawRefreshToken}`,
-        expiresIn: 3600,
-        scope: session.scope
+        accessToken,
+        refreshToken,
+        expiresIn: accessExpiresIn,
+        scope: scope || "openid profile email"
     };
 }
 
 export async function getOAuthSession(token: string) {
-    const parts = token.split('.');
-    if (parts.length !== 2) return null;
-
-    const accessHash = hashToken(parts[1]);
-    const session = await prisma.oAuthSession.findFirst({
-        where: {
-            id: parts[0],
-            access_token_hash: accessHash
-        },
-        include: {
-            user: {
-                include: {
-                    emails: true
-                }
-            }
+    try {
+        const { jwtVerify } = await import("jose");
+        const { getSecret } = await import("@/lib/jwt-secret");
+        const { payload } = await jwtVerify(token, getSecret());
+        
+        if (payload.type !== "access_token") {
+            return null;
         }
-    });
 
-    if (!session || session.revoked_on || session.access_expires_on < new Date()) {
+        if (payload.jti) {
+            const revoked = await prisma.revokedToken.findUnique({ where: { jti: payload.jti as string } });
+            if (revoked) return null;
+        }
+
+        const scopes = (payload.scope as string).split(" ").filter(Boolean);
+        const includeEmails = scopes.includes("email");
+
+        const user = await prisma.user.findUnique({
+            where: { id: payload.sub as string },
+            include: includeEmails ? { emails: { where: { is_primary: true } } } : undefined
+        });
+
+        if (!user) return null;
+
+        return {
+            user,
+            scopes
+        };
+    } catch {
         return null;
     }
-
-    const scopes = session.scope.split(" ").filter(Boolean);
-    return {
-        session,
-        user: session.user,
-        scopes
-    };
 }
 
 export async function revokeOAuthSession(token: string) {
-    const parts = token.split('.');
-    if (parts.length !== 2) return false;
-
-    const accessHash = hashToken(parts[1]);
+    const { jwtVerify } = await import("jose");
+    const { getSecret } = await import("@/lib/jwt-secret");
     try {
-        await prisma.oAuthSession.updateMany({
-            where: {
-                id: parts[0],
-                access_token_hash: accessHash
-            },
-            data: {
-                revoked_on: new Date()
-            }
-        });
-        return true;
-    } catch {
-        return false;
-    }
-}
+        const { payload } = await jwtVerify(token, getSecret(), { maxTokenAge: '30d' });
+        const jti = payload.jti as string;
+        const exp = payload.exp as number;
 
+        if (jti && exp) {
+            await prisma.revokedToken.upsert({
+                where: { jti },
+                update: {},
+                create: {
+                    jti,
+                    expires_at: new Date(exp * 1000)
+                }
+            });
+        }
+    } catch {
+        // Token is malformed or signature invalid
+    }
+    return true;
+}

@@ -5,22 +5,19 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2, Smartphone } from "lucide-react";
+import { SignInReturn } from "@/actions/auth/auth.actions";
 
 interface PhoneVerificationProps {
-  onComplete: (result: unknown) => void;
+  onComplete: (result: SignInReturn) => void;
   tempSessionId: string | null;
 }
 
-export default function PhoneVerification({ onComplete, tempSessionId: _tempSessionId }: PhoneVerificationProps) {
+export default function PhoneVerification({ onComplete }: PhoneVerificationProps) {
   const { t } = useTranslations("signin");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   const handleVerify = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    const response = await new Promise((resolve) => setTimeout(() => resolve({ success: true, data: {} }), 1500));
-    setIsLoading(false);
-    onComplete(response);
+    onComplete({ action: "ERROR", error: "Phone verification not yet implemented" });
   };
 
   return (
@@ -42,21 +39,21 @@ export default function PhoneVerification({ onComplete, tempSessionId: _tempSess
 
       <div className="space-y-5 flex flex-col items-center py-2">
         <div className="relative">
-        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-        <div className="relative bg-background border border-primary/20 p-5 rounded-full">
-          <Smartphone className="h-8 w-8 text-primary animate-pulse" />
+          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+          <div className="relative bg-background border border-primary/20 p-5 rounded-full">
+            <Smartphone className="h-8 w-8 text-primary animate-pulse" />
+          </div>
         </div>
-      </div>
-      <p className="text-sm text-muted-foreground text-center">
-        {t("approveFromPhoneDesc")}
-      </p>
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={handleVerify}
-        disabled={isLoading}
-      >
-        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        <p className="text-sm text-muted-foreground text-center">
+          {t("approveFromPhoneDesc")}
+        </p>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleVerify}
+          disabled={isLoading}
+        >
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Simulate Approval
         </Button>
       </div>

@@ -1,9 +1,10 @@
+import { getEnv } from "@/utils/env";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
 export class GithubOAuthProvider implements IOAuthProvider {
-  private clientId = process.env.GITHUB_CLIENT_ID || "";
-  private clientSecret = process.env.GITHUB_CLIENT_SECRET || "";
-  private redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/oauth/callback/github`;
+  private clientId = getEnv("GITHUB_CLIENT_ID");
+  private clientSecret = getEnv("GITHUB_CLIENT_SECRET");
+  private redirectUri = `${getEnv("NEXT_PUBLIC_BASE_URL")}/api/oauth/callback/github`;
 
   getAuthorizationUrl(state: string): string {
     const url = new URL("https://github.com/login/oauth/authorize");

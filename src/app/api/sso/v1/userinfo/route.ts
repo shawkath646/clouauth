@@ -50,11 +50,8 @@ async function handleUserInfo(request: NextRequest) {
         }
 
         if (scopes.includes("email")) {
-            const primaryEmail = user.emails?.find(e => e.is_primary) || user.emails?.[0];
-            if (primaryEmail) {
-                claims.email = primaryEmail.address;
-                claims.email_verified = primaryEmail.verified;
-            }
+            claims.email = (sessionData.user as any).email || (sessionData.user as any).emails?.[0]?.address || null;
+            claims.email_verified = true;
         }
 
         return NextResponse.json(claims);

@@ -1,49 +1,51 @@
 model UserSession {
-  id                      String    @id @default(cuid())
-  user_id                 String
-  
-  session_token_hash      String    @unique
-  refresh_token_hash      String    @unique
+  id      String @id @default(cuid())
+  user_id String
+
+  session_token_hash          String  @unique
+  refresh_token_hash          String  @unique
   previous_refresh_token_hash String?
-    
-  created_on              DateTime  @default(now())
-  updated_on              DateTime  @updatedAt
-  last_authenticated_on   DateTime  @default(now())
-  session_expires_on      DateTime
-  expires_on              DateTime
-  revoked_on              DateTime?
-  
-  ip_address              String?
-  user_agent              String?
-  device_name             String?
-  
-  user                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_on            DateTime  @default(now())
+  updated_on            DateTime  @updatedAt
+  last_authenticated_on DateTime  @default(now())
+  session_expires_on    DateTime
+  expires_on            DateTime
+  revoked_on            DateTime?
+
+  ip_address  String?
+  user_agent  String?
+  device_name String?
+  device_fingerprint String?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model TempSession {
   id         String   @id @default(cuid())
   user_id    String
+  
   challenge  String?
+  
+  // Verification code fields
+  code_hash       String?
+  failed_attempts Int       @default(0)
+  locked_until    DateTime?
+  type            String?   // e.g. "2fa", "change_email"
+  destination     String?   // The email/phone the code was sent to
+  
+  // Track if a two-step verification was successfully processed
+  two_step_processed Boolean @default(false)
+  remember_me        Boolean @default(false)
+
   created_on DateTime @default(now())
   expires_on DateTime
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-model OAuthSession {
-  id                      String    @id @default(cuid())
-  user_id                 String
-  client_id               String
-  
-  access_token_hash       String    @unique
-  refresh_token_hash      String    @unique
-  
-  scope                   String
-  
-  created_on              DateTime  @default(now())
-  updated_on              DateTime  @updatedAt
-  access_expires_on       DateTime
-  refresh_expires_on      DateTime
-  revoked_on              DateTime?
-  
-  user                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+model RevokedToken {
+  id         String   @id @default(cuid())
+  jti        String   @unique
+  expires_at DateTime
+  created_on DateTime @default(now())
 }

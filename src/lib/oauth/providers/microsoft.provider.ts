@@ -1,10 +1,11 @@
+import { getEnv } from "@/utils/env";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
 export class MicrosoftOAuthProvider implements IOAuthProvider {
-  private clientId = process.env.MICROSOFT_CLIENT_ID || "";
-  private clientSecret = process.env.MICROSOFT_CLIENT_SECRET || "";
-  private redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/oauth/callback/microsoft`;
-  private tenantId = process.env.MICROSOFT_TENANT_ID || "common";
+  private clientId = getEnv("MICROSOFT_CLIENT_ID");
+  private clientSecret = getEnv("MICROSOFT_CLIENT_SECRET");
+  private redirectUri = `${getEnv("NEXT_PUBLIC_BASE_URL")}/api/oauth/callback/microsoft`;
+  private tenantId = getEnv("MICROSOFT_TENANT_ID");
 
   getAuthorizationUrl(state: string): string {
     const url = new URL(`https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/authorize`);

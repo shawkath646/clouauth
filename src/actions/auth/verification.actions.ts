@@ -1,5 +1,5 @@
 "use server";
-
+import { getEnv } from "@/utils/env";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getTempSession } from "@/lib/session";
@@ -11,6 +11,8 @@ import {
 import crypto from "crypto";
 import { sendEmail } from "@/lib/email";
 import { verify } from "otplib";
+import { type SignInReturn } from "./auth.actions";
+import { decryptSymmetric } from "@/lib/encryption";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -26,21 +28,26 @@ export async function triggerVerificationMethod(tempSessionId: string, methodTyp
       where: { id: tempSession.user_id },
       select: {
         id: true,
-        two_factor_methods: {
-          where: { enabled: true, type: methodType },
-          select: { id: true, type: true }
+        emails: { where: { is_primary: true }, select: { address: true } },
+        two_factor: {
+          select: {
+            passkeys: { select: { id: true } },
+            totp: { select: { id: true, enabled: true } },
+            email_id: true,
+          }
         }
       }
     });
 
-    if (!user || user.two_factor_methods.length === 0) {
+    if (!user || !user.two_factor) {
       return { success: false, error: "Verification method not available." };
     }
 
     switch (methodType) {
       case "email":
-      case "sms":
-        return await sendVerificationCode(user.id);
+        const destination = user.emails[0]?.address;
+        if (!destination) return { success: false, error: "No primary email found." };
+        return await sendVerificationCode(user.id, tempSessionId, destination);
       case "passkey":
         return await triggerPasskeyVerification(user.id, tempSessionId);
       case "totp":
@@ -54,47 +61,18 @@ export async function triggerVerificationMethod(tempSessionId: string, methodTyp
   }
 }
 
-async function sendVerificationCode(userId: string) {
+async function sendVerificationCode(userId: string, tempSessionId: string, destination: string) {
   try {
     const rawCode = Array.from({ length: 8 }, () => crypto.randomInt(0, 10)).join("");
     const codeHash = await bcrypt.hash(rawCode, 12);
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        emails: { where: { is_primary: true }, select: { address: true } },
-      }
-    });
-
-    const destination = user?.emails[0]?.address;
-    if (!destination) {
-      return { success: false, error: "No primary email address found for this user." };
-    }
-
-    const previousCode = await prisma.verificationCode.findFirst({
-      where: { user_id: userId, type: "2fa", consumed_on: null },
-      orderBy: { created_on: 'desc' }
-    });
-
-    const failedAttempts = previousCode?.failed_attempts || 0;
-    const lockedUntil = previousCode?.locked_until || null;
-
-    if (previousCode) {
-      await prisma.verificationCode.updateMany({
-        where: { user_id: userId, type: "2fa", consumed_on: null },
-        data: { consumed_on: new Date() }
-      });
-    }
-
-    await prisma.verificationCode.create({
+    await prisma.tempSession.update({
+      where: { id: tempSessionId },
       data: {
-        user_id: userId,
+        code_hash: codeHash,
         type: "2fa",
         destination,
-        code_hash: codeHash,
-        expires_on: new Date(Date.now() + 10 * 60 * 1000),
-        failed_attempts: failedAttempts,
-        locked_until: lockedUntil
+        expires_on: new Date(Date.now() + 10 * 60 * 1000)
       }
     });
 
@@ -113,10 +91,7 @@ async function triggerPasskeyVerification(userId: string, tempSessionId: string)
   try {
     const passkeys = await prisma.passkeyCredential.findMany({
       where: {
-        two_factor_method: {
-          user_id: userId,
-          enabled: true,
-        },
+        two_factor_id: userId,
       },
     });
 
@@ -124,7 +99,7 @@ async function triggerPasskeyVerification(userId: string, tempSessionId: string)
       return { success: false as const, error: "No passkeys registered for this account." };
     }
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
+    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
 
     const options = await generateAuthenticationOptions({
       rpID,
@@ -147,88 +122,89 @@ async function triggerPasskeyVerification(userId: string, tempSessionId: string)
   }
 }
 
-export async function resolveCodeVerification(tempSessionId: string, code: string) {
+export async function resolveCodeVerification(
+  tempSessionId: string, 
+  code: string
+): Promise<SignInReturn> {
   try {
     const tempSession = await getTempSession(tempSessionId);
     if (!tempSession || tempSession.expires_on < new Date()) {
-      return { success: false, error: "Session expired or invalid. Please sign in again." };
+      return { action: "ERROR", error: "Session expired or invalid. Please sign in again." };
     }
 
-    const vCode = await prisma.verificationCode.findFirst({
-      where: { user_id: tempSession.user_id, type: "2fa", consumed_on: null },
-      orderBy: { created_on: 'desc' }
-    });
+    if (!tempSession.code_hash) return { action: "ERROR", error: "No active verification code found." };
 
-    if (!vCode) return { success: false, error: "No active verification code found." };
-
-    if (vCode.locked_until && vCode.locked_until > new Date()) {
-      const minutesLeft = Math.ceil((vCode.locked_until.getTime() - Date.now()) / 60000);
-      return { success: false, error: `Too many failed attempts. Try again in ${minutesLeft} minutes.` };
+    if (tempSession.locked_until && tempSession.locked_until > new Date()) {
+      const minutesLeft = Math.ceil((tempSession.locked_until.getTime() - Date.now()) / 60000);
+      return { action: "ERROR", error: `Too many failed attempts. Try again in ${minutesLeft} minutes.` };
     }
 
-    if (vCode.expires_on < new Date()) {
-      return { success: false, error: "Verification code expired." };
-    }
-
-    const isValid = await bcrypt.compare(code, vCode.code_hash);
+    const isValid = await bcrypt.compare(code, tempSession.code_hash);
 
     if (!isValid) {
-      const updatedCode = await prisma.verificationCode.update({
-        where: { id: vCode.id },
+      const updatedSession = await prisma.tempSession.update({
+        where: { id: tempSession.id },
         data: { failed_attempts: { increment: 1 } }
       });
 
-      if (updatedCode.failed_attempts >= MAX_ATTEMPTS) {
-        await prisma.verificationCode.update({
-          where: { id: vCode.id },
+      if (updatedSession.failed_attempts >= MAX_ATTEMPTS) {
+        await prisma.tempSession.update({
+          where: { id: tempSession.id },
           data: { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) }
         });
       }
-      return { success: false, error: "Invalid verification code." };
+      return { action: "ERROR", error: "Invalid verification code." };
     }
 
-    await prisma.verificationCode.update({
-      where: { id: vCode.id },
-      data: { consumed_on: new Date() }
+    await prisma.tempSession.update({
+      where: { id: tempSession.id },
+      data: { code_hash: null, two_step_processed: true, failed_attempts: 0, locked_until: null }
     });
 
     const { finalizeSignIn } = await import("./auth.actions");
-    return await finalizeSignIn(tempSession.user_id, false, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId);
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute resolveCodeVerification");
-    return { success: false, error: em };
+    return { action: "ERROR", error: em };
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolvePasskeyVerification(tempSessionId: string, payload: any) {
+export async function resolvePasskeyVerification(
+  tempSessionId: string, 
+  payload: Parameters<typeof verifyAuthenticationResponse>[0]["response"]
+): Promise<SignInReturn> {
   try {
     const tempSession = await getTempSession(tempSessionId);
     if (!tempSession || tempSession.expires_on < new Date()) {
-      return { success: false, error: "Session expired or invalid." };
+      return { action: "ERROR", error: "Session expired or invalid." };
     }
 
     if (!tempSession.challenge) {
-      return { success: false, error: "No authentication challenge found for this session." };
+      return { action: "ERROR", error: "No authentication challenge found for this session." };
+    }
+
+    if (tempSession.locked_until && tempSession.locked_until > new Date()) {
+      const minutesLeft = Math.ceil((tempSession.locked_until.getTime() - Date.now()) / 60000);
+      return { action: "ERROR", error: `Too many failed attempts. Try again in ${minutesLeft} minutes.` };
     }
 
     if (!payload || !payload.id) {
-      return { success: false, error: "Invalid passkey payload." };
+      return { action: "ERROR", error: "Invalid passkey payload." };
     }
 
     const passkey = await prisma.passkeyCredential.findUnique({
       where: { credential_id: payload.id },
       include: {
-        two_factor_method: true,
+        two_factor: true,
       },
     });
 
-    if (!passkey || passkey.two_factor_method.user_id !== tempSession.user_id) {
-      return { success: false, error: "Passkey not recognized for this account." };
+    if (!passkey || passkey.two_factor_id !== tempSession.user_id) {
+      return { action: "ERROR", error: "Passkey not recognized for this account." };
     }
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
-    const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
+    const origin = getEnv("NEXT_PUBLIC_BASE_URL");
     const expectedOrigin = [
       origin,
       "http://localhost:3000",
@@ -242,11 +218,20 @@ export async function resolvePasskeyVerification(tempSessionId: string, payload:
       )
     );
 
+    const normalizedPayload = {
+      ...payload,
+      authenticatorAttachment:
+        payload.authenticatorAttachment === "platform" || payload.authenticatorAttachment === "cross-platform"
+          ? payload.authenticatorAttachment
+          : undefined,
+    } as Parameters<typeof verifyAuthenticationResponse>[0]["response"];
+
     const verification = await verifyAuthenticationResponse({
-      response: payload,
+      response: normalizedPayload,
       expectedChallenge: tempSession.challenge,
       expectedOrigin,
       expectedRPID: [rpID, "localhost"],
+      requireUserVerification: false,
       credential: {
         id: passkey.credential_id,
         publicKey: credentialPublicKey,
@@ -255,7 +240,17 @@ export async function resolvePasskeyVerification(tempSessionId: string, payload:
     });
 
     if (!verification.verified || !verification.authenticationInfo) {
-      return { success: false, error: "Passkey verification failed." };
+      const updatedSession = await prisma.tempSession.update({
+        where: { id: tempSession.id },
+        data: { failed_attempts: { increment: 1 } }
+      });
+      if (updatedSession.failed_attempts >= MAX_ATTEMPTS) {
+        await prisma.tempSession.update({
+          where: { id: tempSession.id },
+          data: { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) }
+        });
+      }
+      return { action: "ERROR", error: "Passkey verification failed." };
     }
 
     await prisma.passkeyCredential.update({
@@ -266,43 +261,68 @@ export async function resolvePasskeyVerification(tempSessionId: string, payload:
       },
     });
 
+    await prisma.tempSession.update({
+      where: { id: tempSession.id },
+      data: { two_step_processed: true, failed_attempts: 0, locked_until: null }
+    });
+
     const { finalizeSignIn } = await import("./auth.actions");
-    return await finalizeSignIn(tempSession.user_id, false, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId);
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute resolvePasskeyVerification");
-    return { success: false, error: em };
+    return { action: "ERROR", error: em };
   }
 }
 
-export async function resolveTotpVerification(tempSessionId: string, code: string) {
+export async function resolveTotpVerification(
+  tempSessionId: string, 
+  code: string
+): Promise<SignInReturn> {
   try {
     const tempSession = await getTempSession(tempSessionId);
     if (!tempSession || tempSession.expires_on < new Date()) {
-      return { success: false, error: "Session expired or invalid. Please sign in again." };
+      return { action: "ERROR", error: "Session expired or invalid. Please sign in again." };
     }
 
-    const totpCred = await prisma.totpCredential.findFirst({
+    if (tempSession.locked_until && tempSession.locked_until > new Date()) {
+      const minutesLeft = Math.ceil((tempSession.locked_until.getTime() - Date.now()) / 60000);
+      return { action: "ERROR", error: `Too many failed attempts. Try again in ${minutesLeft} minutes.` };
+    }
+
+    const totpCred = await prisma.totpMethod.findFirst({
       where: {
-        two_factor_method: {
-          user_id: tempSession.user_id,
-          type: "totp",
-          enabled: true
-        }
+        two_factor_id: tempSession.user_id,
+        enabled: true
       }
     });
 
-    if (!totpCred) return { success: false, error: "Authenticator app not configured." };
+    if (!totpCred) return { action: "ERROR", error: "Authenticator app not configured." };
 
-    const { valid } = await verify({ token: code, secret: totpCred.secret });
+    const { valid } = await verify({ token: code, secret: decryptSymmetric(totpCred.secret) });
 
     if (!valid) {
-      return { success: false, error: "Invalid authenticator code." };
+      const updatedSession = await prisma.tempSession.update({
+        where: { id: tempSession.id },
+        data: { failed_attempts: { increment: 1 } }
+      });
+      if (updatedSession.failed_attempts >= MAX_ATTEMPTS) {
+        await prisma.tempSession.update({
+          where: { id: tempSession.id },
+          data: { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) }
+        });
+      }
+      return { action: "ERROR", error: "Invalid authenticator code." };
     }
 
+    await prisma.tempSession.update({
+      where: { id: tempSession.id },
+      data: { two_step_processed: true, failed_attempts: 0, locked_until: null }
+    });
+
     const { finalizeSignIn } = await import("./auth.actions");
-    return await finalizeSignIn(tempSession.user_id, false, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId);
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute resolveTotpVerification");
-    return { success: false, error: em };
+    return { action: "ERROR", error: em };
   }
 }

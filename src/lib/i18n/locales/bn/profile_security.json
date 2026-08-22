@@ -123,6 +123,31 @@
   "cloudDrives": {
     "title": "ক্লাউড ড্রাইভ",
     "desc": "নির্বিঘ্নে ফাইল এবং ব্যাকআপ সিঙ্ক করতে আপনার ক্লাউড স্টোরেজ লিঙ্ক করুন।"
-  }
+  },
+  "authenticator": {
+    "setupTitle": "Set up Authenticator App",
+    "setupDesc": "Scan the QR code with your authenticator app (like Google Authenticator or Authy).",
+    "generating": "Generating secure connection...",
+    "manualCode": "Or enter this code manually:",
+    "enterCode": "Enter the 6-digit code from your app",
+    "cancel": "Cancel",
+    "verify": "Verify",
+    "title": "Authenticator App",
+    "desc": "Add an authenticator app to protect your account from unauthorized access.",
+    "noAppTitle": "No authenticator app added",
+    "noAppDesc": "Protect your account by adding an extra layer of security requiring a verification code when signing in.",
+    "setupBtn": "Set up Authenticator",
+    "connectedTitle": "Authenticator connected",
+    "addedOn": "Added on {date}",
+    "removeBtn": "Remove",
+    "verifySuccess": "Authenticator app connected successfully",
+    "verifyFailed": "Verification failed",
+    "removed": "Method removed",
+    "error": "An unexpected error occurred"
+  },
+  "signedOutSuccess": "Signed out successfully",
+  "signedOutError": "Failed to sign out",
+  "unexpectedError": "An unexpected error occurred",
+  "signedOutAllSuccess": "Signed out of all other devices successfully",
+  "signedOutAllError": "Failed to sign out of all other devices"
 }
-

@@ -29,7 +29,10 @@
     "clientSecret": "Secreto de Cliente",
     "copied": "Copiado",
     "copy": "Copiar",
-    "modalClose": "He Guardado Mi Secreto"
+    "modalClose": "He Guardado Mi Secreto",
+    "clientSecretDesc": "This is your new Client Secret. Copy it now, you won't be able to see it again.",
+    "warning": "Warning",
+    "saveConfirm": "I have saved my secret securely"
   },
   "developerApps": {
     "title": "Aplicaciones de Desarrollador",

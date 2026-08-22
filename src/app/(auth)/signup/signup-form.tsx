@@ -30,7 +30,7 @@ export default function SignUpForm() {
   const { t } = useTranslations("signup");
   const { t: tCommon } = useTranslations("common");
   const { t: tSchema } = useTranslations("schema_auth");
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -56,9 +56,9 @@ export default function SignUpForm() {
         setErrorMsg(response.error || "Failed to create account.");
       }
     } catch (e: unknown) {
-        const em = handleError(e, "Failed to execute onSubmit");
-        setErrorMsg(em);
-      } finally {
+      const em = handleError(e, "Failed to execute onSubmit");
+      setErrorMsg(em);
+    } finally {
       setIsLoading(false);
     }
   }
@@ -166,7 +166,7 @@ export default function SignUpForm() {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-9" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -185,17 +185,17 @@ export default function SignUpForm() {
             <div className="flex-1 border-t"></div>
           </div>
 
-          <SocialProviders 
+          <SocialProviders
             onClick={async (p) => {
               setIsLoading(true);
               try {
                 await continueWithProvider(p);
               } catch (e: unknown) {
-                                      const em = handleError(e, "Failed to execute SignUpForm");
-                                      setIsLoading(false);
-                                      setErrorMsg(em);
-                                    }
-            }} 
+                const em = handleError(e, "Failed to execute SignUpForm");
+                setIsLoading(false);
+                setErrorMsg(em);
+              }
+            }}
             isLoading={isLoading}
           />
 

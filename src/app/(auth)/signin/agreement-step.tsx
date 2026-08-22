@@ -13,6 +13,8 @@ interface AgreementStepProps {
   isLoading?: boolean;
   requestedScopes?: string[];
   clientName?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  appData?: any;
 }
 
 export default function AgreementStep({ 

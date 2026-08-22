@@ -27,7 +27,7 @@ export default function SignUpPromotion() {
                 </p>
 
                 {/* Demo Icons Grid */}
-                <div className="flex flex-wrap gap-6 opacity-80 justify-center">
+                {/* <div className="flex flex-wrap gap-6 opacity-80 justify-center">
                     {SOCIAL_PROVIDERS.map((provider) => {
                         const animArgs = ANIMATION_CONFIG[provider.id];
                         return (
@@ -52,7 +52,7 @@ export default function SignUpPromotion() {
                             </motion.div>
                         );
                     })}
-                </div>
+                </div> */}
             </div>
 
             {/* Decorative background elements inside the left column */}

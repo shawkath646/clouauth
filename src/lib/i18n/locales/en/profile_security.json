@@ -144,5 +144,10 @@
     "verifyFailed": "Verification failed",
     "removed": "Method removed",
     "error": "An unexpected error occurred"
-  }
+  },
+  "signedOutSuccess": "Signed out successfully",
+  "signedOutError": "Failed to sign out",
+  "unexpectedError": "An unexpected error occurred",
+  "signedOutAllSuccess": "Signed out of all other devices successfully",
+  "signedOutAllError": "Failed to sign out of all other devices"
 }

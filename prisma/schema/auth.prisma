@@ -26,50 +26,50 @@ model RecoveryCode {
   user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-model TwoFactorMethod {
-  id       String              @id @default(cuid())
-  user_id  String
-  type     String
-  enabled  Boolean             @default(false)
-  added_on DateTime            @default(now())
-  passkeys PasskeyCredential[]
-  totp     TotpCredential?
-  user     User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
-}
+model TwoFactor {
+  user_id String @id
 
-model TotpCredential {
-  two_factor_method_id String          @id
-  secret               String
-  algorithm            String
-  digits               Int
-  period               Int
-  two_factor_method    TwoFactorMethod @relation(fields: [two_factor_method_id], references: [id], onDelete: Cascade)
+  passkeys PasskeyCredential[]
+  totp     TotpMethod?
+
+  email_id String?    @unique
+  email    UserEmail? @relation(fields: [email_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  phone_id String?    @unique
+  phone    UserPhone? @relation(fields: [phone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PasskeyCredential {
-  id                   String          @id @default(cuid())
-  two_factor_method_id String
-  credential_id        String          @unique
-  public_key           String          @db.Text
-  sign_count           Int             @default(0)
-  device_name          String?
-  created_on           DateTime        @default(now())
-  last_used_on         DateTime?
-  two_factor_method    TwoFactorMethod @relation(fields: [two_factor_method_id], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+
+  two_factor_id String
+
+  credential_id String @unique
+  public_key    String @db.Text
+  sign_count    Int    @default(0)
+
+  device_name  String?
+  created_on   DateTime  @default(now())
+  last_used_on DateTime?
+
+  two_factor TwoFactor @relation(fields: [two_factor_id], references: [user_id], onDelete: Cascade)
 }
 
-model VerificationCode {
-  id              String    @id @default(cuid())
-  user_id         String
-  type            String
-  destination     String
-  code_hash       String
-  failed_attempts Int       @default(0)
-  locked_until    DateTime?
-  expires_on      DateTime
-  consumed_on     DateTime?
-  created_on      DateTime  @default(now())
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+model TotpMethod {
+  id String @id @default(cuid())
+
+  two_factor_id String @unique
+
+  enabled Boolean @default(false)
+
+  secret    String
+  algorithm String
+  digits    Int
+  period    Int
+
+  two_factor TwoFactor @relation(fields: [two_factor_id], references: [user_id], onDelete: Cascade)
 }
 
 model OAuthAccount {
@@ -87,23 +87,23 @@ model OAuthAccount {
 }
 
 model SigningKey {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  kid         String   @unique
+  kid String @unique
 
-  kty         String
-  alg         String
-  use         String   @default("sig")
+  kty String
+  alg String
+  use String @default("sig")
 
-  publicKey   String   @db.Text
-  privateKey  String   @db.Text
+  publicKey  String @db.Text
+  privateKey String @db.Text
 
-  jwk         String   @db.NVarChar(Max)
+  jwk String @db.NVarChar(Max)
 
-  active      Boolean  @default(false)
+  active Boolean @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  expiresAt   DateTime?
-  revokedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime?
+  revokedAt DateTime?
 }

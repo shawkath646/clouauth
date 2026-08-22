@@ -1,12 +1,13 @@
+import { getEnv } from "@/utils/env";
 import { NextResponse } from "next/server";
 
-const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+const baseURL = getEnv("NEXT_PUBLIC_BASE_URL");
 
 export function GET() {
 
     const oidc_config = {
         issuer: baseURL,
-        authorization_endpoint: new URL("/api/sso/v1/authorize", baseURL),
+        authorization_endpoint: new URL("/signin", baseURL),
         token_endpoint: new URL("/api/sso/v1/token", baseURL),
         userinfo_endpoint: new URL("/api/sso/v1/userinfo", baseURL),
         revocation_endpoint: new URL("/api/sso/v1/revoke", baseURL),

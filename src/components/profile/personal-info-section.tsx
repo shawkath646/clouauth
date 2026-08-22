@@ -69,9 +69,7 @@ export function PersonalInfoSection({ profile }: { profile: FullProfile }) {
         />
         <ProfileFieldLink 
           label={t('infoSection.phone')} 
-          value={
-            profile.two_factor_methods?.some(m => m.type === "phone" || (m.type as string) === "sms") ? t('infoSection.phoneAdded') : t('infoSection.notSet')
-          } 
+          value={t('infoSection.notSet')} 
         />
         <ProfileFieldLink 
           label={t('infoSection.address')} 

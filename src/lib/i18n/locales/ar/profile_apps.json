@@ -29,7 +29,10 @@
     "clientSecret": "سر العميل",
     "copied": "تم النسخ",
     "copy": "نسخ",
-    "modalClose": "لقد قمت بحفظ سري"
+    "modalClose": "لقد قمت بحفظ سري",
+    "clientSecretDesc": "This is your new Client Secret. Copy it now, you won't be able to see it again.",
+    "warning": "Warning",
+    "saveConfirm": "I have saved my secret securely"
   },
   "developerApps": {
     "title": "تطبيقات المطور",

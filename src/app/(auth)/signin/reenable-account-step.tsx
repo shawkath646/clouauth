@@ -9,9 +9,11 @@ import { toast } from "sonner";
 
 interface ReenableAccountStepProps {
   tempSessionId: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onComplete: (result: any) => void;
 }
 
-export default function ReenableAccountStep({ tempSessionId }: ReenableAccountStepProps) {
+export default function ReenableAccountStep({ tempSessionId, onComplete }: ReenableAccountStepProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleEnable = async () => {
@@ -23,14 +25,12 @@ export default function ReenableAccountStep({ tempSessionId }: ReenableAccountSt
     setIsLoading(true);
     try {
       const res = await enableAccount(tempSessionId);
-      if (res.success && "redirectUrl" in res && res.redirectUrl) {
-        toast.success("Account re-enabled successfully!");
-        window.location.href = res.redirectUrl as string;
-      } else if (res.success) {
-        toast.success("Account re-enabled successfully!");
-        window.location.href = "/profile";
-      } else {
+      
+      if (res && res.action === "ERROR") {
         toast.error(res.error || "Failed to re-enable account.");
+      } else {
+        toast.success("Account re-enabled successfully!");
+        onComplete(res);
       }
     } finally {
       setIsLoading(false);

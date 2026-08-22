@@ -9,10 +9,10 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { resolvePasskeyVerification, triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { toast } from "sonner";
 import { handleError } from "@/utils/error";
+import { SignInReturn } from "@/actions/auth/auth.actions";
 
 interface PasskeyVerificationProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onComplete: (result: any) => void;
+  onComplete: (result: SignInReturn) => void;
   tempSessionId: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options?: any;
@@ -44,10 +44,10 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
 
       const result = await resolvePasskeyVerification(tempSessionId, assertionResponse);
 
-      if (result.success) {
-        onComplete(result);
-      } else {
+      if (result && result.action === "ERROR") {
         toast.error("Error", { description: result.error || "Passkey verification failed" });
+      } else {
+        onComplete(result);
       }
     } catch (e: unknown) {
         const em = handleError(e, "Failed to execute PasskeyVerification");

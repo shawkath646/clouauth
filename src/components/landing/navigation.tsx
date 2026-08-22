@@ -12,7 +12,7 @@ import iconLight from "@/assets/icon_light.png";
 import iconDark from "@/assets/icon_dark.png";
 
 export function Navigation() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
   const { t } = useTranslations("landing");
   
   const toggleTheme = () => {

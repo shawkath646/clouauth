@@ -1,10 +1,8 @@
 "use client";
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import { useState, useEffect } from "react";
 import { SectionCard } from "@/components/profile/section-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sun, Moon, Monitor } from "lucide-react";
+import { locales, localeNames } from "@/lib/i18n/config";
 import { cn } from "@/utils/utils";
 import { Separator } from "@/components/ui/separator";
 import type { FullProfile } from "@/types/profile.types";
@@ -93,12 +91,11 @@ export function PreferencesSection({ profile }: { profile: FullProfile }) {
               <SelectValue placeholder={t('preferencesSection.langPlaceholder')} />
             </SelectTrigger>
             <SelectContent className="rounded-xl bg-background/90 backdrop-blur-xl border-primary/20">
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="bn">বাংলা</SelectItem>
-              <SelectItem value="ko">한국어</SelectItem>
-              <SelectItem value="es">Español</SelectItem>
-              <SelectItem value="ar">العربية</SelectItem>
-              <SelectItem value="zh">中文</SelectItem>
+              {locales.map((locale) => (
+                <SelectItem key={locale} value={locale}>
+                  {localeNames[locale]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

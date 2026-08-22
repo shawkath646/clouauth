@@ -19,6 +19,7 @@ export interface DBUserSession {
     ip_address?: string | null;
     user_agent?: string | null;
     device_name?: string | null;
+    device_fingerprint?: string | null;
 }
 
 export type SafeDBUserSession = Omit<DBUserSession, 'session_token_hash' | 'refresh_token_hash' | 'previous_refresh_token_hash'>;
@@ -27,6 +28,13 @@ export interface DBTempSession {
     id: string;
     user_id: string;
     challenge?: string | null;
+    code_hash?: string | null;
+    failed_attempts: number;
+    locked_until?: Date | null;
+    remember_me: boolean;
+    type?: string | null;
+    destination?: string | null;
+    two_step_processed: boolean;
     created_on: Date;
     expires_on: Date;
 }

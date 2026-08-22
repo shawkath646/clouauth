@@ -1,9 +1,10 @@
+import { getEnv } from "@/utils/env";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
 export class GoogleOAuthProvider implements IOAuthProvider {
-  private clientId = process.env.GOOGLE_CLIENT_ID || "";
-  private clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
-  private redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/oauth/callback/google`;
+  private clientId = getEnv("GOOGLE_CLIENT_ID");
+  private clientSecret = getEnv("GOOGLE_CLIENT_SECRET");
+  private redirectUri = `${getEnv("NEXT_PUBLIC_BASE_URL")}/api/oauth/callback/google`;
 
   getAuthorizationUrl(state: string): string {
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");

@@ -2,11 +2,11 @@
 
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
-import type { 
-    MinimalProfile, 
-    ExtendedProfile, 
-    SecuredFullProfile, 
-    FullProfile 
+import type {
+    MinimalProfile,
+    ExtendedProfile,
+    SecuredFullProfile,
+    FullProfile
 } from "@/types/profile.types";
 import type { DBUserPreference } from "@/types/preferences.types";
 import { handleError } from "@/utils/error";
@@ -40,7 +40,7 @@ export async function getMinimalProfile(): Promise<{ success: boolean, data?: Mi
 
         return { success: true, data: minimal };
     } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute getMinimalProfile");
+        const em = handleError(e, "Failed to execute getMinimalProfile");
         return { success: false, error: em };
     }
 }
@@ -86,7 +86,7 @@ export async function getExtendedProfile(): Promise<{ success: boolean, data?: E
 
         return { success: true, data: extended };
     } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute getExtendedProfile");
+        const em = handleError(e, "Failed to execute getExtendedProfile");
         return { success: false, error: em };
     }
 }
@@ -157,7 +157,7 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
 
         return { success: true, data: securedProfile };
     } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute getSecuredFullProfile");
+        const em = handleError(e, "Failed to execute getSecuredFullProfile");
         return { success: false, error: em };
     }
 }
@@ -194,21 +194,17 @@ export async function getFullProfile(): Promise<{ success: boolean, data?: FullP
                         user_id: true,
                         last_changed_on: true,
                         force_change: true,
-                        failed_attempts: true, // Needed by UI? 
-                        locked_until: true, // Needed by UI? The report says they are exposed. If we shouldn't expose, we can remove them.
+                        failed_attempts: true,
+                        locked_until: true,
                     }
                 },
-                two_factor_methods: {
+                two_factor: {
                     select: {
-                        id: true,
-                        type: true,
-                        enabled: true,
-                        user_id: true,
-                        added_on: true,
+                        totp: { select: { enabled: true } },
                         passkeys: {
                             select: {
                                 id: true,
-                                two_factor_method_id: true,
+                                two_factor_id: true,
                                 credential_id: true,
                                 sign_count: true,
                                 device_name: true,
@@ -287,24 +283,20 @@ export async function getFullProfile(): Promise<{ success: boolean, data?: FullP
             },
             password: user.password ? {
                 user_id: user.password.user_id,
-                password_hash: "[REDACTED]", 
+                password_hash: "[REDACTED]",
                 last_changed_on: user.password.last_changed_on,
                 force_change: user.password.force_change,
                 failed_attempts: user.password.failed_attempts || 0,
                 locked_until: user.password.locked_until || null
             } : null,
-            two_factor_methods: user.two_factor_methods.map(m => ({ ...m, type: m.type as import("@/types/auth.types").VerificationMethodType })),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            passkeys: user.two_factor_methods.flatMap((m: any) => (m.passkeys || []).map((p: any) => ({
-                id: p.id,
-                two_factor_method_id: p.two_factor_method_id,
-                credential_id: p.credential_id,
+            passkeys: user.two_factor?.passkeys?.map((p) => ({
+                ...p,
                 public_key: "[REDACTED]",
-                sign_count: p.sign_count,
-                device_name: p.device_name,
+                device_name: p.device_name ?? undefined,
                 created_on: p.created_on.toISOString(),
                 last_used_on: p.last_used_on ? p.last_used_on.toISOString() : undefined,
-            }))),
+            })) ?? [],
+            has_totp: !!user.two_factor?.totp?.enabled,
             recovery_codes: user.recovery_codes.map(c => ({ id: c.id, used: c.used, created_on: c.created_on.toISOString() })),
             sessions: user.sessions.map(s => ({
                 id: s.id,
@@ -334,7 +326,7 @@ export async function getFullProfile(): Promise<{ success: boolean, data?: FullP
 
         return { success: true, data: fullProfile };
     } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute getFullProfile");
+        const em = handleError(e, "Failed to execute getFullProfile");
         return { success: false, error: em };
     }
 }

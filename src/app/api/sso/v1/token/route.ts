@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT, importJWK } from "jose";
 import prisma from "@/lib/prisma";
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
         const idToken = await new SignJWT({
             sub: userId,
             aud: clientId,
-            iss: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            iss: getEnv("NEXT_PUBLIC_APP_URL"),
             auth_time: Math.floor(Date.now() / 1000),
             scope,
             nonce: payload.nonce as string | undefined,

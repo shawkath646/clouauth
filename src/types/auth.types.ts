@@ -1,4 +1,4 @@
-export type VerificationMethodType = "totp" | "passkey" | "code" | "remote_approve" | "phone";
+export type VerificationMethodType = "totp" | "passkey" | "code" | "phone";
 
 export interface VerificationMethod {
     id: string;
@@ -31,16 +31,10 @@ export interface DBRecoveryCode {
     used_on?: string;
 }
 
-export interface DBTwoFactorMethod {
-    id: string;
-    user_id: string;
-    type: VerificationMethodType;
-    enabled: boolean;
-    added_on: Date;
-}
+
 
 export interface DBTotpCredential {
-    two_factor_method_id: string;
+    two_factor_id: string;
     secret: string;
     algorithm: "SHA1" | "SHA256" | "SHA512";
     digits: number;
@@ -49,7 +43,7 @@ export interface DBTotpCredential {
 
 export interface DBPasskeyCredential {
     id: string;
-    two_factor_method_id: string;
+    two_factor_id: string;
     credential_id: string;
     public_key: string;
     sign_count: number;
@@ -58,23 +52,7 @@ export interface DBPasskeyCredential {
     last_used_on?: string;
 }
 
-export interface DBVerificationCode {
-    id: string;
-    user_id: string;
-    type:
-        | "email_verification"
-        | "login"
-        | "password_reset"
-        | "change_email";
 
-    destination: string;
-    code_hash: string;
-    failed_attempts: number;
-    locked_until?: string;
-    expires_on: string;
-    consumed_on?: string;
-    created_on: string;
-}
 
 export interface DBOAuthAccount {
     id: string;

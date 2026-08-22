@@ -1,19 +1,19 @@
 model EmailQueue {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  to          String?
-  subject     String
-  templateId  String
-  data        String
+  id     String @id @default(cuid())
+  userId String
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  to         String?
+  subject    String
+  templateId String
+  data       String
 
   retryCount  Int      @default(0)
   isComplete  Boolean  @default(false)
   nextRetryAt DateTime @default(now())
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isComplete, nextRetryAt])
   @@index([userId])

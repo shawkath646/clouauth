@@ -21,15 +21,13 @@ import Link from "next/link";
 import SocialProviders from "@/components/social-providers";
 import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
-import { signIn } from "@/actions/auth/auth.actions";
+import { signIn, SignInReturn } from "@/actions/auth/auth.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
 import { handleError } from "@/utils/error";
 import { BrandName } from "@/components/ui/brand-name";
 
- 
 interface CredentialsStepProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onNext: (result: any) => void;
+  onNext: (result: SignInReturn) => void;
 }
 
 export default function CredentialsStep({ onNext }: CredentialsStepProps) {
@@ -41,7 +39,7 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm<z.input<ReturnType<typeof getSignInSchema>>>({
-    resolver: zodResolver(getSignInSchema(tSchema)) as any,
+    resolver: zodResolver(getSignInSchema(tSchema)),
     defaultValues: {
       username: "",
       password: "",
@@ -54,17 +52,16 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
     setErrorMsg(null);
     try {
       const response = await signIn(data as SignInValues);
-      if (response.success) {
-        onNext(response);
+      if (response && response.action === "ERROR") {
+        setErrorMsg(response.error ?? "Invalid credentials");
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setErrorMsg((response as any).error || "Invalid credentials");
+        onNext(response);
       }
     } catch (e: unknown) {
-        const em = handleError(e, true);
-        setErrorMsg(em);
+      const em = handleError(e, true);
+      setErrorMsg(em);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -169,7 +166,7 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
             </div>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+          <Button type="submit" className="w-full h-9 text-base" disabled={isLoading}>
             {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -188,18 +185,18 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
           <div className="flex-1 border-t"></div>
         </div>
 
-        <SocialProviders 
-          onClick={async (p) => { 
+        <SocialProviders
+          onClick={async (p) => {
             setIsLoading(true);
             try {
               await continueWithProvider(p);
             } catch (e: unknown) {
-                                        const em = handleError(e, true);
-                                setIsLoading(false);
-                                setErrorMsg(em);
-                              }
-          }} 
-          isLoading={isLoading} 
+              const em = handleError(e, true);
+              setIsLoading(false);
+              setErrorMsg(em);
+            }
+          }}
+          isLoading={isLoading}
         />
 
         <p className="mt-6 text-sm text-muted-foreground">

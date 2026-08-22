@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default async function PhonePage() {
   const profileRes = await getFullProfile();
   const profile = (profileRes.success && "profile" in profileRes ? profileRes.profile : null) as import("@/types/profile.types").FullProfile | null;
-  const phones = profile?.two_factor_methods?.filter((m: import("@/types/auth.types").DBTwoFactorMethod) => m.type === "phone") || [];
+  const phones: any[] = []; // TODO: Migrate to proper Phone model usage
 
   return (
     <div className="space-y-6 max-w-3xl">

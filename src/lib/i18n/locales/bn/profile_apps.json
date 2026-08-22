@@ -29,7 +29,10 @@
     "clientSecret": "ক্লায়েন্ট গোপনীয়তা",
     "copied": "অনুলিপি করা হয়েছে",
     "copy": "অনুলিপি করুন",
-    "modalClose": "আমি আমার গোপনীয়তা সংরক্ষণ করেছি"
+    "modalClose": "আমি আমার গোপনীয়তা সংরক্ষণ করেছি",
+    "clientSecretDesc": "This is your new Client Secret. Copy it now, you won't be able to see it again.",
+    "warning": "Warning",
+    "saveConfirm": "I have saved my secret securely"
   },
   "developerApps": {
     "title": "বিকাশকারী অ্যাপ্লিকেশনসমূহ",

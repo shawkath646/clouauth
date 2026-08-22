@@ -24,14 +24,12 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
     ? new Date(profile.password.last_changed_on).toLocaleDateString()
     : "Never";
     
-  const twoFactorCount = profile.two_factor_methods?.length || 0;
-  const has2FA = twoFactorCount > 0;
-
   const passkeysCount = profile.passkeys?.length || 0;
   const hasPasskeys = passkeysCount > 0;
 
-  const phoneMethods = profile.two_factor_methods?.filter(m => m.type === "phone" || (m.type as string) === "sms") || [];
-  const phoneCount = phoneMethods.length;
+  const hasTotp = !!profile.has_totp;
+  const hasPhone = false;
+  const phoneCount = 0;
 
   const recoveryEmailObj = profile.emails?.find(e => !e.is_primary);
   const recoveryEmail = recoveryEmailObj ? recoveryEmailObj.address : "";
@@ -84,9 +82,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
               <span>
-                {has2FA 
-                  ? `${twoFactorCount} ${twoFactorCount === 1 ? t('signInSecurity.method') : t('signInSecurity.methods')}` 
-                  : t('signInSecurity.disabled')}
+                {(hasPasskeys || hasTotp) ? t('signInSecurity.enabled') : t('signInSecurity.disabled')}
               </span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>

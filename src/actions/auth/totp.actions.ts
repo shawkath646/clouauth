@@ -36,19 +36,32 @@ export async function verifyAndEnableTotpAction(secret: string, token: string) {
       return { success: false, error: "Invalid verification code" };
     }
 
-    await prisma.twoFactorMethod.create({
-      data: {
-        user_id: sessionData.user.id,
-        type: "totp",
+    // Ensure the TwoFactor record exists
+    const twoFactor = await prisma.twoFactor.upsert({
+      where: { user_id: sessionData.user.id },
+      update: {},
+      create: { user_id: sessionData.user.id }
+    });
+
+    const { encryptSymmetric } = await import("@/lib/encryption");
+    const encryptedSecret = encryptSymmetric(secret);
+
+    await prisma.totpMethod.upsert({
+      where: { two_factor_id: twoFactor.user_id },
+      update: {
         enabled: true,
-        totp: {
-          create: {
-            secret: secret,
-            algorithm: 'SHA1',
-            digits: 6,
-            period: 30
-          }
-        }
+        secret: encryptedSecret,
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30
+      },
+      create: {
+        two_factor_id: twoFactor.user_id,
+        enabled: true,
+        secret: encryptedSecret,
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30
       }
     });
 

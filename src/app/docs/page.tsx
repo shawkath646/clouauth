@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import { Navigation } from "@/components/landing/navigation";
 import { Footer } from "@/components/landing/footer";
 import JsonLd from "@/components/json-ld";
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DocsPage() {
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+  const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
   
   const { locale, t } = await getServerTranslations("docs");
   const landingDict = await import(`@/lib/i18n/locales/${locale}/landing.json`).then(m => m.default);

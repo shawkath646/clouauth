@@ -23,16 +23,12 @@ export async function GET(request: Request) {
         // Run cleanup operations in parallel
         const [
             tempSessions,
-            userSessions,
-            verificationCodes
+            userSessions
         ] = await Promise.all([
             prisma.tempSession.deleteMany({
                 where: { expires_on: { lt: now } }
             }),
             prisma.userSession.deleteMany({
-                where: { expires_on: { lt: now } }
-            }),
-            prisma.verificationCode.deleteMany({
                 where: { expires_on: { lt: now } }
             })
         ]);
@@ -41,8 +37,7 @@ export async function GET(request: Request) {
             success: true, 
             deleted: {
                 tempSessions: tempSessions.count,
-                userSessions: userSessions.count,
-                verificationCodes: verificationCodes.count
+                userSessions: userSessions.count
             }
         });
 

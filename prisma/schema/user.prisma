@@ -1,43 +1,56 @@
 model User {
-  id                 String                  @id @default(cuid())
-  username           String                  @unique
-  first_name         String
-  last_name          String
-  avatar             String
-  bio                String?
-  date_of_birth      String?
-  account_status     AccountStatus?
+  id                    String                  @id @default(cuid())
+  username              String                  @unique
+  first_name            String
+  last_name             String
+  avatar                String
+  bio                   String?
+  date_of_birth         String?
+  account_status        AccountStatus?
   username_last_changed DateTime?
-  pronouns           String?
-  created_on         DateTime                @default(now())
-  updated_on         DateTime                @updatedAt
-  addresses          Address[]
-  audit_logs         AuditLog[]
-  notifications      NotificationPreference?
-  oauth_accounts     OAuthAccount[]
-  password           PasswordCredential?
-  password_history   PasswordHistory[]
-  recovery_codes     RecoveryCode[]
-  temp_sessions      TempSession[]
-  two_factor_methods TwoFactorMethod[]
-  emails             UserEmail[]
-  preferences        UserPreference?
-  sessions           UserSession[]
-  verification_codes VerificationCode[]
-  apps               UserApp[]               @relation("UserApps")
-  oauth_sessions     OAuthSession[]
-  email_queue        EmailQueue[]
+  pronouns              String?
+  created_on            DateTime                @default(now())
+  updated_on            DateTime                @updatedAt
+  addresses             Address[]
+  audit_logs            AuditLog[]
+  notifications         NotificationPreference?
+  oauth_accounts        OAuthAccount[]
+  password              PasswordCredential?
+  password_history      PasswordHistory[]
+  recovery_codes        RecoveryCode[]
+  temp_sessions         TempSession[]
+  two_factor            TwoFactor?
+  emails                UserEmail[]
+  phones                UserPhone[]
+  preferences           UserPreference?
+  sessions              UserSession[]
+  apps                  UserApp[]               @relation("UserApps")
+  email_queue           EmailQueue[]
 }
 
 model UserEmail {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   user_id     String
   address     String
-  verified    Boolean   @default(false)
-  is_primary  Boolean   @default(false)
-  added_on    DateTime  @default(now())
+  verified    Boolean    @default(false)
+  is_primary  Boolean    @default(false)
+  added_on    DateTime   @default(now())
   verified_on DateTime?
-  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  two_factor  TwoFactor?
+}
+
+model UserPhone {
+  id           String     @id @default(cuid())
+  user_id      String
+  country_code String
+  number       String
+  verified     Boolean    @default(false)
+  is_primary   Boolean    @default(false)
+  added_on     DateTime   @default(now())
+  verified_on  DateTime?
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  two_factor   TwoFactor?
 }
 
 model Address {
@@ -63,4 +76,3 @@ model AccountStatus {
   updated_on  DateTime @updatedAt
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
-

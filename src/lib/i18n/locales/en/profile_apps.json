@@ -26,7 +26,13 @@
     "modalTitle": "Application Registered!",
     "clientSecretDesc": "This is your new Client Secret. Copy it now, you won't be able to see it again.",
     "warning": "Warning",
-    "saveConfirm": "I have saved my secret securely"
+    "saveConfirm": "I have saved my secret securely",
+    "modalWarning": "Warning: This secret will only be shown once. Please copy it now.",
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "copied": "Copied",
+    "copy": "Copy",
+    "modalClose": "Close"
   },
   "developerApps": {
     "title": "Developer Applications",

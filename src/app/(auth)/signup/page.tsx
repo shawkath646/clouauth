@@ -1,3 +1,4 @@
+import { getEnv } from "@/utils/env";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
 import SignUpForm from "@/app/(auth)/signup/signup-form";
@@ -25,7 +26,7 @@ export default async function SignUpPage() {
   const locale = await getLocale();
   const dict = await getDictionary(locale, 'signup');
 
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://auth.clouburstlab.com";
+  const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
 
   return (
     <>
@@ -34,7 +35,7 @@ export default async function SignUpPage() {
           "@context": "https://schema.org",
           "@type": "WebPage",
           "@id": `${BASE_URL}/signup#webpage`,
-          name: "Create an Account — clouburstlab",
+          name: "Create an Account — ClouAuth",
           description:
             "Create your free clouburstlab account for a unified identity across all OIDC and OAuth 2.0 applications.",
           url: `${BASE_URL}/signup`,
@@ -66,8 +67,8 @@ export default async function SignUpPage() {
         }}
       />
       <I18nProvider locale={locale} messages={dict}>
-      <SignUpForm />
-    </I18nProvider>
+        <SignUpForm />
+      </I18nProvider>
     </>
   );
 }

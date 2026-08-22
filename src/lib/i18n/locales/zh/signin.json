@@ -22,5 +22,21 @@
   "back": "返回",
   "verify": "验证",
   "enterCode": "输入验证码",
-  "codePlaceholder": "123456"
+  "codePlaceholder": "123456",
+  "usernameLabel": "Username",
+  "usernamePlaceholder": "johndoe",
+  "didntReceiveCode": "Didn't receive the code?",
+  "resendCode": "Resend",
+  "resending": "Resending...",
+  "oauthConsentTitle": "Authorization Request",
+  "oauthConsentSubtitle": "wants to access your information",
+  "oauthConsentAccess": "The application will receive access to:",
+  "oauthConsentAgree": "Agree and Continue",
+  "oauthConsentCancel": "Cancel",
+  "oauthConsentGranting": "Granting Access...",
+  "oauthConsentTerms": "By clicking Agree, you allow this app to use your information in accordance with its terms of service and privacy policies.",
+  "scopeProfile": "Full name",
+  "scopeEmail": "Email address",
+  "scopePhone": "Phone number",
+  "scopeOpenid": "Basic identity"
 }

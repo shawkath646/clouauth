@@ -1,5 +1,5 @@
 "use server";
-
+import { getEnv } from "@/utils/env";
 import prisma from "@/lib/prisma";
 import { getUserSession, createTempSession, getTempSession, deleteTempSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
@@ -17,9 +17,7 @@ export async function getUserPasskeys() {
 
     const passkeys = await prisma.passkeyCredential.findMany({
       where: {
-        two_factor_method: {
-          user_id: sessionData.user.id,
-        },
+        two_factor_id: sessionData.user.id,
       },
       orderBy: { created_on: "desc" },
       select: {
@@ -47,14 +45,12 @@ export async function triggerPasskeyRegistration() {
 
     const existingPasskeys = await prisma.passkeyCredential.findMany({
       where: {
-        two_factor_method: {
-          user_id: sessionData.user.id,
-        },
+        two_factor_id: sessionData.user.id,
       },
     });
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
-    const rpName = process.env.NEXT_PUBLIC_APP_NAME || "clouburstlab";
+    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
+    const rpName = getEnv("NEXT_PUBLIC_APP_NAME");
 
     const options = await generateRegistrationOptions({
       rpName,
@@ -101,8 +97,8 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
       return { success: false, error: "Session mismatch." };
     }
 
-    const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
-    const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
+    const origin = getEnv("NEXT_PUBLIC_APP_URL");
     const expectedOrigin = [
       origin,
       "http://localhost:3000",
@@ -114,6 +110,7 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
       expectedChallenge: tempSession.challenge,
       expectedOrigin,
       expectedRPID: [rpID, "localhost"],
+      requireUserVerification: false,
     });
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -122,28 +119,15 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
 
     const { credential } = verification.registrationInfo;
 
-    let method = await prisma.twoFactorMethod.findFirst({
-      where: { user_id: sessionData.user.id, type: "passkey" },
+    const twoFactor = await prisma.twoFactor.upsert({
+      where: { user_id: sessionData.user.id },
+      update: {},
+      create: { user_id: sessionData.user.id }
     });
-
-    if (!method) {
-      method = await prisma.twoFactorMethod.create({
-        data: {
-          user_id: sessionData.user.id,
-          type: "passkey",
-          enabled: true,
-        },
-      });
-    } else if (!method.enabled) {
-      method = await prisma.twoFactorMethod.update({
-        where: { id: method.id },
-        data: { enabled: true },
-      });
-    }
 
     const passkey = await prisma.passkeyCredential.create({
       data: {
-        two_factor_method_id: method.id,
+        two_factor_id: twoFactor.user_id,
         credential_id: credential.id,
         public_key: Buffer.from(credential.publicKey).toString("base64"),
         sign_count: credential.counter,
@@ -170,9 +154,7 @@ export async function updatePasskeyName(passkeyId: string, deviceName: string) {
     const passkey = await prisma.passkeyCredential.findFirst({
       where: {
         id: passkeyId,
-        two_factor_method: {
-          user_id: sessionData.user.id,
-        },
+        two_factor_id: sessionData.user.id,
       },
     });
 
@@ -202,13 +184,8 @@ export async function deletePasskey(passkeyId: string) {
     const passkey = await prisma.passkeyCredential.findFirst({
       where: {
         id: passkeyId,
-        two_factor_method: {
-          user_id: sessionData.user.id,
-        },
-      },
-      include: {
-        two_factor_method: true,
-      },
+        two_factor_id: sessionData.user.id,
+      }
     });
 
     if (!passkey) {
@@ -220,14 +197,20 @@ export async function deletePasskey(passkeyId: string) {
     });
 
     const remaining = await prisma.passkeyCredential.count({
-      where: { two_factor_method_id: passkey.two_factor_method_id },
+      where: { two_factor_id: passkey.two_factor_id },
     });
 
     if (remaining === 0) {
-      await prisma.twoFactorMethod.update({
-        where: { id: passkey.two_factor_method_id },
-        data: { enabled: false },
+      // If no passkeys left, but they might have TOTP or Email/Phone 2FA,
+      // we don't necessarily delete the TwoFactor record unless everything is empty.
+      // But we can check if it's completely empty.
+      const twoFactor = await prisma.twoFactor.findUnique({
+        where: { user_id: passkey.two_factor_id },
+        include: { totp: true }
       });
+      if (twoFactor && !twoFactor.totp && !twoFactor.email_id && !twoFactor.phone_id) {
+        await prisma.twoFactor.delete({ where: { user_id: passkey.two_factor_id } });
+      }
     }
 
     return { success: true };

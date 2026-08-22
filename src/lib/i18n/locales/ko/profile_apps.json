@@ -29,7 +29,10 @@
     "clientSecret": "클라이언트 비밀 키",
     "copied": "복사됨",
     "copy": "복사",
-    "modalClose": "비밀 키를 저장했습니다"
+    "modalClose": "비밀 키를 저장했습니다",
+    "clientSecretDesc": "This is your new Client Secret. Copy it now, you won't be able to see it again.",
+    "warning": "Warning",
+    "saveConfirm": "I have saved my secret securely"
   },
   "developerApps": {
     "title": "개발자 애플리케이션",

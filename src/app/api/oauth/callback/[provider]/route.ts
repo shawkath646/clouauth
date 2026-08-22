@@ -83,10 +83,7 @@ export async function GET(
           select: {
             id: true,
             account_status: true,
-            two_factor_methods: {
-              where: { enabled: true },
-              select: { id: true, type: true }
-            }
+            password: true
           }
         }
       }
@@ -128,34 +125,34 @@ export async function GET(
         select: {
           id: true,
           account_status: true,
-          two_factor_methods: {
-            where: { enabled: true },
-            select: { id: true, type: true }
-          }
+          password: true,
         }
       });
       targetUser = newUser;
     }
 
-    // Call the shared processUserSignIn from auth actions
+    // Call the shared processFinalSignIn from auth actions
     // Since we are not in a server action directly, we can just call it (it uses cookies() internally)
-    const { processUserSignIn } = await import("@/actions/auth/auth.actions");
-    const result = await processUserSignIn(targetUser, true);
+    const { processFinalSignIn } = await import("@/actions/auth/auth.actions");
+    const result = await processFinalSignIn(targetUser, false);
 
     const loginRedirectUrl = request.nextUrl.clone();
     
-    if (result.success && "require2FA" in result && result.require2FA) {
+    if (result.action === "METHOD_SELECTION") {
       loginRedirectUrl.pathname = "/signin";
       loginRedirectUrl.searchParams.set("require2FA", "true");
       if (result.tempSessionId) loginRedirectUrl.searchParams.set("tempSessionId", result.tempSessionId);
-    } else if (result.success && "action" in result && result.action === "CONSENT_SCREEN") {
+    } else if (result.action === "ACCOUNT_DISABLED") {
       loginRedirectUrl.pathname = "/signin";
-      loginRedirectUrl.searchParams.set("consent", "true");
-    } else if (result.success) {
-      loginRedirectUrl.pathname = ("redirectUrl" in result && typeof result.redirectUrl === "string") ? result.redirectUrl : "/profile";
+      loginRedirectUrl.searchParams.set("error", "Account disabled");
+    } else if (result.action === "LOGIN_SUCCESS") {
+      loginRedirectUrl.pathname = "/profile";
+    } else if (result.action === "ERROR") {
+      loginRedirectUrl.pathname = "/signin";
+      loginRedirectUrl.searchParams.set("error", result.error || "Login failed");
     } else {
       loginRedirectUrl.pathname = "/signin";
-      loginRedirectUrl.searchParams.set("error", ("error" in result && typeof result.error === "string") ? result.error : "Login failed");
+      loginRedirectUrl.searchParams.set("error", "Login failed");
     }
 
     const response = NextResponse.redirect(loginRedirectUrl);

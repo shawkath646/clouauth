@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
-import { Shield, Fingerprint, Smartphone } from "lucide-react";
+import { Shield, Fingerprint, Smartphone, Mail } from "lucide-react";
 import { VerificationMethod } from "@/types/auth.types";
 
 interface VerificationMethodStepProps {
@@ -15,8 +15,7 @@ export default function VerificationMethodStep({
   availableMethods = [],
 }: VerificationMethodStepProps) {
   const { t } = useTranslations("signin");
-
-  // Map backend types to UI representations
+  
   const getMethodUI = (method: VerificationMethod) => {
     switch (method.type) {
       case "phone":
@@ -31,13 +30,18 @@ export default function VerificationMethodStep({
           title: method.name || t("passkey"),
           description: t("passkeyDesc"),
         };
-      case "code":
       case "totp":
-      default:
         return {
           icon: Shield,
-          title: method.name || t("verificationCode"),
-          description: t("verificationCodeDesc"),
+          title: method.name || t("authenticatorApp"), 
+          description: t("authenticatorAppDesc"),
+        };
+      case "code":
+      default:
+        return {
+          icon: Mail,
+          title: method.name || t("emailCode"), 
+          description: t("emailCodeDesc"),
         };
     }
   };
@@ -84,6 +88,7 @@ export default function VerificationMethodStep({
             </button>
           );
         })}
+        
         {availableMethods.length === 0 && (
           <p className="text-sm text-center text-muted-foreground py-4">
             No verification methods available.

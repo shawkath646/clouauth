@@ -1,6 +1,15 @@
 export const locales = ['en', 'bn', 'ko', 'es', 'ar', 'zh'] as const;
 export type Locale = typeof locales[number];
 
+export const localeNames: Record<Locale, string> = {
+  en: 'English',
+  bn: 'বাংলা',
+  ko: '한국어',
+  es: 'Español',
+  ar: 'العربية',
+  zh: '中文',
+};
+
 export const defaultLocale: Locale = 'en';
 
 export const namespaces = [

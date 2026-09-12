@@ -1,4 +1,4 @@
-import { getExtendedProfile } from "@/actions/profile/get-profile.actions";
+import { getExtendedProfile } from "@/actions/profile/get-profile";
 import { EditNameForm } from "@/components/profile/edit/edit-name-form";
 import { EditUsernameForm } from "@/components/profile/edit/edit-username-form";
 import { EditBioForm } from "@/components/profile/edit/edit-bio-form";

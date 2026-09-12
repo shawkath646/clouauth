@@ -38,8 +38,8 @@ export default async function DocsPage() {
       response: t('endpoints.oidc.response')
     },
     {
-      method: "POST",
-      path: "/api/sso/v1/authorize",
+      method: "GET",
+      path: "/signin",
       name: t('endpoints.auth.name'),
       description: t('endpoints.auth.description'),
       params: [

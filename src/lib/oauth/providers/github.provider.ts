@@ -60,25 +60,36 @@ export class GithubOAuthProvider implements IOAuthProvider {
 
     const data = await response.json();
 
-    let email = data.email;
-    if (!email) {
-      try {
-        const emailsResponse = await fetch("https://api.github.com/user/emails", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/json",
-          },
-        });
-        const emailsData = await emailsResponse.json();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const primaryEmail = emailsData.find((e: any) => e.primary);
-        if (primaryEmail) email = primaryEmail.email;
-      } catch {}
+    interface GitHubEmail {
+      email: string;
+      primary: boolean;
+      verified: boolean;
+    }
+
+    let email: string | null = null;
+    try {
+      const emailsResponse = await fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      });
+      if (emailsResponse.ok) {
+        const emailsData = (await emailsResponse.json()) as GitHubEmail[];
+        if (Array.isArray(emailsData)) {
+          const primaryEmail = emailsData.find((e) => e.primary && e.verified);
+          if (primaryEmail) email = primaryEmail.email;
+        }
+      }
+    } catch {}
+
+    if (!email && data.email) {
+      email = data.email;
     }
 
     return {
       id: data.id.toString(),
-      email,
+      email: email || undefined,
       name: data.name || data.login,
       avatar: data.avatar_url,
     };

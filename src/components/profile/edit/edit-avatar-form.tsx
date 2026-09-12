@@ -7,7 +7,7 @@ import imageCompression from "browser-image-compression";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Upload, Loader2, ImagePlus } from "lucide-react";
-import { uploadCustomAvatar } from "@/actions/profile/upload-avatar";
+import { uploadCustomAvatar } from "@/actions/profile/upload-avatar.actions";
 import { toast } from "sonner";
 import getCroppedImg from "@/utils/crop-image";
 import { handleError } from "@/utils/error";

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeveloperApp, createAppAction, updateAppAction } from "@/actions/profile/apps.actions";
-import { uploadAppIcon } from "@/actions/profile/upload-app-icon";
+import { uploadAppIcon } from "@/actions/profile/upload-app-icon.actions";
 import { Loader2, Plus, Trash2, Upload, ImagePlus, Copy, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";

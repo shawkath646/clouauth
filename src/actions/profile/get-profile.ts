@@ -1,5 +1,4 @@
-"use server";
-
+import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import type {
@@ -162,7 +161,7 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
     }
 }
 
-export async function getFullProfile(): Promise<{ success: boolean, data?: FullProfile, error?: string }> {
+export const getFullProfile = cache(async (): Promise<{ success: boolean, data?: FullProfile, error?: string }> => {
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -329,4 +328,4 @@ export async function getFullProfile(): Promise<{ success: boolean, data?: FullP
         const em = handleError(e, "Failed to execute getFullProfile");
         return { success: false, error: em };
     }
-}
+});

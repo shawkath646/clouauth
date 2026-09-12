@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -44,7 +43,6 @@ const PRONOUN_OPTIONS = [
 ];
 
 export function EditPronounsForm({ initialData }: EditPronounsFormProps) {
-  const router = useRouter();
   const { t } = useTranslations("schema_profile");
   const { t: tUI } = useTranslations("profile_personal");
 

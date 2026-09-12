@@ -14,9 +14,17 @@ import { getSecureCookieOptions } from "@/utils/utils";
 const generateRandomValue = () => crypto.randomBytes(32).toString("hex");
 const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
+function timingSafeEqualStr(a: string | null | undefined, b: string | null | undefined): boolean {
+    if (typeof a !== "string" || typeof b !== "string") return false;
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function sanitizeSession(session: DBUserSession): SafeDBUserSession {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { session_token_hash, refresh_token_hash, ...safeSession } = session;
+    const { session_token_hash, refresh_token_hash, previous_refresh_token_hash, ...safeSession } = session;
     return safeSession as SafeDBUserSession;
 }
 
@@ -174,9 +182,9 @@ export async function refreshSession(presentedRefreshToken: string, setCookies: 
 
     // Replay Attack Detection: If the presented token doesn't match the active token, 
     // it means an old token was reused. We immediately revoke the session to kick out the attacker.
-    if (session.refresh_token_hash !== presentedHash) {
+    if (!timingSafeEqualStr(session.refresh_token_hash, presentedHash)) {
         // Allow 1-minute grace period for the previous refresh token in case of network failure
-        const isPrevious = session.previous_refresh_token_hash === presentedHash;
+        const isPrevious = session.previous_refresh_token_hash && timingSafeEqualStr(session.previous_refresh_token_hash, presentedHash);
         const gracePeriodValid = session.updated_on.getTime() + 60 * 1000 > Date.now();
 
         if (!(isPrevious && gracePeriodValid)) {
@@ -244,8 +252,7 @@ export async function getSession(sessionToken: string): Promise<SafeDBUserSessio
         return null;
     }
 
-    if (session.session_token_hash !== sessionHash) {
-        await revokeSession(session.id);
+    if (!timingSafeEqualStr(session.session_token_hash, sessionHash)) {
         return null;
     }
 
@@ -391,11 +398,10 @@ export async function getOAuthSession(token: string) {
         }
 
         const scopes = (payload.scope as string).split(" ").filter(Boolean);
-        const includeEmails = scopes.includes("email");
 
         const user = await prisma.user.findUnique({
             where: { id: payload.sub as string },
-            include: includeEmails ? { emails: { where: { is_primary: true } } } : undefined
+            include: { emails: { where: { is_primary: true } } }
         });
 
         if (!user) return null;

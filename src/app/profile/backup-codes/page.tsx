@@ -1,4 +1,4 @@
-import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { getFullProfile } from "@/actions/profile/get-profile";
 import { BackupCodesManagementPage } from "@/components/profile/views/backup-codes-management-page";
 import type { Metadata } from "next";
 

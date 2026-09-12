@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Loader2 } from "lucide-react";
 import CredentialsStep from "./credentials-step";
 import VerificationMethodStep from "./verification-method-step";
 import CodeVerification from "./code-verification";
-import PasskeyVerification from "./passkey-verification";
-import PhoneVerification from "./phone-verification";
+import PasskeyVerification, { type PasskeyAuthOptions } from "./passkey-verification";
 import AgreementStep from "./agreement-step";
 import ReenableAccountStep from "./reenable-account-step";
 import { VerificationMethod } from "@/types/auth.types";
@@ -21,44 +21,127 @@ type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | 
 
 interface SigninClientProps {
   initialStep?: Step;
+  initialTempSessionId?: string | null;
+  initialMethods?: VerificationMethod[];
   appData?: {
     name: string;
     icon: string | null;
   } | null;
 }
 
-export default function SigninClient({ initialStep = "CREDENTIALS", appData }: SigninClientProps) {
+export default function SigninClient({
+  initialStep = "CREDENTIALS",
+  initialTempSessionId = null,
+  initialMethods = [],
+  appData,
+}: SigninClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [currentStep, setCurrentStep] = useState<Step>(initialStep);
   const [selectedMethod, setSelectedMethod] = useState<VerificationMethod | null>(null);
-  const [tempSessionId, setTempSessionId] = useState<string | null>(null);
-  const [availableMethods, setAvailableMethods] = useState<VerificationMethod[]>([]);
-  const [passkeyOptions, setPasskeyOptions] = useState<Record<string, unknown> | null>(null);
+  const [tempSessionId, setTempSessionId] = useState<string | null>(initialTempSessionId);
+  const [availableMethods, setAvailableMethods] = useState<VerificationMethod[]>(initialMethods);
+  const [passkeyOptions, setPasskeyOptions] = useState<PasskeyAuthOptions | null>(null);
   const [isGranting, setIsGranting] = useState(false);
 
-  const processAction = (result: SignInReturn) => {
-    switch (result.action) {
-      case "ERROR":
-        toast.error("Authentication Error", { description: result.error });
-        break;
-      case "METHOD_SELECTION":
-        setTempSessionId(result.tempSessionId);
-        setAvailableMethods(result.methods);
-        setCurrentStep("METHOD_SELECTION");
-        break;
-      case "ACCOUNT_DISABLED":
-        if ("tempSessionId" in result && result.tempSessionId) {
+  // Smooth loading / authenticating overlay state
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authMessage, setAuthMessage] = useState<string>("Signing you in...");
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Adjust state when props change without triggering cascading effects
+  const [prevInitialStep, setPrevInitialStep] = useState(initialStep);
+  if (initialStep !== prevInitialStep) {
+    setPrevInitialStep(initialStep);
+    setCurrentStep(initialStep);
+  }
+
+  const [prevTempId, setPrevTempId] = useState(initialTempSessionId);
+  if (initialTempSessionId !== prevTempId) {
+    setPrevTempId(initialTempSessionId);
+    setTempSessionId(initialTempSessionId);
+  }
+
+  const [prevMethods, setPrevMethods] = useState(initialMethods);
+  if (initialMethods !== prevMethods && initialMethods.length > 0) {
+    setPrevMethods(initialMethods);
+    setAvailableMethods(initialMethods);
+  }
+
+  const processAction = useCallback(
+    (result: SignInReturn) => {
+      switch (result.action) {
+        case "ERROR":
+          setIsAuthenticating(false);
+          setIsSuccess(false);
+          toast.error("Authentication Error", { description: result.error });
+          break;
+
+        case "METHOD_SELECTION":
+          setIsAuthenticating(false);
+          setIsSuccess(false);
           setTempSessionId(result.tempSessionId);
+          setAvailableMethods(result.methods);
+          setCurrentStep("METHOD_SELECTION");
+          break;
+
+        case "ACCOUNT_DISABLED":
+          setIsAuthenticating(false);
+          setIsSuccess(false);
+          if ("tempSessionId" in result && result.tempSessionId) {
+            setTempSessionId(result.tempSessionId);
+          }
+          setCurrentStep("REENABLE_ACCOUNT");
+          break;
+
+        case "LOGIN_SUCCESS": {
+          setIsAuthenticating(true);
+          setIsSuccess(true);
+          setAuthMessage("Signed in! Redirecting...");
+
+          const clientId = searchParams.get("client_id");
+          const redirectUri = searchParams.get("redirect_uri");
+          const returnTo = searchParams.get("return_to");
+
+          if (clientId && redirectUri) {
+            router.refresh();
+          } else {
+            const target =
+              returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+                ? returnTo
+                : "/profile";
+            router.replace(target);
+          }
+          break;
         }
-        setCurrentStep("REENABLE_ACCOUNT");
-        break;
-      case "LOGIN_SUCCESS":
-        router.refresh();
-        break;
-    }
-  };
+      }
+    },
+    [router, searchParams]
+  );
+
+  useEffect(() => {
+    const handleAuthStart = (event: Event) => {
+      const customEvent = event as CustomEvent<{ provider?: string; message?: string }>;
+      setIsAuthenticating(true);
+      setIsSuccess(false);
+      setAuthMessage(customEvent.detail?.message || "Signing you in...");
+    };
+
+    const handleAuthAction = (event: Event) => {
+      const customEvent = event as CustomEvent<SignInReturn>;
+      if (customEvent.detail) {
+        processAction(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("clou_auth_start", handleAuthStart);
+    window.addEventListener("clou_auth_action", handleAuthAction);
+    return () => {
+      window.removeEventListener("clou_auth_start", handleAuthStart);
+      window.removeEventListener("clou_auth_action", handleAuthAction);
+    };
+  }, [processAction]);
 
   const handleMethodSelect = async (method: VerificationMethod) => {
     setSelectedMethod(method);
@@ -73,9 +156,9 @@ export default function SigninClient({ initialStep = "CREDENTIALS", appData }: S
         await triggerVerificationMethod(tempSessionId, method.type === "totp" ? "totp" : "email");
       } else if (method.type === "passkey") {
         const res = await triggerVerificationMethod(tempSessionId, "passkey");
-        
-        if (res.success && "payload" in res) {
-          setPasskeyOptions(res.payload as Record<string, unknown>);
+
+        if (res.success && res.payload) {
+          setPasskeyOptions(res.payload as PasskeyAuthOptions);
         } else {
           toast.error("Passkey Error", { description: res.error || "Failed to trigger passkey verification" });
           return;
@@ -128,10 +211,10 @@ export default function SigninClient({ initialStep = "CREDENTIALS", appData }: S
     switch (currentStep) {
       case "CREDENTIALS":
         return <CredentialsStep onNext={processAction} />;
-      
+
       case "METHOD_SELECTION":
         return <VerificationMethodStep onSelectMethod={handleMethodSelect} availableMethods={availableMethods} />;
-      
+
       case "VERIFICATION":
         switch (selectedMethod?.type) {
           case "code":
@@ -142,22 +225,53 @@ export default function SigninClient({ initialStep = "CREDENTIALS", appData }: S
           default:
             return null;
         }
-      
+
       case "AGREEMENT":
         return <AgreementStep onAgree={handleAgreementComplete} onCancel={() => setCurrentStep("CREDENTIALS")} isLoading={isGranting} appData={appData} />;
-      
+
       case "REENABLE_ACCOUNT":
         return <ReenableAccountStep tempSessionId={tempSessionId} onComplete={processAction} />;
-        
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="w-full flex items-center justify-center min-h-100">
+    <div className="w-full flex items-center justify-center min-h-100 relative">
       <AnimatePresence mode="wait">
         {renderStep()}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAuthenticating && (
+          <motion.div
+            key="auth-overlay"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 dark:bg-card/85 backdrop-blur-md rounded-3xl p-6 text-center max-w-md mx-auto shadow-2xl border border-primary/20 pointer-events-auto"
+          >
+            <div className="relative flex items-center justify-center mb-4">
+              {isSuccess ? (
+                <div className="w-14 h-14 rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 text-emerald-500 flex items-center justify-center animate-in zoom-in-75 duration-300">
+                  <Check className="w-7 h-7 stroke-[2.5]" />
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                </div>
+              )}
+            </div>
+            <h3 className="text-xl font-semibold tracking-tight text-foreground mb-1.5">
+              {authMessage}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isSuccess ? "Redirecting to your destination..." : "Please wait while we verify your identity"}
+            </p>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

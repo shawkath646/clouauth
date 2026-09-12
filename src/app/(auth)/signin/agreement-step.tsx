@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Check, Info } from "lucide-react";
 import { motion } from "framer-motion";
-import { BrandName } from "@/components/ui/brand-name";
 
 import { useTranslations } from "@/lib/i18n/hooks";
 
@@ -13,8 +12,7 @@ interface AgreementStepProps {
   isLoading?: boolean;
   requestedScopes?: string[];
   clientName?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  appData?: any;
+  appData?: { name?: string; icon?: string | null } | Record<string, unknown> | null;
 }
 
 export default function AgreementStep({ 

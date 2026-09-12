@@ -5,7 +5,7 @@ import iconDark from "@/assets/icon_dark.png";
 import { BackgroundStars } from "@/components/landing/background-stars";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
-import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { getFullProfile } from "@/actions/profile/get-profile";
 import { redirect } from "next/navigation";
 import { ProfileLayoutClient } from "@/components/profile/profile-layout-client";
 import { SignOutButton } from "@/components/profile/sign-out-button";

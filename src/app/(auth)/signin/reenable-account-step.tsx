@@ -4,16 +4,17 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { enableAccount } from "@/actions/auth/auth.actions";
+import { enableAccount, type SignInReturn } from "@/actions/auth/auth.actions";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface ReenableAccountStepProps {
   tempSessionId: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onComplete: (result: any) => void;
+  onComplete: (result: SignInReturn) => void;
 }
 
 export default function ReenableAccountStep({ tempSessionId, onComplete }: ReenableAccountStepProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleEnable = async () => {
@@ -74,7 +75,7 @@ export default function ReenableAccountStep({ tempSessionId, onComplete }: Reena
         <Button 
           variant="ghost" 
           className="w-full mt-4" 
-          onClick={() => window.location.href = "/"}
+          onClick={() => router.push("/")}
           disabled={isLoading}
         >
           Back to Home

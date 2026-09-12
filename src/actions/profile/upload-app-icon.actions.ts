@@ -2,9 +2,10 @@
 
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
-import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar"; // R2 is generic
+import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { handleError } from "@/utils/error";
+import { validateImageMagicBytes } from "@/utils/image-validator";
 
 export async function uploadAppIcon(formData: FormData, appId: string) {
   try {
@@ -26,6 +27,10 @@ export async function uploadAppIcon(formData: FormData, appId: string) {
       return { success: false, error: "No file provided" };
     }
 
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      return { success: false, error: "SVG images are not allowed for security reasons." };
+    }
+
     if (!file.type.startsWith("image/")) {
       return { success: false, error: "Invalid file type. Must be an image." };
     }
@@ -35,6 +40,11 @@ export async function uploadAppIcon(formData: FormData, appId: string) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    const validatedImage = validateImageMagicBytes(buffer);
+    if (!validatedImage) {
+      return { success: false, error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed." };
+    }
 
     // Delete old icon if exists
     if (app.icon && app.icon.startsWith(R2_PUBLIC_URL)) {
@@ -53,15 +63,14 @@ export async function uploadAppIcon(formData: FormData, appId: string) {
       }
     }
 
-    const ext = file.name.split('.').pop() || "jpg";
-    const filename = `app_icons/${appId}_${Date.now()}.${ext}`;
+    const filename = `app_icons/${appId}_${Date.now()}.${validatedImage.ext}`;
 
     await s3Client.send(
       new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: filename,
         Body: buffer,
-        ContentType: file.type,
+        ContentType: validatedImage.mime,
       })
     );
 

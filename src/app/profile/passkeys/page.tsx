@@ -1,5 +1,5 @@
 import { PasskeysManagement } from "@/components/profile/views/passkeys-management";
-import { getUserPasskeys } from "@/actions/auth/passkey.actions";
+import { getUserPasskeys } from "@/actions/auth/passkey";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/hooks";
@@ -11,38 +11,60 @@ import { toast } from "sonner";
 import { handleError } from "@/utils/error";
 import { SignInReturn } from "@/actions/auth/auth.actions";
 
+export type PasskeyAuthOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
+
 interface PasskeyVerificationProps {
   onComplete: (result: SignInReturn) => void;
   tempSessionId: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: any;
+  options?: PasskeyAuthOptions | null;
 }
 
 export default function PasskeyVerification({ onComplete, tempSessionId, options }: PasskeyVerificationProps) {
   const { t } = useTranslations("signin");
   const [isLoading, setIsLoading] = useState(false);
+  const isVerifyingRef = useRef(false);
+  const hasTriggeredRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const handleVerify = async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const handleVerify = useCallback(async () => {
+    if (isVerifyingRef.current) return;
+
     if (!tempSessionId) {
       toast.error("Error", { description: "No active verification session" });
       return;
     }
+
+    isVerifyingRef.current = true;
     setIsLoading(true);
+
     try {
       let authOptions = options;
       if (!authOptions) {
         const res = await triggerVerificationMethod(tempSessionId, "passkey");
-        if (!res.success || !("payload" in res)) {
+        if (!res.success || !res.payload) {
           toast.error("Error", { description: res.error || "Failed to get passkey challenge" });
-          setIsLoading(false);
           return;
         }
-        authOptions = res.payload;
+        authOptions = res.payload as PasskeyAuthOptions;
+      }
+
+      if (!authOptions) {
+        toast.error("Error", { description: "Passkey options missing" });
+        return;
       }
 
       const assertionResponse = await startAuthentication({ optionsJSON: authOptions });
 
       const result = await resolvePasskeyVerification(tempSessionId, assertionResponse);
+
+      if (!mountedRef.current) return;
 
       if (result && result.action === "ERROR") {
         toast.error("Error", { description: result.error || "Passkey verification failed" });
@@ -50,14 +72,29 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
         onComplete(result);
       }
     } catch (e: unknown) {
+      if (!mountedRef.current) return;
+
+      const isUserCancelled = e instanceof Error && e.name === "NotAllowedError";
+      if (!isUserCancelled) {
         const em = handleError(e, "Failed to execute PasskeyVerification");
-        if (!em.toLowerCase().includes("cancelled") && !em.toLowerCase().includes("not allowed")) {
-          toast.error("Verification failed", { description: em });
-        }
-      } finally {
-      setIsLoading(false);
+        toast.error("Verification failed", { description: em });
+      }
+    } finally {
+      isVerifyingRef.current = false;
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [onComplete, options, tempSessionId]);
+
+  // Auto-trigger exactly once per mount (per tempSessionId), regardless of
+  // how many times handleVerify's identity changes due to prop churn.
+  useEffect(() => {
+    if (hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
+    handleVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tempSessionId]);
 
   return (
     <motion.div

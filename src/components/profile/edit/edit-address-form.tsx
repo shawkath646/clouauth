@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ interface EditAddressFormProps {
 }
 
 export function EditAddressForm({ initialData }: EditAddressFormProps) {
-  const router = useRouter();
   const { t } = useTranslations("schema_profile");
   const { t: tUI } = useTranslations("profile_personal");
   const defaultAddress = initialData.addresses?.find(a => a.is_default) || initialData.addresses?.[0];

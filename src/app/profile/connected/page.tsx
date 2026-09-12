@@ -1,5 +1,5 @@
 import { ConnectedAccountsSection } from "@/components/profile/connected-accounts-section";
-import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { getFullProfile } from "@/actions/profile/get-profile";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 

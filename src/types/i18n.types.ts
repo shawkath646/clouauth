@@ -36,5 +36,5 @@ export type Dictionaries = {
 
 export type Dictionary<T extends keyof Dictionaries> = Dictionaries[T];
 
-// Simplified to avoid TS memory leak
-export type TranslationKey<T extends keyof Dictionaries> = any;
+// String key representation avoiding TS deep recursion memory bottleneck
+export type TranslationKey<T extends keyof Dictionaries = keyof Dictionaries> = T extends unknown ? string : never;

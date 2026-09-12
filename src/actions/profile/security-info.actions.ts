@@ -64,6 +64,16 @@ export async function updatePasswordAction(data: PasswordValues) {
       },
     });
 
+    // Revoke all other active sessions upon password change
+    await prisma.userSession.updateMany({
+      where: {
+        user_id: sessionData.user.id,
+        id: { not: sessionData.session.id },
+        revoked_on: null,
+      },
+      data: { revoked_on: new Date() },
+    });
+
     revalidatePath("/profile");
     revalidatePath("/profile/password");
     return { success: true };
@@ -161,7 +171,7 @@ export async function removeTwoFactorMethodAction(methodId: string) {
   }
 }
 
-export async function generateBackupCodesAction() {
+export async function generateBackupCodesAction(): Promise<{ success: boolean; codes?: string[]; error?: string }> {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };

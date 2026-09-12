@@ -1,5 +1,5 @@
 import { DangerZoneSection } from "@/components/profile/danger-zone-section";
-import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { getFullProfile } from "@/actions/profile/get-profile";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
@@ -9,10 +9,15 @@ export const metadata: Metadata = {
 
 export default async function DangerZonePage() {
   const result = await getFullProfile();
-  
+
   if (!result.success || !result.data) {
     redirect("/signin");
   }
 
-  return <DangerZoneSection />;
+  return (
+    <DangerZoneSection
+      username={result.data.user.username}
+      hasPassword={Boolean(result.data.password)}
+    />
+  );
 }

@@ -5,7 +5,7 @@ import { getUserSession, revokeSession, signOut } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { handleError } from "@/utils/error";
 
-export async function revokeUserSessionAction(sessionId: string) {
+export async function revokeUserSessionAction(sessionId: string): Promise<{ success: boolean; isCurrent?: boolean; error?: string }> {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
@@ -27,6 +27,7 @@ export async function revokeUserSessionAction(sessionId: string) {
     }
 
     revalidatePath("/profile");
+
     return { success: true, isCurrent };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute revokeUserSessionAction");
@@ -34,7 +35,7 @@ export async function revokeUserSessionAction(sessionId: string) {
   }
 }
 
-export async function revokeAllUserSessionsAction(includeCurrent: boolean = false) {
+export async function revokeAllUserSessionsAction(includeCurrent: boolean = false): Promise<{ success: boolean; isCurrent?: boolean; error?: string }> {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };

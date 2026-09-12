@@ -28,7 +28,6 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
   const hasPasskeys = passkeysCount > 0;
 
   const hasTotp = !!profile.has_totp;
-  const hasPhone = false;
   const phoneCount = 0;
 
   const recoveryEmailObj = profile.emails?.find(e => !e.is_primary);

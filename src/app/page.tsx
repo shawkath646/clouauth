@@ -8,7 +8,7 @@ import { SecuritySection } from "@/components/landing/security-section";
 import { FutureVision } from "@/components/landing/future-vision";
 import { CallToAction } from "@/components/landing/call-to-action";
 import { Footer } from "@/components/landing/footer";
-import { getMinimalProfile } from "@/actions/profile/get-profile.actions";
+import { getMinimalProfile } from "@/actions/profile/get-profile";
 import JsonLd from "@/components/json-ld";
 import { getServerTranslations, getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";

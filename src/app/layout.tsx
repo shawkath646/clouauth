@@ -1,12 +1,14 @@
-import { getEnv } from "@/utils/env";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { cn } from "@/utils/utils";
 import { getLocale } from "@/lib/i18n/server";
+import { getUserSession } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
+import { getEnv } from "@/utils/env";
 import JsonLd from "@/components/json-ld";
 import "./globals.css";
+import GoogleOneTap from "@/components/google-one-tap";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -133,8 +135,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
+  const [locale, session] = await Promise.all([
+    getLocale(),
+    getUserSession(),
+  ]);
   const dir = locale === "ar" ? "rtl" : "ltr";
+
+  const gClientId = getEnv("GOOGLE_CLIENT_ID");
 
   return (
     <html
@@ -198,6 +205,7 @@ export default async function RootLayout({
           enableSystem
         >
           {children}
+          {!session && <GoogleOneTap gClientId={gClientId} />}
           <Toaster />
         </ThemeProvider>
       </body>

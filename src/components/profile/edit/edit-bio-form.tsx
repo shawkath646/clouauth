@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +26,6 @@ interface EditBioFormProps {
 }
 
 export function EditBioForm({ initialData }: EditBioFormProps) {
-  const router = useRouter();
   const { t } = useTranslations("schema_profile");
   const { t: tUI } = useTranslations("profile_personal");
 

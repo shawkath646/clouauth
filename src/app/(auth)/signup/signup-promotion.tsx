@@ -1,16 +1,4 @@
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { cn } from "@/utils/utils";
 import { useTranslations } from "@/lib/i18n/hooks";
-
-import { PROVIDERS, SOCIAL_PROVIDERS } from "@/constants/providers.constant";
-
-const ANIMATION_CONFIG: Record<PROVIDERS, { y: number[]; scale: number[]; duration: number; delay: number }> = {
-  google: { y: [-4, 4, -4], scale: [0.95, 1.05, 0.95], duration: 5, delay: 0 },
-  github: { y: [-3, 3, -3], scale: [0.95, 1.05, 0.95], duration: 5.5, delay: 1 },
-  microsoft: { y: [3, -3, 3], scale: [1.02, 0.98, 1.02], duration: 4.8, delay: 1.5 },
-  linkedin: { y: [-4, 4, -4], scale: [0.97, 1.03, 0.97], duration: 5.2, delay: 2 },
-};
 
 export default function SignUpPromotion() {
     const { t } = useTranslations("signup");

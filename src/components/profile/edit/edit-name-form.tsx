@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ interface EditNameFormProps {
 }
 
 export function EditNameForm({ initialData }: EditNameFormProps) {
-  const router = useRouter();
   const { t } = useTranslations("schema_profile");
   const { t: tUI } = useTranslations("profile_personal");
   

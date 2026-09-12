@@ -1,0 +1,16 @@
+model Graveyard {
+  id              String   @id @default(cuid())
+  user_id         String
+  username        String
+  first_name      String
+  last_name       String
+  email           String?
+  phone           String?
+  deletion_reason String?  @db.Text
+  ip_address      String?
+  user_agent      String?  @db.Text
+  deleted_on      DateTime @default(now())
+
+  @@index([user_id])
+  @@index([email])
+}

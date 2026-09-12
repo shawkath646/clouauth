@@ -32,8 +32,12 @@ export const getSignUpSchema = (t: (key: TranslationKey<"schema_auth">) => strin
     .email(t("signUp.emailInvalid"))
     .max(100),
   password: z.string()
-    .min(6, t("signUp.passwordMin"))
-    .max(100),
+    .min(8, t("signUp.passwordMin"))
+    .max(100)
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
 });
 
 export type SignInValues = z.infer<ReturnType<typeof getSignInSchema>>;

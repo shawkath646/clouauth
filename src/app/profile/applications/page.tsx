@@ -1,5 +1,5 @@
 import { ApplicationsSection } from "@/components/profile/applications-section";
-import { getUserAppsAction } from "@/actions/profile/apps.actions";
+import { getUserAppsAction } from "@/actions/profile/apps";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 

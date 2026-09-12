@@ -1,47 +1,18 @@
 "use server";
+
 import { getEnv } from "@/utils/env";
 import prisma from "@/lib/prisma";
-import { getUserSession, createTempSession, getTempSession, deleteTempSession } from "@/lib/session";
+import { createTempSession, deleteTempSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
-
-export async function getUserPasskeys() {
-  try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
-    }
-
-    const passkeys = await prisma.passkeyCredential.findMany({
-      where: {
-        two_factor_id: sessionData.user.id,
-      },
-      orderBy: { created_on: "desc" },
-      select: {
-        id: true,
-        credential_id: true,
-        device_name: true,
-        created_on: true,
-        last_used_on: true,
-      },
-    });
-
-    return { success: true, passkeys };
-  } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute getUserPasskeys");
-    return { success: false, error: em };
-  }
-}
+import { requireUserSession, requireValidTempSession, getWebAuthnConfig } from "./helpers";
 
 export async function triggerPasskeyRegistration() {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
-    }
+    const sessionData = await requireUserSession();
 
     const existingPasskeys = await prisma.passkeyCredential.findMany({
       where: {
@@ -49,8 +20,8 @@ export async function triggerPasskeyRegistration() {
       },
     });
 
-    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
-    const rpName = getEnv("NEXT_PUBLIC_APP_NAME");
+    const { rpID } = getWebAuthnConfig();
+    const rpName = getEnv("NEXT_PUBLIC_APP_NAME", true) || "Clou";
 
     const options = await generateRegistrationOptions({
       rpName,
@@ -75,7 +46,7 @@ export async function triggerPasskeyRegistration() {
 
     return { success: true, tempSessionId: tempSession.id, options };
   } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute triggerPasskeyRegistration");
+    const em = handleError(e, true);
     return { success: false, error: em };
   }
 }
@@ -83,33 +54,24 @@ export async function triggerPasskeyRegistration() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function resolvePasskeyRegistration(tempSessionId: string, payload: any, deviceName: string) {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
-    }
+    const sessionData = await requireUserSession();
 
-    const tempSession = await getTempSession(tempSessionId);
-    if (!tempSession || tempSession.expires_on < new Date() || !tempSession.challenge) {
-      return { success: false, error: "Registration session expired or invalid." };
+    const tempSession = await requireValidTempSession(tempSessionId);
+    if (!tempSession.challenge) {
+      return { success: false, error: "Registration session missing challenge." };
     }
 
     if (tempSession.user_id !== sessionData.user.id) {
       return { success: false, error: "Session mismatch." };
     }
 
-    const rpID = getEnv("NEXT_PUBLIC_RP_ID");
-    const origin = getEnv("NEXT_PUBLIC_APP_URL");
-    const expectedOrigin = [
-      origin,
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ];
+    const { expectedOrigin, expectedRPID } = getWebAuthnConfig();
 
     const verification = await verifyRegistrationResponse({
       response: payload,
       expectedChallenge: tempSession.challenge,
       expectedOrigin,
-      expectedRPID: [rpID, "localhost"],
+      expectedRPID,
       requireUserVerification: false,
     });
 
@@ -122,7 +84,7 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
     const twoFactor = await prisma.twoFactor.upsert({
       where: { user_id: sessionData.user.id },
       update: {},
-      create: { user_id: sessionData.user.id }
+      create: { user_id: sessionData.user.id },
     });
 
     const passkey = await prisma.passkeyCredential.create({
@@ -139,17 +101,14 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
 
     return { success: true, passkey };
   } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute resolvePasskeyRegistration");
+    const em = handleError(e, true);
     return { success: false, error: em };
   }
 }
 
 export async function updatePasskeyName(passkeyId: string, deviceName: string) {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
-    }
+    const sessionData = await requireUserSession();
 
     const passkey = await prisma.passkeyCredential.findFirst({
       where: {
@@ -169,23 +128,20 @@ export async function updatePasskeyName(passkeyId: string, deviceName: string) {
 
     return { success: true, passkey: updated };
   } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute updatePasskeyName");
+    const em = handleError(e, true);
     return { success: false, error: em };
   }
 }
 
 export async function deletePasskey(passkeyId: string) {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
-    }
+    const sessionData = await requireUserSession();
 
     const passkey = await prisma.passkeyCredential.findFirst({
       where: {
         id: passkeyId,
         two_factor_id: sessionData.user.id,
-      }
+      },
     });
 
     if (!passkey) {
@@ -201,12 +157,9 @@ export async function deletePasskey(passkeyId: string) {
     });
 
     if (remaining === 0) {
-      // If no passkeys left, but they might have TOTP or Email/Phone 2FA,
-      // we don't necessarily delete the TwoFactor record unless everything is empty.
-      // But we can check if it's completely empty.
       const twoFactor = await prisma.twoFactor.findUnique({
         where: { user_id: passkey.two_factor_id },
-        include: { totp: true }
+        include: { totp: true },
       });
       if (twoFactor && !twoFactor.totp && !twoFactor.email_id && !twoFactor.phone_id) {
         await prisma.twoFactor.delete({ where: { user_id: passkey.two_factor_id } });
@@ -215,7 +168,7 @@ export async function deletePasskey(passkeyId: string) {
 
     return { success: true };
   } catch (e: unknown) {
-    const em = handleError(e, "Failed to execute deletePasskey");
+    const em = handleError(e, true);
     return { success: false, error: em };
   }
 }

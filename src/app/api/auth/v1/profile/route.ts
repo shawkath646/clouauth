@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSecuredFullProfile } from "@/actions/profile/get-profile.actions";
+import { getSecuredFullProfile } from "@/actions/profile/get-profile";
 import { handleError } from "@/utils/error";
 
 export async function GET() {

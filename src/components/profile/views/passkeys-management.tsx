@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ import {
 import { Fingerprint, Plus, Pencil, Trash2, Loader2, ShieldCheck } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import {
-  getUserPasskeys,
   triggerPasskeyRegistration,
   resolvePasskeyRegistration,
   updatePasskeyName,

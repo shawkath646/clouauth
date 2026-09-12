@@ -9,6 +9,8 @@ import { getUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import OAuthErrorStep from "./oauth-error-step";
+import { VerificationMethod } from "@/types/auth.types";
+import { resolveTempSessionStep } from "@/actions/auth/verification";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -44,11 +46,11 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
   const redirectUri = getStringParam(searchParams?.redirect_uri);
   const responseType = getStringParam(searchParams?.response_type);
   const returnTo = getStringParam(searchParams?.return_to);
+  const tempId = getStringParam(searchParams?.tid);
 
   const isOAuthRequest = Boolean(clientId && responseType === 'code');
 
   let appData: { name: string; icon: string | null } | null = null;
-
   let oauthError: { title?: string; message: string } | null = null;
 
   if (isOAuthRequest && clientId) {
@@ -93,6 +95,21 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
     }
   }
 
+  let initialStep: 'CREDENTIALS' | 'METHOD_SELECTION' | 'AGREEMENT' | 'REENABLE_ACCOUNT' = 'CREDENTIALS';
+  let initialMethods: VerificationMethod[] = [];
+
+  if (session && isOAuthRequest && appData) {
+    initialStep = 'AGREEMENT';
+  } else if (tempId) {
+    const resolved = await resolveTempSessionStep(tempId);
+    if (resolved.step === 'REENABLE_ACCOUNT') {
+      initialStep = 'REENABLE_ACCOUNT';
+    } else if (resolved.step === 'METHOD_SELECTION') {
+      initialStep = 'METHOD_SELECTION';
+      initialMethods = resolved.methods;
+    }
+  }
+
   return (
     <>
       <JsonLd
@@ -119,7 +136,15 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
       />
 
       <I18nProvider locale={locale} messages={dict}>
-        <Suspense fallback={<div className="flex items-center justify-center min-h-100">Loading...</div>}>
+        <Suspense
+          fallback={
+            <div className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col items-center justify-center min-h-[480px] mx-auto animate-pulse">
+              <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
+              <div className="h-4 w-32 bg-muted rounded mb-2" />
+              <div className="h-3 w-48 bg-muted/60 rounded" />
+            </div>
+          }
+        >
           {isOAuthRequest && oauthError ? (
             <OAuthErrorStep 
               errorTitle={oauthError.title}
@@ -127,7 +152,9 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
             />
           ) : (
             <SigninClient
-              initialStep={session && isOAuthRequest && appData ? 'AGREEMENT' : 'CREDENTIALS'}
+              initialStep={initialStep}
+              initialTempSessionId={tempId}
+              initialMethods={initialMethods}
               appData={appData}
             />
           )}

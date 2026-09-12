@@ -8,7 +8,8 @@ import { BrandName } from "@/components/ui/brand-name";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { Button } from "@/components/ui/button";
 
-export function PrivacySection({ profile: _profile }: { profile: FullProfile }) {
+export function PrivacySection({ profile }: { profile?: FullProfile } = {}) {
+  void profile;
   const { t } = useTranslations("profile_personal");
 
   return (

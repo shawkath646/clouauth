@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { handleError } from "@/utils/error";
+import { validateImageMagicBytes } from "@/utils/image-validator";
 
 export async function uploadCustomAvatar(formData: FormData) {
   try {
@@ -15,6 +16,10 @@ export async function uploadCustomAvatar(formData: FormData) {
     const file = formData.get("file") as File | null;
     if (!file) {
       return { success: false, error: "No file provided" };
+    }
+
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      return { success: false, error: "SVG images are not allowed for security reasons." };
     }
 
     if (!file.type.startsWith("image/")) {
@@ -27,6 +32,11 @@ export async function uploadCustomAvatar(formData: FormData) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
+    const validatedImage = validateImageMagicBytes(buffer);
+    if (!validatedImage) {
+      return { success: false, error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed." };
+    }
+
     // Fetch current user to get old avatar
     const user = await prisma.user.findUnique({
       where: { id: sessionData.user.id },
@@ -51,15 +61,14 @@ export async function uploadCustomAvatar(formData: FormData) {
       }
     }
 
-    const ext = file.name.split('.').pop() || "jpg";
-    const filename = `user_avatar/${sessionData.user.id}.${ext}`;
+    const filename = `user_avatar/${sessionData.user.id}.${validatedImage.ext}`;
 
     await s3Client.send(
       new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: filename,
         Body: buffer,
-        ContentType: file.type,
+        ContentType: validatedImage.mime,
       })
     );
 

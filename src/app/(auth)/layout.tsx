@@ -23,7 +23,7 @@ export default async function AuthLayout({
   const mergedDict = { ...commonDict, ...schemaAuthDict };
 
   return (
-    <I18nProvider locale={locale} messages={mergedDict as any}>
+    <I18nProvider locale={locale} messages={mergedDict as unknown as import('@/types/i18n.types').Dictionary<'common'>}>
       <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-primary/5 dark:bg-primary/10 overflow-hidden">
         <BackgroundStars />
         <div className="absolute top-5 right-5 z-50">

@@ -61,7 +61,7 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
                 onChange={setPhoneNumber}
                 defaultCountry="US"
                 className="w-full flex"
-                style={{ "--PhoneInput-color--focus": "transparent" } as any}
+                style={{ "--PhoneInput-color--focus": "transparent" } as React.CSSProperties}
                 numberInputProps={{
                   className: "w-full border-0 bg-transparent p-0 text-sm focus:outline-none focus:ring-0 ml-2"
                 }}

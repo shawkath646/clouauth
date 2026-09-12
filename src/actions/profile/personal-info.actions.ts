@@ -115,7 +115,7 @@ export async function updateProfileBio(data: BioValues) {
     await prisma.user.update({
       where: { id: sessionData.user.id },
       data: {
-        bio: parsed.data.bio,
+        bio: parsed.data.bio || null,
       },
     });
 
@@ -196,7 +196,7 @@ export async function updateProfilePronouns(data: PronounsValues) {
     await prisma.user.update({
       where: { id: sessionData.user.id },
       data: {
-        pronouns: parsed.data.pronouns,
+        pronouns: parsed.data.pronouns || null,
       },
     });
 

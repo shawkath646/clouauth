@@ -3,7 +3,7 @@ import type { Thing, WithContext, Graph } from "schema-dts";
 export default function JsonLd({
   schema
 }: {
-  schema: any
+  schema: Thing | WithContext<Thing> | Graph | Record<string, unknown>;
 }) {
   const safeJsonLd = JSON.stringify(schema)
     .replace(/</g, "\\u003c")

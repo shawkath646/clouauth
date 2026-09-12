@@ -1,4 +1,4 @@
-import { getFullProfile } from "@/actions/profile/get-profile.actions";
+import { getFullProfile } from "@/actions/profile/get-profile";
 import { AuthenticatorManagementPage } from "@/components/profile/views/authenticator-management-page";
 import type { Metadata } from "next";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default async function AuthenticatorPage() {
   const profileRes = await getFullProfile();
-  const profile = (profileRes.success && "profile" in profileRes ? profileRes.profile : profileRes.success && "data" in profileRes ? (profileRes as any).data : null) as import("@/types/profile.types").FullProfile | null;
+  const profile = profileRes.success ? profileRes.data : null;
 
   const hasTotp = !!profile?.has_totp;
 

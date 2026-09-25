@@ -181,9 +181,17 @@ export async function resolvePasskeyVerification(
       return { action: "ERROR", error: lockoutError };
     }
 
-    if (!payload || !payload.id) {
-      return { action: "ERROR", error: "Invalid passkey payload." };
+    if (!payload || !payload.id || !payload.response) {
+      return { action: "ERROR", error: "Invalid passkey payload from browser." };
     }
+
+    const expectedChallenge = tempSession.challenge;
+
+    // Immediately clear challenge to prevent replay attacks
+    await prisma.tempSession.update({
+      where: { id: tempSession.id },
+      data: { challenge: null },
+    });
 
     const passkey = await prisma.passkeyCredential.findUnique({
       where: { credential_id: payload.id },
@@ -193,17 +201,16 @@ export async function resolvePasskeyVerification(
     });
 
     if (!passkey || passkey.two_factor_id !== tempSession.user_id) {
+      await handleFailedAttempt("tempSession", tempSession.id);
       return { action: "ERROR", error: "Passkey not recognized for this account." };
     }
 
     const { expectedOrigin, expectedRPID } = getWebAuthnConfig();
 
-    const credentialPublicKey = new Uint8Array(
-      Buffer.from(
-        passkey.public_key,
-        passkey.public_key.includes("-") || passkey.public_key.includes("_") ? "base64url" : "base64"
-      )
-    );
+    const rawKey = passkey.public_key.trim();
+    const isBase64Url = rawKey.includes("-") || rawKey.includes("_");
+    const keyBuf = Buffer.from(rawKey, isBase64Url ? "base64url" : "base64");
+    const credentialPublicKey = new Uint8Array(keyBuf.buffer, keyBuf.byteOffset, keyBuf.byteLength);
 
     const normalizedPayload = {
       ...payload,
@@ -215,7 +222,7 @@ export async function resolvePasskeyVerification(
 
     const verification = await verifyAuthenticationResponse({
       response: normalizedPayload,
-      expectedChallenge: tempSession.challenge,
+      expectedChallenge,
       expectedOrigin,
       expectedRPID,
       requireUserVerification: false,

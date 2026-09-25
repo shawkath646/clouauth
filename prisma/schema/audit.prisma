@@ -6,4 +6,7 @@ model AuditLog {
   user_agent String?
   created_on DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([created_on])
 }

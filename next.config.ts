@@ -11,7 +11,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "assets.clouburstlab.com",
         port: '',
-      }
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: '',
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+        port: '',
+      },
     ]
   },
   headers: async () => [

@@ -88,6 +88,10 @@
     "codesCount": "{count}개 코드",
     "notGenerated": "생성되지 않음"
   },
+  "recoveryMethods": {
+    "title": "복구 방법",
+    "desc": "기본 로그인 수단을 사용할 수 없을 때 계정 액세스를 복구하기 위한 백업 방법입니다."
+  },
   "recentActivity": {
     "title": "최근 보안 활동",
     "desc": "계정의 최근 보안 이벤트를 검토하세요.",

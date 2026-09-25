@@ -113,6 +113,7 @@ export async function markTempSessionVerified(tempSessionId: string, clearCodeHa
       two_step_processed: true,
       failed_attempts: 0,
       locked_until: null,
+      challenge: null,
       ...(clearCodeHash ? { code_hash: null } : {}),
     },
   });
@@ -144,15 +145,59 @@ export async function upsertOAuthAccount(userId: string, profile: ExternalAuthPr
 }
 
 export function getWebAuthnConfig() {
-  const rpID = getEnv("NEXT_PUBLIC_RP_ID");
-  const origin = getEnv("NEXT_PUBLIC_BASE_URL", true) || getEnv("NEXT_PUBLIC_APP_URL", true) || "http://localhost:3000";
+  const rawOrigin = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
+  const origin = rawOrigin.replace(/\/+$/, "");
+  const devUrl = getEnv("NEXT_PUBLIC_DEV_URL", true).replace(/\/+$/, "");
   const isDev = process.env.NODE_ENV !== "production";
-  const expectedOrigin = [
+
+  let originHost = "localhost";
+  try {
+    originHost = new URL(origin).hostname;
+  } catch {
+    originHost = "localhost";
+  }
+
+  const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim();
+
+  // Determine a valid RP ID:
+  // In WebAuthn, rpId MUST be equal to or a registrable domain suffix of the origin domain.
+  // In development against localhost/127.0.0.1, rpID MUST be "localhost".
+  let rpID = envRpID;
+  if (!rpID || (isDev && (originHost === "localhost" || originHost === "127.0.0.1"))) {
+    rpID = "localhost";
+  } else if (!rpID) {
+    rpID = originHost;
+  }
+
+  const expectedOriginSet = new Set<string>();
+  expectedOriginSet.add(origin);
+  if (isDev) {
+    expectedOriginSet.add("http://localhost:3000");
+    expectedOriginSet.add("http://127.0.0.1:3000");
+  }
+  if (devUrl) {
+    expectedOriginSet.add(devUrl);
+  }
+
+  const expectedRPIDSet = new Set<string>();
+  expectedRPIDSet.add(rpID);
+  expectedRPIDSet.add(originHost);
+  if (envRpID) expectedRPIDSet.add(envRpID);
+  if (isDev) expectedRPIDSet.add("localhost");
+  if (devUrl) {
+    try {
+      expectedRPIDSet.add(new URL(devUrl).hostname);
+    } catch {
+      // Ignore URL parse error
+    }
+  }
+
+  return {
+    rpID,
     origin,
-    ...(isDev ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
-  ];
-  const expectedRPID = [rpID, ...(isDev ? ["localhost"] : [])];
-  return { rpID, origin, expectedOrigin, expectedRPID };
+    expectedOrigin: Array.from(expectedOriginSet),
+    expectedRPID: Array.from(expectedRPIDSet),
+  };
 }
 
 export async function generateUniqueUsername(baseInput?: string | null): Promise<string> {

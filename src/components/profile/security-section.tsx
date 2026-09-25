@@ -112,7 +112,16 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
           </Link>
+        </div>
+      </SectionCard>
 
+      {/* Recovery Methods Shell */}
+      <SectionCard 
+        title={t('recoveryMethods.title')} 
+        description={t('recoveryMethods.desc')} 
+        noPadding
+      >
+        <div role="region" aria-label="Recovery methods" className="divide-y divide-border/50">
           {/* Phone Numbers Row */}
           <Link
             href="/profile/phone"

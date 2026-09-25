@@ -88,6 +88,10 @@
     "codesCount": "{count} codes",
     "notGenerated": "Not generated"
   },
+  "recoveryMethods": {
+    "title": "Recovery methods",
+    "desc": "Backup methods to help you regain access to your account if you are locked out."
+  },
   "recentActivity": {
     "title": "Recent Security Activity",
     "desc": "Review recent security events on your account.",

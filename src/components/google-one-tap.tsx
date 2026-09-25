@@ -203,10 +203,7 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
     if (!isEligible || !window.google?.accounts?.id) return;
 
     const currentParams = searchParamsRef.current;
-    // Do not prompt if user is completing 2FA or re-enabling account
-    if (currentParams.get("tid") || currentParams.get("require2FA") || currentParams.get("reenable")) {
-      return;
-    }
+    if (currentParams.get("tid")) return;
 
     if (isPromptingRef.current) return;
     isPromptingRef.current = true;

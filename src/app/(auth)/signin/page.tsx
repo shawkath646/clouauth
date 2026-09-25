@@ -11,6 +11,7 @@ import prisma from "@/lib/prisma";
 import OAuthErrorStep from "./oauth-error-step";
 import { VerificationMethod } from "@/types/auth.types";
 import { resolveTempSessionStep } from "@/actions/auth/verification";
+import { BrandName } from "@/components/ui/brand-name";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -46,7 +47,7 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
   const redirectUri = getStringParam(searchParams?.redirect_uri);
   const responseType = getStringParam(searchParams?.response_type);
   const returnTo = getStringParam(searchParams?.return_to);
-  const tempId = getStringParam(searchParams?.tid);
+  const tid = getStringParam(searchParams?.tid);
 
   const isOAuthRequest = Boolean(clientId && responseType === 'code');
 
@@ -98,15 +99,60 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
   let initialStep: 'CREDENTIALS' | 'METHOD_SELECTION' | 'AGREEMENT' | 'REENABLE_ACCOUNT' = 'CREDENTIALS';
   let initialMethods: VerificationMethod[] = [];
 
-  if (session && isOAuthRequest && appData) {
+  let serverError: {
+    title?: string;
+    message: string;
+    note?: React.ReactNode;
+    actionText?: string;
+    actionHref?: string;
+  } | null = null;
+
+  if (isOAuthRequest && oauthError) {
+    serverError = {
+      title: oauthError.title || "Authorization Error",
+      message: oauthError.message,
+      note: (
+        <>
+          You can still sign in to your <BrandName className="font-semibold" /> account directly, but you will not be redirected back to the requesting application.
+        </>
+      ),
+      actionText: "Continue to Standard Sign In",
+      actionHref: "/signin",
+    };
+  } else if (session && isOAuthRequest && appData) {
     initialStep = 'AGREEMENT';
-  } else if (tempId) {
-    const resolved = await resolveTempSessionStep(tempId);
+  } else if (tid) {
+    const resolved = await resolveTempSessionStep(tid);
     if (resolved.step === 'REENABLE_ACCOUNT') {
       initialStep = 'REENABLE_ACCOUNT';
     } else if (resolved.step === 'METHOD_SELECTION') {
       initialStep = 'METHOD_SELECTION';
       initialMethods = resolved.methods;
+    } else if (resolved.error) {
+      serverError = {
+        title: "Verification Session Expired",
+        message: resolved.error,
+        note: "For your security, temporary verification sessions expire quickly and can only be used once. Please sign in again to continue.",
+        actionText: "Return to Sign In",
+        actionHref: "/signin",
+      };
+    }
+  } else {
+    const queryError = getStringParam(searchParams?.error);
+    if (queryError) {
+      serverError = {
+        title: "Sign In Error",
+        message:
+          queryError === "invalid_state"
+            ? "Security check failed (invalid state). Please try signing in again."
+            : queryError === "missing_parameters"
+            ? "Missing required authentication parameters. Please try again."
+            : queryError === "connection_failed"
+            ? "Failed to connect to the authentication provider. Please try again later."
+            : queryError,
+        actionText: "Return to Sign In",
+        actionHref: "/signin",
+      };
     }
   }
 
@@ -145,15 +191,18 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
             </div>
           }
         >
-          {isOAuthRequest && oauthError ? (
+          {serverError ? (
             <OAuthErrorStep 
-              errorTitle={oauthError.title}
-              errorMessage={oauthError.message}
+              errorTitle={serverError.title}
+              errorMessage={serverError.message}
+              note={serverError.note}
+              actionText={serverError.actionText}
+              actionHref={serverError.actionHref}
             />
           ) : (
             <SigninClient
               initialStep={initialStep}
-              initialTempSessionId={tempId}
+              initialTempSessionId={tid}
               initialMethods={initialMethods}
               appData={appData}
             />

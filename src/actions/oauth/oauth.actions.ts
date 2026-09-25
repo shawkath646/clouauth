@@ -55,7 +55,7 @@ export async function grantOAuthAccess(
   }
 }
 
-async function redirectToProvider(provider: string) {
+async function redirectToProvider(provider: string, returnTo?: string | null) {
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
 
@@ -64,6 +64,14 @@ async function redirectToProvider(provider: string) {
     state,
     getSecureCookieOptions({ maxAge: 60 * 10 })
   );
+
+  if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    cookieStore.set(
+      "oauth_return_to",
+      returnTo,
+      getSecureCookieOptions({ maxAge: 60 * 10 })
+    );
+  }
 
   const oauthProvider = OAuthProviderFactory.getProvider(provider);
   const authUrl = oauthProvider.getAuthorizationUrl(state);
@@ -76,6 +84,6 @@ export async function initializeOAuthProvider(provider: string) {
   return redirectToProvider(provider);
 }
 
-export async function continueWithProvider(provider: string) {
-  return redirectToProvider(provider);
+export async function continueWithProvider(provider: string, returnTo?: string | null) {
+  return redirectToProvider(provider, returnTo);
 }

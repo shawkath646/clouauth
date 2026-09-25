@@ -27,6 +27,11 @@ export type SafeDBUserSession = Omit<DBUserSession, 'session_token_hash' | 'refr
 export interface DBTempSession {
     id: string;
     user_id: string;
+    auth_method?: string | null;
+    flow_type?: string | null;
+    ip_address?: string | null;
+    user_agent?: string | null;
+    payload?: string | null;
     challenge?: string | null;
     code_hash?: string | null;
     failed_attempts: number;

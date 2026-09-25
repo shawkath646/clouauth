@@ -65,6 +65,8 @@ model Address {
   country    String
   is_default Boolean @default(false)
   user       User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model AccountStatus {

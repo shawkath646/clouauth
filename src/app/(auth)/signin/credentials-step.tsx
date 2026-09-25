@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import SocialProviders from "@/components/social-providers";
 import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
@@ -31,6 +32,8 @@ interface CredentialsStepProps {
 }
 
 export default function CredentialsStep({ onNext }: CredentialsStepProps) {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("return_to");
   const { t } = useTranslations("signin");
   const { t: tCommon } = useTranslations("common");
   const { t: tSchema } = useTranslations("schema_auth");
@@ -189,7 +192,7 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
           onClick={async (p) => {
             setIsLoading(true);
             try {
-              await continueWithProvider(p);
+              await continueWithProvider(p, returnTo);
             } catch (e: unknown) {
               const em = handleError(e, true);
               setIsLoading(false);

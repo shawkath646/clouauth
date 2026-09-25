@@ -44,7 +44,7 @@ export async function signInWithGoogleOneTap(credential: string): Promise<SignIn
         name: (payload.name as string) || null,
         avatar: (payload.picture as string) || null,
       },
-      { rememberMe: true }
+      { rememberMe: true, authMethod: "one_tap" }
     );
   } catch (e: unknown) {
     const errorMessage = handleError(e, true);

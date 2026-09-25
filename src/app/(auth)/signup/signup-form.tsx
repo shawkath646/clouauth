@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
 import SignUpPromotion from "./signup-promotion";
@@ -27,6 +27,8 @@ import { handleError } from "@/utils/error";
 
 export default function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("return_to");
   const { t } = useTranslations("signup");
   const { t: tCommon } = useTranslations("common");
   const { t: tSchema } = useTranslations("schema_auth");
@@ -189,7 +191,7 @@ export default function SignUpForm() {
             onClick={async (p) => {
               setIsLoading(true);
               try {
-                await continueWithProvider(p);
+                await continueWithProvider(p, returnTo);
               } catch (e: unknown) {
                 const em = handleError(e, "Failed to execute SignUpForm");
                 setIsLoading(false);

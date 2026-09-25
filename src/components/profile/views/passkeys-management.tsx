@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Fingerprint, Plus, Pencil, Trash2, Loader2, ShieldCheck } from "lucide-react";
-import { startRegistration } from "@simplewebauthn/browser";
+import { startRegistration, browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import {
   triggerPasskeyRegistration,
   resolvePasskeyRegistration,
@@ -45,13 +45,34 @@ interface PasskeyItem {
 
 import { useRouter } from "next/navigation";
 
+function getSuggestedPasskeyName(): string {
+  if (typeof window === "undefined") return "Passkey / Security Key";
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua)) return "Apple Device (Face ID / Touch ID)";
+  if (/Macintosh/.test(ua)) return "Mac (Touch ID / Passkey)";
+  if (/Windows/.test(ua)) return "Windows Hello / Security Key";
+  if (/Android/.test(ua)) return "Android Passkey";
+  return "Security Key / Passkey";
+}
+
 export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?: PasskeyItem[] }) {
   const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
 
   // Add passkey modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newDeviceName, setNewDeviceName] = useState("Windows Hello / Security Key");
+  const [newDeviceName, setNewDeviceName] = useState("Passkey / Security Key");
+
+  const openAddModal = () => {
+    if (!browserSupportsWebAuthn()) {
+      toast.error("Browser Unsupported", {
+        description: "Your current browser or device does not support WebAuthn passkeys.",
+      });
+      return;
+    }
+    setNewDeviceName(getSuggestedPasskeyName());
+    setIsAddModalOpen(true);
+  };
 
   // Rename passkey modal state
   const [renamePasskeyId, setRenamePasskeyId] = useState<string | null>(null);
@@ -66,6 +87,13 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
     e.preventDefault();
     if (!newDeviceName.trim()) {
       toast.error("Please enter a name for this passkey");
+      return;
+    }
+
+    if (!browserSupportsWebAuthn()) {
+      toast.error("Browser Unsupported", {
+        description: "Your current browser does not support WebAuthn passkeys.",
+      });
       return;
     }
 
@@ -92,17 +120,33 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
           description: `"${newDeviceName.trim()}" has been added to your account.`,
         });
         setIsAddModalOpen(false);
-        setNewDeviceName("Windows Hello / Security Key");
+        setNewDeviceName(getSuggestedPasskeyName());
         router.refresh();
       } else {
         toast.error("Verification error", { description: resolveRes.error || "Failed to register passkey" });
       }
     } catch (e: unknown) {
-        const em = handleError(e, "Failed to execute PasskeysManagement");
-        if (!em.toLowerCase().includes("cancelled") && !em.toLowerCase().includes("not allowed")) {
-          toast.error("Registration failed", { description: em });
+      if (e instanceof Error) {
+        if (e.name === "NotAllowedError") {
+          toast.info("Registration canceled", { description: "Passkey setup was canceled or timed out." });
+          return;
         }
-      } finally {
+        if (e.name === "InvalidStateError") {
+          toast.error("Already Registered", {
+            description: "This authenticator device is already registered for your account.",
+          });
+          return;
+        }
+        if (e.name === "SecurityError") {
+          toast.error("Security Error", {
+            description: "Passkey origin/RP ID mismatch. Please ensure you are accessing via HTTPS or localhost.",
+          });
+          return;
+        }
+      }
+      const em = handleError(e, "Failed to register passkey");
+      toast.error("Registration failed", { description: em });
+    } finally {
       setIsRegistering(false);
     }
   };
@@ -157,6 +201,20 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
         title="Registered Devices"
         description="Devices authorized to sign in to your account with biometrics or security keys."
         noPadding
+        headerAction={
+          initialPasskeys.length > 0 ? (
+            <Button
+              onClick={openAddModal}
+              size="sm"
+              variant="outline"
+              className="gap-2 shrink-0"
+              aria-label="Add another passkey"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Passkey</span>
+            </Button>
+          ) : undefined
+        }
       >
         {initialPasskeys.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -168,7 +226,7 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
               Add a passkey to sign in to your account with biometrics or a security key instead of a password.
             </p>
             <Button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={openAddModal}
               variant="outline"
               size="sm"
               className="gap-2"
@@ -264,7 +322,7 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
                 disabled={isRegistering}
               />
             </div>
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="space-x-2 sm:space-x-0">
               <Button
                 type="button"
                 variant="outline"

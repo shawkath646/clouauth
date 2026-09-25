@@ -7,6 +7,7 @@ import { handleError } from "@/utils/error";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
+  type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 import { requireUserSession, requireValidTempSession, getWebAuthnConfig } from "./helpers";
 
@@ -18,27 +19,36 @@ export async function triggerPasskeyRegistration() {
       where: {
         two_factor_id: sessionData.user.id,
       },
+      select: {
+        credential_id: true,
+      },
     });
 
     const { rpID } = getWebAuthnConfig();
-    const rpName = getEnv("NEXT_PUBLIC_APP_NAME", true) || "Clou";
+    const rpName = getEnv("NEXT_PUBLIC_APP_NAME", true) || "ClouAuth";
+    const userDisplayName =
+      [sessionData.user.first_name, sessionData.user.last_name].filter(Boolean).join(" ") ||
+      sessionData.user.username;
 
     const options = await generateRegistrationOptions({
       rpName,
       rpID,
+      userID: new TextEncoder().encode(sessionData.user.id),
       userName: sessionData.user.username,
-      userDisplayName: sessionData.user.first_name
-        ? `${sessionData.user.first_name} ${sessionData.user.last_name}`
-        : sessionData.user.username,
+      userDisplayName,
       excludeCredentials: existingPasskeys.map((p) => ({
         id: p.credential_id,
+        type: "public-key" as const,
       })),
       authenticatorSelection: {
+        residentKey: "preferred",
         userVerification: "preferred",
       },
     });
 
-    const tempSession = await createTempSession(sessionData.user.id);
+    const tempSession = await createTempSession(sessionData.user.id, {
+      flowType: "passkey_registration",
+    });
     await prisma.tempSession.update({
       where: { id: tempSession.id },
       data: { challenge: options.challenge },
@@ -51,8 +61,11 @@ export async function triggerPasskeyRegistration() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolvePasskeyRegistration(tempSessionId: string, payload: any, deviceName: string) {
+export async function resolvePasskeyRegistration(
+  tempSessionId: string,
+  payload: RegistrationResponseJSON,
+  deviceName: string
+) {
   try {
     const sessionData = await requireUserSession();
 
@@ -65,11 +78,23 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
       return { success: false, error: "Session mismatch." };
     }
 
+    const expectedChallenge = tempSession.challenge;
+
+    // Immediately clear challenge to prevent reuse/replay
+    await prisma.tempSession.update({
+      where: { id: tempSessionId },
+      data: { challenge: null },
+    });
+
+    if (!payload || !payload.id || !payload.response) {
+      return { success: false, error: "Invalid registration payload from authenticator." };
+    }
+
     const { expectedOrigin, expectedRPID } = getWebAuthnConfig();
 
     const verification = await verifyRegistrationResponse({
       response: payload,
-      expectedChallenge: tempSession.challenge,
+      expectedChallenge,
       expectedOrigin,
       expectedRPID,
       requireUserVerification: false,
@@ -80,6 +105,16 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
     }
 
     const { credential } = verification.registrationInfo;
+
+    // Check if credential ID already exists in DB
+    const existingCred = await prisma.passkeyCredential.findUnique({
+      where: { credential_id: credential.id },
+      select: { id: true },
+    });
+
+    if (existingCred) {
+      return { success: false, error: "This passkey device has already been registered." };
+    }
 
     const twoFactor = await prisma.twoFactor.upsert({
       where: { user_id: sessionData.user.id },
@@ -93,14 +128,15 @@ export async function resolvePasskeyRegistration(tempSessionId: string, payload:
         credential_id: credential.id,
         public_key: Buffer.from(credential.publicKey).toString("base64"),
         sign_count: credential.counter,
-        device_name: deviceName || "Security Key / Biometric",
+        device_name: deviceName.trim() || "Passkey / Security Key",
       },
     });
 
-    await deleteTempSession(tempSessionId);
+    await deleteTempSession(tempSessionId).catch(() => {});
 
     return { success: true, passkey };
   } catch (e: unknown) {
+    await deleteTempSession(tempSessionId).catch(() => {});
     const em = handleError(e, true);
     return { success: false, error: em };
   }

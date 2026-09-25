@@ -14,6 +14,9 @@ model PasswordHistory {
   password_hash String
   created_on    DateTime @default(now())
   user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, created_on])
 }
 
 model RecoveryCode {
@@ -24,6 +27,9 @@ model RecoveryCode {
   created_on DateTime  @default(now())
   used_on    DateTime?
   user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, used])
 }
 
 model TwoFactor {
@@ -55,6 +61,8 @@ model PasskeyCredential {
   last_used_on DateTime?
 
   two_factor TwoFactor @relation(fields: [two_factor_id], references: [user_id], onDelete: Cascade)
+
+  @@index([two_factor_id])
 }
 
 model TotpMethod {
@@ -84,6 +92,7 @@ model OAuthAccount {
   user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([provider, provider_user_id])
+  @@index([user_id])
 }
 
 model SigningKey {

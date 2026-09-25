@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { handleError } from "@/utils/error";
 import { VerificationMethod } from "@/types/auth.types";
-import { requireValidTempSession, verificationMethodMap } from "./helpers";
+import { verificationMethodMap } from "./helpers";
 
 export type ResolvedTempSessionStep = {
   step: "CREDENTIALS" | "METHOD_SELECTION" | "REENABLE_ACCOUNT";
@@ -14,28 +14,39 @@ export async function resolveTempSessionStep(
   tempSessionId: string
 ): Promise<ResolvedTempSessionStep> {
   try {
-    const tempSession = await requireValidTempSession(tempSessionId);
+    if (!tempSessionId) {
+      return { step: "CREDENTIALS", methods: [], error: "Session expired or invalid. Please sign in again." };
+    }
 
-    const user = await prisma.user.findUnique({
-      where: { id: tempSession.user_id },
-      select: {
-        id: true,
-        account_status: {
+    const tempSession = await prisma.tempSession.findUnique({
+      where: { id: tempSessionId },
+      include: {
+        user: {
           select: {
-            is_active: true,
-            self_enable: true,
-          },
-        },
-        two_factor: {
-          select: {
-            passkeys: { select: { id: true } },
-            totp: { select: { id: true, enabled: true } },
-            email_id: true,
+            id: true,
+            account_status: {
+              select: {
+                is_active: true,
+                self_enable: true,
+              },
+            },
+            two_factor: {
+              select: {
+                passkeys: { select: { id: true } },
+                totp: { select: { id: true, enabled: true } },
+                email_id: true,
+              },
+            },
           },
         },
       },
     });
 
+    if (!tempSession || tempSession.expires_on < new Date()) {
+      return { step: "CREDENTIALS", methods: [], error: "Session expired or invalid. Please sign in again." };
+    }
+
+    const user = tempSession.user;
     if (!user) {
       return { step: "CREDENTIALS", methods: [], error: "User not found" };
     }

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getEnv } from "@/utils/env";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
@@ -67,9 +68,10 @@ export default async function SignUpPage() {
         }}
       />
       <I18nProvider locale={locale} messages={dict}>
-        <SignUpForm />
+        <Suspense fallback={null}>
+          <SignUpForm />
+        </Suspense>
       </I18nProvider>
     </>
   );
 }
-

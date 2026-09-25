@@ -70,7 +70,7 @@ export async function signIn(data: SignInValues): Promise<SignInReturn> {
       return { action: "ERROR", error: "Invalid credentials! Please verify your username and password." };
     }
 
-    return await evaluateAuthStepOrSignIn(user, rememberMe);
+    return await evaluateAuthStepOrSignIn(user, rememberMe, "credentials");
   } catch (e: unknown) {
     return { action: "ERROR", error: handleError(e, true) };
   }

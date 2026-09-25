@@ -77,3 +77,71 @@ export async function generateAndUploadAvatar(
 
     return `${R2_PUBLIC_URL}/${filename}`;
 }
+
+export async function uploadExternalAvatar(externalUrl: string): Promise<string | null> {
+    try {
+        const { validateImageMagicBytes } = await import("@/utils/image-validator");
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
+        const res = await fetch(externalUrl, {
+            signal: controller.signal,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            },
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) return null;
+
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        if (buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        const validated = validateImageMagicBytes(buffer);
+        if (!validated) return null;
+
+        const filename = `user_avatar/${crypto.randomUUID()}.${validated.ext}`;
+
+        await s3Client.send(
+            new PutObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: filename,
+                Body: buffer,
+                ContentType: validated.mime,
+            })
+        );
+
+        return `${R2_PUBLIC_URL}/${filename}`;
+    } catch {
+        return null;
+    }
+}
+
+export async function resolveUserAvatar(
+    externalAvatarUrl: string | null | undefined,
+    firstName: string,
+    lastName: string
+): Promise<string> {
+    const cleanUrl = externalAvatarUrl?.trim();
+    if (cleanUrl) {
+        try {
+            const uploadedUrl = await uploadExternalAvatar(cleanUrl);
+            if (uploadedUrl) {
+                return uploadedUrl;
+            }
+        } catch {
+            // Ignore error and proceed to fallback
+        }
+    }
+
+    try {
+        return await generateAndUploadAvatar(firstName, lastName);
+    } catch {
+        return cleanUrl || "";
+    }
+}

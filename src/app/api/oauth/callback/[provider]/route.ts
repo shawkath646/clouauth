@@ -11,26 +11,25 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await params;
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/profile/edit";
-  redirectUrl.searchParams.set("field", "connected-accounts");
+  const baseUrl = request.nextUrl.origin;
 
   try {
     const session = await getUserSession();
+    const { searchParams } = request.nextUrl;
+    
+    const errorRedirect = (errorMsg: string) => {
+      const url = session
+        ? new URL(`/profile/edit?field=connected-accounts&error=${errorMsg}`, baseUrl)
+        : new URL(`/signin?error=${errorMsg}`, baseUrl);
+      return NextResponse.redirect(url);
+    };
 
-    const code = request.nextUrl.searchParams.get("code");
-    const state = request.nextUrl.searchParams.get("state");
-    const error = request.nextUrl.searchParams.get("error");
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
+    const error = searchParams.get("error");
 
-    if (error) {
-      redirectUrl.searchParams.set("error", error);
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    if (!code || !state) {
-      redirectUrl.searchParams.set("error", "missing_parameters");
-      return NextResponse.redirect(redirectUrl);
-    }
+    if (error) return errorRedirect(error);
+    if (!code || !state) return errorRedirect("missing_parameters");
 
     const savedState = request.cookies.get(`oauth_state_${provider}`)?.value;
     if (
@@ -38,16 +37,12 @@ export async function GET(
       savedState.length !== state.length ||
       !crypto.timingSafeEqual(Buffer.from(savedState), Buffer.from(state))
     ) {
-      redirectUrl.searchParams.set("error", "invalid_state");
-      return NextResponse.redirect(redirectUrl);
+      return errorRedirect("invalid_state");
     }
 
     const oauthProvider = OAuthProviderFactory.getProvider(provider);
     const tokens = await oauthProvider.exchangeCode(code);
     const profile = await oauthProvider.getUserProfile(tokens.accessToken);
-
-    const encryptedAccessToken = tokens.accessToken ? encryptSymmetric(tokens.accessToken) : null;
-    const encryptedRefreshToken = tokens.refreshToken ? encryptSymmetric(tokens.refreshToken) : null;
 
     const result = await authenticateExternalUser({
       provider,
@@ -56,44 +51,53 @@ export async function GET(
       emailVerified: true,
       name: profile.name,
       avatar: profile.avatar,
-      accessToken: encryptedAccessToken,
-      refreshToken: encryptedRefreshToken,
+      accessToken: tokens.accessToken ? encryptSymmetric(tokens.accessToken) : null,
+      refreshToken: tokens.refreshToken ? encryptSymmetric(tokens.refreshToken) : null,
       expiresAt: tokens.expiresAt,
     });
 
+    let targetUrl: URL;
+
     if (session) {
-      const response = NextResponse.redirect(redirectUrl);
-      response.cookies.delete(`oauth_state_${provider}`);
-      return response;
-    }
-
-    const loginRedirectUrl = request.nextUrl.clone();
-    if (result.action === "METHOD_SELECTION") {
-      loginRedirectUrl.pathname = "/signin";
-      if (result.tempSessionId) loginRedirectUrl.searchParams.set("tempId", result.tempSessionId);
-    } else if (result.action === "ACCOUNT_DISABLED") {
-      loginRedirectUrl.pathname = "/signin";
-      if ("tempSessionId" in result && result.tempSessionId) {
-        loginRedirectUrl.searchParams.set("tempId", result.tempSessionId);
-      } else {
-        loginRedirectUrl.searchParams.set("error", "Account disabled");
-      }
-    } else if (result.action === "LOGIN_SUCCESS") {
-      loginRedirectUrl.pathname = "/profile";
-    } else if (result.action === "ERROR") {
-      loginRedirectUrl.pathname = "/signin";
-      loginRedirectUrl.searchParams.set("error", result.error || "Login failed");
+      targetUrl = new URL("/profile/edit?field=connected-accounts", baseUrl);
     } else {
-      loginRedirectUrl.pathname = "/signin";
-      loginRedirectUrl.searchParams.set("error", "Login failed");
+      const returnToCookie = request.cookies.get("oauth_return_to")?.value;
+      const safeReturnTo = returnToCookie?.startsWith("/") && !returnToCookie.startsWith("//")
+        ? returnToCookie
+        : null;
+
+      targetUrl = new URL("/signin", baseUrl);
+
+      switch (result.action) {
+        case "METHOD_SELECTION":
+          if (result.tempSessionId) targetUrl.searchParams.set("tid", result.tempSessionId);
+          if (safeReturnTo) targetUrl.searchParams.set("return_to", safeReturnTo);
+          break;
+        case "ACCOUNT_DISABLED":
+          if (result.selfEnable && result.tempSessionId) {
+            targetUrl.searchParams.set("tid", result.tempSessionId);
+            targetUrl.searchParams.set("reenable", "true");
+          } else {
+            targetUrl.searchParams.set("error", "Account disabled");
+          }
+          break;
+        case "LOGIN_SUCCESS":
+          targetUrl = new URL(safeReturnTo || "/profile", baseUrl);
+          break;
+        default:
+          targetUrl.searchParams.set("error", result.action === "ERROR" ? result.error : "Login failed");
+          break;
+      }
     }
 
-    const response = NextResponse.redirect(loginRedirectUrl);
+    const response = NextResponse.redirect(targetUrl);
     response.cookies.delete(`oauth_state_${provider}`);
+    if (!session) response.cookies.delete("oauth_return_to");
+    
     return response;
+
   } catch (e: unknown) {
     handleError(e, "Failed to execute GET");
-    redirectUrl.searchParams.set("error", "connection_failed");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL("/signin?error=connection_failed", baseUrl));
   }
 }

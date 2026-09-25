@@ -13,27 +13,43 @@ model UserSession {
   expires_on            DateTime
   revoked_on            DateTime?
 
-  ip_address  String?
-  user_agent  String?
-  device_name String?
+  ip_address         String?
+  user_agent         String?  @db.Text
+  device_name        String?
   device_fingerprint String?
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_on])
+  @@index([session_expires_on])
+  @@index([user_id, device_fingerprint])
 }
 
 model TempSession {
-  id         String   @id @default(cuid())
-  user_id    String
-  
-  challenge  String?
-  
+  id      String @id @default(cuid())
+  user_id String
+
+  // Authentication & Flow Context
+  auth_method String? // e.g. "credentials", "oauth:google", "oauth:github", "one_tap"
+  flow_type   String? // e.g. "2fa", "reenable", "verify_email", "verify_phone"
+
+  // Client Security Context
+  ip_address String?
+  user_agent String? @db.Text
+
+  // Generic flow payload for deferred onboarding or OAuth state
+  payload String? @db.Text
+
+  challenge String?
+
   // Verification code fields
   code_hash       String?
   failed_attempts Int       @default(0)
   locked_until    DateTime?
-  type            String?   // e.g. "2fa", "change_email"
+  type            String?   // legacy type alias for compatibility e.g. "2fa", "change_email"
   destination     String?   // The email/phone the code was sent to
-  
+
   // Track if a two-step verification was successfully processed
   two_step_processed Boolean @default(false)
   remember_me        Boolean @default(false)
@@ -41,6 +57,10 @@ model TempSession {
   created_on DateTime @default(now())
   expires_on DateTime
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_on])
+  @@index([flow_type])
 }
 
 model RevokedToken {
@@ -48,4 +68,6 @@ model RevokedToken {
   jti        String   @unique
   expires_at DateTime
   created_on DateTime @default(now())
+
+  @@index([expires_at])
 }

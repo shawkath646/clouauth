@@ -1,17 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft } from "lucide-react";
-import { BrandName } from "@/components/ui/brand-name";
 import Link from "next/link";
+import React from "react";
 
-interface OAuthErrorStepProps {
+interface SignInErrorStepProps {
   errorTitle?: string;
   errorMessage: string;
+  note?: React.ReactNode;
+  actionText?: string;
+  actionHref?: string;
 }
 
-export default function OAuthErrorStep({
-  errorTitle = "Authorization Error",
-  errorMessage
-}: OAuthErrorStepProps) {
+export default function SignInErrorStep({
+  errorTitle = "Authentication Error",
+  errorMessage,
+  note,
+  actionText = "Continue to Standard Sign In",
+  actionHref = "/signin",
+}: SignInErrorStepProps) {
   return (
     <div className="w-full flex items-center justify-center min-h-100">
       <div className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-destructive/20 shadow-2xl rounded-3xl flex flex-col mx-auto">
@@ -25,18 +31,20 @@ export default function OAuthErrorStep({
           </p>
         </div>
 
-        <div className="text-sm text-muted-foreground text-center mb-8 px-2">
-          You can still sign in to your <BrandName className="font-semibold" /> account directly, but you will not be redirected back to the requesting application.
-        </div>
+        {note && (
+          <div className="text-sm text-muted-foreground text-center mb-8 px-2 border border-destructive/15 bg-destructive/5 rounded-2xl p-4">
+            {note}
+          </div>
+        )}
 
         <div className="flex flex-col space-y-3">
-          <Link href="/signin">
+          <Link href={actionHref}>
             <Button 
               variant="outline"
               className="w-full rounded-xl h-11 border-primary/20 hover:bg-primary/5"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Continue to Standard Sign In
+              {actionText}
             </Button>
           </Link>
         </div>
@@ -44,3 +52,6 @@ export default function OAuthErrorStep({
     </div>
   );
 }
+
+export { SignInErrorStep as OAuthErrorStep };
+

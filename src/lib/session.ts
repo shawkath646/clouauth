@@ -263,35 +263,52 @@ export async function getUserSession() {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
 
-    if (!sessionToken) return null;
+    if (!sessionToken || typeof sessionToken !== "string") return null;
 
-    const session = await getSession(sessionToken);
-    if (!session) return null;
+    const parts = sessionToken.split('.');
+    if (parts.length !== 2) return null;
 
-    const user = await prisma.user.findUnique({
-        where: { id: session.user_id },
-        select: {
-            id: true,
-            username: true,
-            emails: {
-                where: { is_primary: true },
-                select: { address: true }
-            },
-            first_name: true,
-            last_name: true,
-            avatar: true,
+    const [sessionId, tokenValue] = parts;
+    const sessionHash = hashToken(tokenValue);
+
+    // Single query joining UserSession and User
+    const sessionWithUser = await prisma.userSession.findUnique({
+        where: { id: sessionId },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    emails: {
+                        where: { is_primary: true },
+                        select: { address: true }
+                    },
+                    first_name: true,
+                    last_name: true,
+                    avatar: true,
+                }
+            }
         }
     });
 
-    if (!user) return null;
+    if (!sessionWithUser || sessionWithUser.revoked_on || sessionWithUser.session_expires_on < new Date()) {
+        return null;
+    }
 
+    if (!timingSafeEqualStr(sessionWithUser.session_token_hash, sessionHash)) {
+        return null;
+    }
+
+    if (!sessionWithUser.user) return null;
+
+    const { user, ...sessionData } = sessionWithUser;
     const { emails, ...restUser } = user;
     const transformedUser = {
         ...restUser,
         email: emails[0]?.address || null
     };
 
-    return { session, user: transformedUser };
+    return { session: sanitizeSession(sessionData as DBUserSession), user: transformedUser };
 }
 
 export async function signOut(sessionId?: string) {
@@ -313,15 +330,46 @@ export async function signOut(sessionId?: string) {
     cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
 }
 
-export async function createTempSession(userId: string, rememberMe: boolean = false): Promise<DBTempSession> {
+export interface CreateTempSessionOptions {
+    rememberMe?: boolean;
+    authMethod?: string;
+    flowType?: string;
+    payload?: string;
+}
+
+export async function createTempSession(
+    userId: string,
+    options: boolean | CreateTempSessionOptions = false
+): Promise<DBTempSession> {
+    const opts: CreateTempSessionOptions = typeof options === "boolean" ? { rememberMe: options } : options;
     const now = new Date();
     const expiresOn = new Date(now.getTime() + 15 * 60 * 1000);
 
+    let ipAddress: string | null = null;
+    let userAgent: string | null = null;
+
+    try {
+        const headersList = await headers();
+        userAgent = headersList.get("user-agent") || null;
+        ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || null;
+    } catch {
+        // Headers might not be available in non-request contexts
+    }
+
+    // 256-bit cryptographically secure unpredictable random identifier
+    const highEntropyId = crypto.randomBytes(32).toString("hex");
+
     return await prisma.tempSession.create({
         data: {
+            id: highEntropyId,
             user_id: userId,
             expires_on: expiresOn,
-            remember_me: rememberMe,
+            remember_me: opts.rememberMe ?? false,
+            auth_method: opts.authMethod ?? null,
+            flow_type: opts.flowType ?? null,
+            payload: opts.payload ?? null,
+            ip_address: ipAddress,
+            user_agent: userAgent,
         }
     });
 }

@@ -57,9 +57,9 @@ export default function SigninClient({
     setCurrentStep(initialStep);
   }
 
-  const [prevTempId, setPrevTempId] = useState(initialTempSessionId);
-  if (initialTempSessionId !== prevTempId) {
-    setPrevTempId(initialTempSessionId);
+  const [prevTid, setPrevTid] = useState(initialTempSessionId);
+  if (initialTempSessionId !== prevTid) {
+    setPrevTid(initialTempSessionId);
     setTempSessionId(initialTempSessionId);
   }
 

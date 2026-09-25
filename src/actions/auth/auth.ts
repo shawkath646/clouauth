@@ -12,6 +12,7 @@ import {
   generateUniqueUsername,
   requireUserSession,
 } from "./helpers";
+import { resolveUserAvatar } from "@/lib/avatar";
 
 export { MAX_ATTEMPTS, LOCKOUT_DURATION_MS, verificationMethodMap };
 
@@ -44,6 +45,9 @@ export type FinalSignInUser = {
 };
 
 export type UserWithAuthRelations = FinalSignInUser & {
+  first_name?: string;
+  last_name?: string;
+  avatar?: string;
   two_factor?: {
     passkeys?: { id: string }[];
     totp?: { id: string; enabled?: boolean } | null;
@@ -112,12 +116,17 @@ export async function processFinalSignIn(
 
 export async function evaluateAuthStepOrSignIn(
   user: UserWithAuthRelations,
-  rememberMe: boolean
+  rememberMe: boolean,
+  authMethod?: string
 ): Promise<SignInReturn> {
   // 1. Account status check
   if (user.account_status && !user.account_status.is_active) {
     if (user.account_status.self_enable) {
-      const tempSession = await createTempSession(user.id, rememberMe);
+      const tempSession = await createTempSession(user.id, {
+        rememberMe,
+        authMethod,
+        flowType: "reenable",
+      });
       return {
         action: "ACCOUNT_DISABLED",
         selfEnable: true,
@@ -136,7 +145,11 @@ export async function evaluateAuthStepOrSignIn(
     if (tf.email || tf.email_id) methods.push(verificationMethodMap.email);
 
     if (methods.length > 0) {
-      const tempSession = await createTempSession(user.id, rememberMe);
+      const tempSession = await createTempSession(user.id, {
+        rememberMe,
+        authMethod,
+        flowType: "2fa",
+      });
       return {
         action: "METHOD_SELECTION",
         tempSessionId: tempSession.id,
@@ -151,9 +164,10 @@ export async function evaluateAuthStepOrSignIn(
 
 export async function authenticateExternalUser(
   profile: ExternalAuthProfile,
-  options: { rememberMe?: boolean } = {}
+  options: { rememberMe?: boolean; authMethod?: string } = {}
 ): Promise<SignInReturn> {
   const rememberMe = options.rememberMe ?? false;
+  const authMethod = options.authMethod ?? `oauth:${profile.provider.toLowerCase()}`;
   const currentSession = await getUserSession();
 
   if (currentSession) {
@@ -176,6 +190,25 @@ export async function authenticateExternalUser(
   });
 
   let targetUser: UserWithAuthRelations | undefined = existingOAuthAccount?.user ?? undefined;
+
+  // Refresh OAuth tokens and expiry on re-login for existing connected accounts
+  if (existingOAuthAccount && targetUser) {
+    await upsertOAuthAccount(targetUser.id, profile);
+    if (!targetUser.avatar && profile.avatar) {
+      const resolvedAvatar = await resolveUserAvatar(
+        profile.avatar,
+        targetUser.first_name || "User",
+        targetUser.last_name || ""
+      );
+      if (resolvedAvatar) {
+        await prisma.user.update({
+          where: { id: targetUser.id },
+          data: { avatar: resolvedAvatar },
+        });
+        targetUser.avatar = resolvedAvatar;
+      }
+    }
+  }
 
   // 3. Match by email if not found by provider_user_id
   if (!targetUser && profile.email) {
@@ -201,6 +234,21 @@ export async function authenticateExternalUser(
       // Link external OAuth account to existing verified user
       await upsertOAuthAccount(existingEmail.user.id, profile);
       targetUser = existingEmail.user;
+
+      if (!targetUser.avatar && profile.avatar) {
+        const resolvedAvatar = await resolveUserAvatar(
+          profile.avatar,
+          targetUser.first_name || "User",
+          targetUser.last_name || ""
+        );
+        if (resolvedAvatar) {
+          await prisma.user.update({
+            where: { id: targetUser.id },
+            data: { avatar: resolvedAvatar },
+          });
+          targetUser.avatar = resolvedAvatar;
+        }
+      }
     }
   }
 
@@ -213,12 +261,14 @@ export async function authenticateExternalUser(
     const firstName = nameParts[0] || "User";
     const lastName = nameParts.slice(1).join(" ") || "";
 
+    const avatar = await resolveUserAvatar(profile.avatar, firstName, lastName);
+
     const newUser = await prisma.user.create({
       data: {
         username,
         first_name: firstName,
         last_name: lastName,
-        avatar: profile.avatar || "",
+        avatar,
         account_status: {
           create: {
             is_active: true,
@@ -258,7 +308,7 @@ export async function authenticateExternalUser(
   }
 
   // 5. Evaluate auth step (account status, 2FA) or complete sign in
-  return await evaluateAuthStepOrSignIn(targetUser, rememberMe);
+  return await evaluateAuthStepOrSignIn(targetUser, rememberMe, authMethod);
 }
 
 export async function finalizeSignIn(

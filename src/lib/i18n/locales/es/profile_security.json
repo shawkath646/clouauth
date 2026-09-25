@@ -88,6 +88,10 @@
     "codesCount": "{count} códigos",
     "notGenerated": "No generados"
   },
+  "recoveryMethods": {
+    "title": "Métodos de recuperación",
+    "desc": "Métodos de respaldo para ayudarte a recuperar el acceso a tu cuenta si no puedes iniciar sesión."
+  },
   "recentActivity": {
     "title": "Actividad de Seguridad Reciente",
     "desc": "Revise los eventos de seguridad recientes en su cuenta.",

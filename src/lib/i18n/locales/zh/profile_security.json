@@ -88,6 +88,10 @@
     "codesCount": "{count} 个代码",
     "notGenerated": "未生成"
   },
+  "recoveryMethods": {
+    "title": "恢复方法",
+    "desc": "在无法使用主要登录方式时用于恢复账户访问权限的备用方法。"
+  },
   "recentActivity": {
     "title": "近期安全活动",
     "desc": "查看您帐户近期的安全事件。",

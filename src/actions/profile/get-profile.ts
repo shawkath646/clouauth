@@ -323,7 +323,8 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 access_token: "[REDACTED]",
                 refresh_token: "[REDACTED]",
                 expires_at: acc.expires_at
-            }))
+            })),
+            current_session_id: sessionData.session.id
         };
 
         return { success: true, data: fullProfile };

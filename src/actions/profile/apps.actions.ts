@@ -6,9 +6,40 @@ import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { type DeveloperApp } from "./apps";
+import { type DeveloperApp, formatDeveloperApp } from "./apps";
+import { checkSudoAction } from "@/actions/auth/sudo";
+import { z } from "zod";
 
 export type { DeveloperApp };
+
+const redirectUriSchema = z.string().refine((val) => {
+  try {
+    const u = new URL(val);
+    if (u.protocol === "http:") {
+      return u.hostname === "localhost" || u.hostname === "127.0.0.1";
+    }
+    return u.protocol === "https:" || (u.protocol.endsWith(":") && u.protocol !== "javascript:" && u.protocol !== "data:");
+  } catch {
+    return false;
+  }
+}, "Each redirect URI must be a valid absolute URI (HTTPS, HTTP on localhost, or private-use scheme)");
+
+const createAppSchema = z.object({
+  name: z.string().trim().min(2, "Application name must be at least 2 characters").max(50, "Application name must be at most 50 characters"),
+  description: z.string().trim().max(200, "Description must be at most 200 characters").optional().nullable(),
+  website: z.string().url("Website must be a valid URL").optional().nullable().or(z.literal("")),
+  redirect_uris: z.array(redirectUriSchema).min(1, "At least one redirect URI is required"),
+  scopes: z.array(z.string()).optional(),
+});
+
+const updateAppSchema = z.object({
+  name: z.string().trim().min(2, "Application name must be at least 2 characters").max(50, "Application name must be at most 50 characters").optional(),
+  description: z.string().trim().max(200, "Description must be at most 200 characters").optional().nullable(),
+  website: z.string().url("Website must be a valid URL").optional().nullable().or(z.literal("")),
+  redirect_uris: z.array(redirectUriSchema).min(1, "At least one redirect URI is required").optional(),
+  scopes: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+});
 
 export async function createAppAction(data: {
   name: string;
@@ -29,8 +60,9 @@ export async function createAppAction(data: {
       return { success: false, error: "Unauthorized" };
     }
 
-    if (!data.name || data.name.trim().length === 0) {
-      return { success: false, error: "Application name is required." };
+    const parsed = createAppSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0]?.message || "Validation failed" };
     }
 
     const clientId = `cbl_${crypto.randomBytes(12).toString("hex")}`;
@@ -39,17 +71,17 @@ export async function createAppAction(data: {
 
     const newApp = await prisma.userApp.create({
       data: {
-        name: data.name.trim(),
-        description: data.description?.trim() || null,
-        website: data.website?.trim() || null,
+        name: parsed.data.name,
+        description: parsed.data.description || null,
+        website: parsed.data.website || null,
         author_id: sessionData.user.id,
         oauth: {
           create: {
             client_id: clientId,
             client_secret_hash: clientSecretHash,
             client_type: "confidential",
-            redirect_uris: JSON.stringify(data.redirect_uris || []),
-            scopes: JSON.stringify(data.scopes || ["openid", "profile", "email"]),
+            redirect_uris: JSON.stringify(parsed.data.redirect_uris),
+            scopes: JSON.stringify(parsed.data.scopes || ["openid", "profile", "email"]),
             pkce_required: true,
             token_endpoint_auth_method: "client_secret_post",
           },
@@ -60,27 +92,7 @@ export async function createAppAction(data: {
 
     revalidatePath("/profile");
 
-    const formattedApp: DeveloperApp = {
-      id: newApp.id,
-      name: newApp.name,
-      description: newApp.description,
-      icon: newApp.icon,
-      website: newApp.website,
-      created_at: newApp.created_at,
-      updated_at: newApp.updated_at,
-      oauth: newApp.oauth
-        ? {
-            app_id: newApp.oauth.app_id,
-            enabled: newApp.oauth.enabled,
-            client_id: newApp.oauth.client_id,
-            client_type: newApp.oauth.client_type,
-            redirect_uris: JSON.parse(newApp.oauth.redirect_uris || "[]"),
-            scopes: JSON.parse(newApp.oauth.scopes || '["openid","profile","email"]'),
-            pkce_required: newApp.oauth.pkce_required,
-            token_endpoint_auth_method: newApp.oauth.token_endpoint_auth_method,
-          }
-        : null,
-    };
+    const formattedApp = formatDeveloperApp(newApp);
 
     return {
       success: true,
@@ -111,6 +123,11 @@ export async function updateAppAction(
       return { success: false, error: "Unauthorized" };
     }
 
+    const parsed = updateAppSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0]?.message || "Validation failed" };
+    }
+
     const app = await prisma.userApp.findUnique({
       where: { id: appId },
     });
@@ -122,14 +139,14 @@ export async function updateAppAction(
     await prisma.userApp.update({
       where: { id: appId },
       data: {
-        name: data.name !== undefined ? data.name.trim() : undefined,
-        description: data.description !== undefined ? data.description.trim() || null : undefined,
-        website: data.website !== undefined ? data.website.trim() || null : undefined,
+        name: parsed.data.name,
+        description: parsed.data.description !== undefined ? parsed.data.description : undefined,
+        website: parsed.data.website !== undefined ? parsed.data.website : undefined,
         oauth: {
           update: {
-            enabled: data.enabled !== undefined ? data.enabled : undefined,
-            redirect_uris: data.redirect_uris ? JSON.stringify(data.redirect_uris) : undefined,
-            scopes: data.scopes ? JSON.stringify(data.scopes) : undefined,
+            enabled: parsed.data.enabled,
+            redirect_uris: parsed.data.redirect_uris ? JSON.stringify(parsed.data.redirect_uris) : undefined,
+            scopes: parsed.data.scopes ? JSON.stringify(parsed.data.scopes) : undefined,
           },
         },
       },
@@ -174,12 +191,21 @@ export async function rotateAppSecretAction(appId: string): Promise<{
   success: boolean;
   newSecret?: string;
   error?: string;
+  sudoRequired?: boolean;
+  redirectUrl?: string;
 }> {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) {
-      return { success: false, error: "Unauthorized" };
+    const sudoCheck = await checkSudoAction("/profile/applications");
+    if (!sudoCheck.authorized) {
+      return {
+        success: false,
+        error: sudoCheck.error,
+        sudoRequired: true,
+        redirectUrl: sudoCheck.redirectUrl,
+      };
     }
+
+    const sessionData = sudoCheck.sessionData;
 
     const app = await prisma.userApp.findUnique({
       where: { id: appId },

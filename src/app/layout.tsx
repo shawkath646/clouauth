@@ -144,6 +144,7 @@ export default async function RootLayout({
   const dir = locale === "ar" ? "rtl" : "ltr";
 
   const gClientId = getEnv("GOOGLE_CLIENT_ID");
+  const recaptchaSiteKey = getEnv("RECAPTCHA_SITE_KEY");
 
   return (
     <html
@@ -206,7 +207,7 @@ export default async function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          <ReCaptchaProvider>
+          <ReCaptchaProvider siteKey={recaptchaSiteKey}>
             {children}
             {!session && <GoogleOneTap gClientId={gClientId} />}
             <Toaster />

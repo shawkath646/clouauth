@@ -74,6 +74,7 @@ export class GoogleOAuthProvider implements IOAuthProvider {
     return {
       id: data.sub,
       email: data.email,
+      emailVerified: Boolean(data.email_verified),
       name: data.name,
       avatar: data.picture,
     };

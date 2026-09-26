@@ -114,7 +114,7 @@ export async function GET(
       provider: effectiveProvider,
       providerUserId: profile.id,
       email: profile.email,
-      emailVerified: true,
+      emailVerified: Boolean(profile.emailVerified),
       name: profile.name,
       avatar: profile.avatar,
       accessToken: tokens.accessToken ? encryptSymmetric(tokens.accessToken) : null,

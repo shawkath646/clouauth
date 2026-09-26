@@ -66,6 +66,7 @@ export class DropboxOAuthProvider implements IOAuthProvider {
     return {
       id: data.account_id,
       email: data.email,
+      emailVerified: Boolean(data.email_verified),
       name: data.name?.display_name || "Dropbox User",
       avatar: data.profile_photo_url,
     };

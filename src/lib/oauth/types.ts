@@ -7,6 +7,7 @@ export interface OAuthTokens {
 export interface OAuthUserProfile {
   id: string; // The provider's unique ID for the user
   email?: string;
+  emailVerified?: boolean;
   name?: string;
   avatar?: string;
 }

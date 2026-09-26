@@ -36,18 +36,13 @@ const ReCaptchaContext = createContext<ReCaptchaContextType>({
 export interface ReCaptchaProviderProps {
   children: React.ReactNode;
   /** Optional custom site key. If omitted, uses process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY */
-  siteKey?: string;
+  siteKey: string;
 }
 
 export function ReCaptchaProvider({
   children,
-  siteKey: customSiteKey,
+  siteKey,
 }: ReCaptchaProviderProps) {
-  const siteKey = (
-    customSiteKey ||
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
-    ""
-  ).trim();
 
   const [isLoaded, setIsLoaded] = useState(false);
   const isExecutingRef = useRef(false);

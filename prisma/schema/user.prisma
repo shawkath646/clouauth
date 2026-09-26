@@ -38,6 +38,9 @@ model UserEmail {
   verified_on DateTime?
   user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
   two_factor  TwoFactor?
+
+  @@index([user_id])
+  @@index([user_id, is_primary])
 }
 
 model UserPhone {
@@ -51,6 +54,8 @@ model UserPhone {
   verified_on  DateTime?
   user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
   two_factor   TwoFactor?
+
+  @@index([user_id])
 }
 
 model Address {

@@ -9,6 +9,7 @@ import { handleError } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { sendEmail } from "@/lib/email";
 import { checkSudoAction } from "@/actions/auth/sudo";
+import { checkLockout, handleFailedAttempt } from "@/actions/auth/helpers";
 
 import {
   getPasswordSchema,
@@ -286,8 +287,16 @@ export async function verifyRecoveryEmailAction(code: string) {
       return { success: false, error: "Code expired or not found" };
     }
 
+    const lockoutError = checkLockout(tempSession.locked_until);
+    if (lockoutError) {
+      return { success: false, error: lockoutError };
+    }
+
     const isValid = await bcrypt.compare(code, tempSession.code_hash);
-    if (!isValid) return { success: false, error: "Invalid code" };
+    if (!isValid) {
+      await handleFailedAttempt("tempSession", tempSession.id);
+      return { success: false, error: "Invalid code" };
+    }
 
     // Valid code. Delete the temp session
     await prisma.tempSession.delete({

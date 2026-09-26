@@ -44,13 +44,16 @@ export async function signIn(data: SignInValues, recaptchaToken?: string): Promi
 
     const { username, password, rememberMe } = parsed.data;
 
-    const userCreds = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { username },
-      select: { id: true, password: true },
+      include: {
+        ...USER_WITH_AUTH_INCLUDE,
+        password: true,
+      },
     });
 
-    const creds = userCreds?.password;
-    if (!userCreds || !creds) {
+    const creds = user?.password;
+    if (!user || !creds) {
       return { action: "ERROR", error: "Invalid credentials! Please verify your username and password." };
     }
 
@@ -62,21 +65,12 @@ export async function signIn(data: SignInValues, recaptchaToken?: string): Promi
     const passwordMatch = await bcrypt.compare(password, creds.password_hash);
 
     if (!passwordMatch) {
-      await handleFailedAttempt("password", userCreds.id);
+      await handleFailedAttempt("password", user.id);
       return { action: "ERROR", error: "Invalid credentials! Please verify your username and password." };
     }
 
     if (creds.failed_attempts > 0 || creds.locked_until) {
-      await resetFailedAttempts("password", userCreds.id);
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userCreds.id },
-      include: USER_WITH_AUTH_INCLUDE,
-    });
-
-    if (!user) {
-      return { action: "ERROR", error: "Invalid credentials! Please verify your username and password." };
+      await resetFailedAttempts("password", user.id);
     }
 
     return await evaluateAuthStepOrSignIn(user, rememberMe, "credentials");

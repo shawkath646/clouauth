@@ -109,7 +109,6 @@ export async function sendEmail<T extends TemplateId>(
           templateId,
           data
         });
-        console.log(`Saved failed ${templateId} email to retry queue.`);
       } catch (dbError) {
         console.error("Critical: Failed to save to email queue DB!", dbError);
       }

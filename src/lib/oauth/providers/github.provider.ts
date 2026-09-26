@@ -67,6 +67,7 @@ export class GithubOAuthProvider implements IOAuthProvider {
     }
 
     let email: string | null = null;
+    let emailVerified = false;
     try {
       const emailsResponse = await fetch("https://api.github.com/user/emails", {
         headers: {
@@ -78,18 +79,23 @@ export class GithubOAuthProvider implements IOAuthProvider {
         const emailsData = (await emailsResponse.json()) as GitHubEmail[];
         if (Array.isArray(emailsData)) {
           const primaryEmail = emailsData.find((e) => e.primary && e.verified);
-          if (primaryEmail) email = primaryEmail.email;
+          if (primaryEmail) {
+            email = primaryEmail.email;
+            emailVerified = true;
+          }
         }
       }
     } catch {}
 
     if (!email && data.email) {
       email = data.email;
+      emailVerified = false;
     }
 
     return {
       id: data.id.toString(),
       email: email || undefined,
+      emailVerified,
       name: data.name || data.login,
       avatar: data.avatar_url,
     };

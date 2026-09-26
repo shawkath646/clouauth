@@ -5,6 +5,7 @@ import {
     COOKIE_SESSION_TOKEN_NAME,
     COOKIE_REFRESH_TOKEN_NAME,
     SESSION_TOKEN_TTL,
+    REFRESH_TOKEN_TTL,
     REFRESH_TOKEN_TTL_REMEMBER_ME
 } from "@/constants/session.constants";
 import { handleError } from "@/utils/error";
@@ -202,8 +203,9 @@ export async function refreshSession(presentedRefreshToken: string, setCookies: 
     // Add 5 minutes grace period to DB expiry
     const sessionExpiresOn = new Date(now.getTime() + SESSION_TOKEN_TTL * 1000 + 300 * 1000);
 
-    const originalTtl = (session.expires_on.getTime() - session.created_on.getTime()) / 1000;
-    const refreshExpiresOn = new Date(now.getTime() + originalTtl * 1000);
+    const isRememberMe = (session.expires_on.getTime() - session.created_on.getTime()) > 2 * 24 * 60 * 60 * 1000;
+    const rtTtl = isRememberMe ? REFRESH_TOKEN_TTL_REMEMBER_ME : REFRESH_TOKEN_TTL;
+    const refreshExpiresOn = new Date(now.getTime() + rtTtl * 1000);
 
     await prisma.userSession.update({
         where: { id: session.id },
@@ -219,7 +221,7 @@ export async function refreshSession(presentedRefreshToken: string, setCookies: 
     const newSessionToken = `${session.id}.${rawSessionToken}`;
     const newRefreshToken = `${session.id}.${rawRefreshToken}`;
 
-    if (setCookies) await setSessionCookies(newSessionToken, newRefreshToken, SESSION_TOKEN_TTL, originalTtl);
+    if (setCookies) await setSessionCookies(newSessionToken, newRefreshToken, SESSION_TOKEN_TTL, rtTtl);
 
     return {
         sessionToken: newSessionToken,

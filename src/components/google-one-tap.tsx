@@ -38,7 +38,9 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
 
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false);
   const isPromptingRef = useRef<boolean>(false);
@@ -64,34 +66,10 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
       }
     };
 
-    const originalConsoleError = console.error;
-    const originalConsoleWarn = console.warn;
-
-    const shouldSuppress = (args: unknown[]) => {
-      return args.some(
-        (arg) =>
-          typeof arg === "string" &&
-          (arg.includes("FedCM get() rejects with AbortError") ||
-            (arg.includes("[GSI_LOGGER]") && arg.includes("AbortError")))
-      );
-    };
-
-    console.error = (...args: unknown[]) => {
-      if (shouldSuppress(args)) return;
-      originalConsoleError.apply(console, args);
-    };
-
-    console.warn = (...args: unknown[]) => {
-      if (shouldSuppress(args)) return;
-      originalConsoleWarn.apply(console, args);
-    };
-
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
     return () => {
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-      console.error = originalConsoleError;
-      console.warn = originalConsoleWarn;
     };
   }, []);
 

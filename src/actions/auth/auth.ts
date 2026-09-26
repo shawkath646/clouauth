@@ -226,6 +226,14 @@ export async function authenticateExternalUser(
     });
 
     if (existingEmail) {
+      if (!profile.emailVerified) {
+        return {
+          action: "ERROR",
+          error:
+            "Your email address is not verified with the provider. Please verify your email with the identity provider first or sign in using your credentials.",
+        };
+      }
+
       if (!existingEmail.verified) {
         return {
           action: "ERROR",

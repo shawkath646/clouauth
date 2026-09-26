@@ -57,7 +57,7 @@ export default function SignUpForm() {
       const recaptchaToken = await executeRecaptcha("signup");
       const response = await signUp(data, recaptchaToken ?? undefined);
       if (response.success) {
-        router.push(response.redirectUrl || "/dashboard");
+        router.push(response.redirectUrl || "/profile");
       } else {
         setErrorMsg(response.error || "Failed to create account.");
       }

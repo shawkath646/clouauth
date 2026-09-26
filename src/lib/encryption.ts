@@ -3,9 +3,20 @@ import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 
+let cachedEncryptionKey: Buffer | null = null;
+
 function getEncryptionKey(): Buffer {
-    const secret = (process.env.ENCRYPTION_KEY || getEnv("JWT_SECRET"));
-    return crypto.scryptSync(secret, "clouauth-salt", 32);
+    if (cachedEncryptionKey) return cachedEncryptionKey;
+
+    const rawKey = process.env.ENCRYPTION_KEY;
+    if (rawKey && rawKey.length === 64) {
+        cachedEncryptionKey = Buffer.from(rawKey, "hex");
+        return cachedEncryptionKey;
+    }
+
+    const secret = (rawKey || getEnv("JWT_SECRET"));
+    cachedEncryptionKey = crypto.scryptSync(secret, "clouauth-salt", 32);
+    return cachedEncryptionKey;
 }
 
 export function encryptSymmetric(text: string): string {

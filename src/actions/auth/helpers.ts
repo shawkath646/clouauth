@@ -4,7 +4,6 @@ import { getEnv } from "@/utils/env";
 import { VerificationMethod } from "@/types/auth.types";
 import type { ExternalAuthProfile } from "./auth";
 import type { DBTempSession } from "@/types/session.types";
-import { headers } from "next/headers";
 import crypto from "crypto";
 
 export const MAX_ATTEMPTS = 5;
@@ -147,102 +146,49 @@ export async function upsertOAuthAccount(userId: string, profile: ExternalAuthPr
 
 export async function getWebAuthnConfig() {
   const isDev = process.env.NODE_ENV !== "production";
-  const rawOrigin = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
-  let origin = rawOrigin.replace(/\/+$/, "");
-  const devUrl = getEnv("NEXT_PUBLIC_DEV_URL", true).replace(/\/+$/, "");
-  const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim();
-
-  let reqHost = "";
-  let reqOrigin = "";
-
+  const rawBase = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
+  let canonicalOrigin = "http://localhost:3000";
+  let canonicalHost = "localhost";
   try {
-    const h = await headers();
-    const forwardedHost = h.get("x-forwarded-host");
-    const host = forwardedHost || h.get("host");
-    const proto = h.get("x-forwarded-proto") || (isDev ? "http" : "https");
-    if (host) {
-      reqHost = host.split(":")[0].toLowerCase();
-      reqOrigin = `${proto}://${host}`.replace(/\/+$/, "");
-    }
-    const originHdr = h.get("origin");
-    if (originHdr) {
-      reqOrigin = originHdr.replace(/\/+$/, "");
-      try {
-        reqHost = new URL(originHdr).hostname.toLowerCase();
-      } catch {}
-    }
+    const parsed = new URL(rawBase);
+    canonicalOrigin = parsed.origin;
+    canonicalHost = parsed.hostname.toLowerCase();
   } catch {
-    // Outside request context (e.g. background tasks or unit tests)
+    canonicalOrigin = rawBase.replace(/\/+$/, "");
   }
 
-  // Determine effective host
-  let originHost = "localhost";
-  try {
-    originHost = new URL(origin).hostname.toLowerCase();
-  } catch {
-    originHost = "localhost";
-  }
+  const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim().toLowerCase();
+  const rpID = envRpID || (canonicalHost === "127.0.0.1" ? "localhost" : canonicalHost);
 
-  const effectiveHost = reqHost || originHost;
+  const allowedOrigins = new Set<string>();
+  allowedOrigins.add(canonicalOrigin);
 
-  if (reqOrigin) {
-    origin = reqOrigin;
-  }
+  const allowedRPIDs = new Set<string>();
+  allowedRPIDs.add(rpID);
+  if (canonicalHost) allowedRPIDs.add(canonicalHost);
 
-  // Determine a valid RP ID:
-  // In WebAuthn, rpId MUST be equal to or a registrable domain suffix of the origin domain.
-  // 1. If effectiveHost is localhost or 127.0.0.1, rpID MUST be "localhost".
-  // 2. If effectiveHost matches or ends with envRpID (e.g. auth.clouburstlab.com with clouburstlab.com), use envRpID.
-  // 3. Otherwise extract registrable suffix or fallback to effectiveHost.
-  let rpID = "localhost";
-  if (effectiveHost === "localhost" || effectiveHost === "127.0.0.1") {
-    rpID = "localhost";
-  } else if (envRpID && (effectiveHost === envRpID || effectiveHost.endsWith(`.${envRpID}`))) {
-    rpID = envRpID;
-  } else if (envRpID && isDev) {
-    rpID = "localhost";
-  } else if (envRpID) {
-    rpID = envRpID;
-  } else {
-    const parts = effectiveHost.split(".");
-    if (parts.length > 2) {
-      rpID = parts.slice(-2).join(".");
-    } else {
-      rpID = effectiveHost;
-    }
-  }
-
-  const expectedOriginSet = new Set<string>();
-  expectedOriginSet.add(origin);
-  if (rawOrigin) expectedOriginSet.add(rawOrigin.replace(/\/+$/, ""));
-  if (reqOrigin) expectedOriginSet.add(reqOrigin);
   if (isDev) {
-    expectedOriginSet.add("http://localhost:3000");
-    expectedOriginSet.add("http://127.0.0.1:3000");
-    expectedOriginSet.add("http://localhost:3001");
-  }
-  if (devUrl) {
-    expectedOriginSet.add(devUrl);
-  }
+    allowedOrigins.add("http://localhost:3000");
+    allowedOrigins.add("http://127.0.0.1:3000");
+    allowedOrigins.add("http://localhost:3001");
+    allowedRPIDs.add("localhost");
+    allowedRPIDs.add("127.0.0.1");
 
-  const expectedRPIDSet = new Set<string>();
-  expectedRPIDSet.add(rpID);
-  expectedRPIDSet.add(effectiveHost);
-  if (envRpID) expectedRPIDSet.add(envRpID);
-  if (isDev) expectedRPIDSet.add("localhost");
-  if (devUrl) {
-    try {
-      expectedRPIDSet.add(new URL(devUrl).hostname.toLowerCase());
-    } catch {
-      // Ignore URL parse error
+    const devUrl = getEnv("NEXT_PUBLIC_DEV_URL", true).trim();
+    if (devUrl) {
+      try {
+        const parsedDev = new URL(devUrl);
+        allowedOrigins.add(parsedDev.origin);
+        allowedRPIDs.add(parsedDev.hostname.toLowerCase());
+      } catch {}
     }
   }
 
   return {
     rpID,
-    origin,
-    expectedOrigin: Array.from(expectedOriginSet),
-    expectedRPID: Array.from(expectedRPIDSet),
+    origin: canonicalOrigin,
+    expectedOrigin: Array.from(allowedOrigins),
+    expectedRPID: Array.from(allowedRPIDs),
   };
 }
 

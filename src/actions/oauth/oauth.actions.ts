@@ -27,18 +27,49 @@ export async function grantOAuthAccess(
       return { success: false, error: "Invalid OAuth request. Missing required parameters." };
     }
 
-    // Generate the Authorization Code (Stateless JWT)
+    // 1. Validate Client Application and Status
+    const clientApp = await prisma.oAuthClientConfig.findUnique({
+      where: { client_id },
+      include: { app: true },
+    });
+
+    if (!clientApp || !clientApp.enabled) {
+      return { success: false, error: "The requesting application could not be found or is disabled." };
+    }
+
+    // 2. Validate Redirect URI against registered URIs
+    let registeredUris: string[] = [];
+    try {
+      registeredUris = typeof clientApp.redirect_uris === "string"
+        ? JSON.parse(clientApp.redirect_uris)
+        : clientApp.redirect_uris;
+    } catch {
+      registeredUris = [];
+    }
+
+    if (!Array.isArray(registeredUris) || !registeredUris.includes(redirect_uri)) {
+      return { success: false, error: "The provided redirect URI is not authorized for this application." };
+    }
+
+    // 3. Enforce PKCE requirement if required by client configuration
+    if (clientApp.pkce_required && !code_challenge) {
+      return { success: false, error: "PKCE code_challenge is required for this application." };
+    }
+
+    // 4. Generate the Authorization Code with single-use JTI
+    const codeId = crypto.randomUUID();
     const authCode = await new SignJWT({
       client_id,
       redirect_uri,
       user_id: session.user.id,
       code_challenge,
-      code_challenge_method,
-      scope,
+      code_challenge_method: code_challenge_method || "S256",
+      scope: scope || "openid profile email",
       nonce,
       type: "authorization_code",
     })
       .setProtectedHeader({ alg: "HS256" })
+      .setJti(codeId)
       .setIssuedAt()
       .setExpirationTime("5m") // Code is valid for 5 minutes
       .sign(getSecret());

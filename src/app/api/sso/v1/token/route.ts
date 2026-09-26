@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
         let code: string | null = null;
         let grantType: string | null = null;
         let redirectUri: string | null = null;
+        let codeVerifier: string | null = null;
 
         const authHeader = request.headers.get("authorization");
         if (authHeader && authHeader.startsWith("Basic ")) {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
             code = formData.get("code") as string;
             grantType = formData.get("grant_type") as string;
             redirectUri = formData.get("redirect_uri") as string;
+            codeVerifier = (formData.get("code_verifier") as string) || null;
         } else {
             const json = await request.json().catch(() => ({}));
             clientId = clientId || json.client_id;
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
             code = json.code;
             grantType = json.grant_type;
             redirectUri = json.redirect_uri;
+            codeVerifier = json.code_verifier || null;
         }
 
         if (grantType !== "authorization_code") {
@@ -68,17 +71,43 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "invalid_grant", error_description: "Redirect URI mismatch." }, { status: 400 });
         }
 
-        let codeVerifier: string | null = null;
-        if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-            const formData = await request.formData().catch(() => null);
-            codeVerifier = formData?.get("code_verifier") as string | undefined || null;
-        } else {
-            const json = await request.json().catch(() => ({}));
-            codeVerifier = json?.code_verifier || null;
+        // Enforce single-use authorization code tracking via JTI
+        const jti = payload.jti as string | undefined;
+        if (!jti) {
+            return NextResponse.json({ error: "invalid_grant", error_description: "Malformed authorization code." }, { status: 400 });
+        }
+
+        const revokedCode = await prisma.revokedToken.findUnique({ where: { jti } });
+        if (revokedCode) {
+            return NextResponse.json({ error: "invalid_grant", error_description: "Authorization code has already been used." }, { status: 400 });
+        }
+
+        // Revoke the code immediately upon use
+        await prisma.revokedToken.create({
+            data: {
+                jti,
+                expires_at: new Date(Date.now() + 5 * 60 * 1000)
+            }
+        });
+
+        const clientApp = await prisma.oAuthClientConfig.findUnique({
+            where: { client_id: clientId }
+        });
+
+        if (!clientApp || !clientApp.enabled) {
+            return NextResponse.json({ error: "invalid_client" }, { status: 401 });
         }
 
         const codeChallenge = payload.code_challenge as string | undefined;
         const codeChallengeMethod = payload.code_challenge_method as string | undefined;
+
+        // Strict PKCE enforcement based on client policy
+        if (clientApp.pkce_required && !codeChallenge) {
+            return NextResponse.json(
+                { error: "invalid_grant", error_description: "PKCE code_challenge is required for this client." },
+                { status: 400 }
+            );
+        }
 
         if (codeChallenge) {
             if (!codeVerifier) {
@@ -104,14 +133,6 @@ export async function POST(request: NextRequest) {
                     );
                 }
             }
-        }
-
-        const clientApp = await prisma.oAuthClientConfig.findUnique({
-            where: { client_id: clientId }
-        });
-
-        if (!clientApp || !clientApp.enabled) {
-            return NextResponse.json({ error: "invalid_client" }, { status: 401 });
         }
 
         const authMethod = clientApp.token_endpoint_auth_method;
@@ -158,10 +179,12 @@ export async function POST(request: NextRequest) {
         const privateJwk = JSON.parse(signingKey.privateKey);
         const privateKey = await importJWK(privateJwk, "RS256");
 
+        const issuer = getEnv("NEXT_PUBLIC_BASE_URL", true) || getEnv("NEXT_PUBLIC_APP_URL");
+
         const idToken = await new SignJWT({
             sub: userId,
             aud: clientId,
-            iss: getEnv("NEXT_PUBLIC_APP_URL"),
+            iss: issuer,
             auth_time: Math.floor(Date.now() / 1000),
             scope,
             nonce: payload.nonce as string | undefined,

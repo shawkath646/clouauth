@@ -214,32 +214,33 @@ export default function SigninClient({
   const renderStep = () => {
     switch (currentStep) {
       case "CREDENTIALS":
-        return <CredentialsStep onNext={processAction} />;
+        return <CredentialsStep key="credentials" onNext={processAction} />;
 
       case "METHOD_SELECTION":
-        return <VerificationMethodStep onSelectMethod={handleMethodSelect} availableMethods={availableMethods} />;
+        return <VerificationMethodStep key="method_selection" onSelectMethod={handleMethodSelect} availableMethods={availableMethods} />;
 
       case "VERIFICATION":
         switch (selectedMethod?.type) {
           case "code":
           case "totp":
-            return <CodeVerification onComplete={processAction} tempSessionId={tempSessionId} methodType={selectedMethod.type} />;
+            return <CodeVerification key={`verification-${selectedMethod.type}`} onComplete={processAction} tempSessionId={tempSessionId} methodType={selectedMethod.type} />;
           case "passkey":
-            return <PasskeyVerification onComplete={processAction} tempSessionId={tempSessionId} options={passkeyOptions} />;
+            return <PasskeyVerification key="verification-passkey" onComplete={processAction} tempSessionId={tempSessionId} options={passkeyOptions} />;
           default:
             return null;
         }
 
       case "AGREEMENT":
-        return <AgreementStep onAgree={handleAgreementComplete} onCancel={() => setCurrentStep("CREDENTIALS")} isLoading={isGranting} appData={appData} />;
+        return <AgreementStep key="agreement" onAgree={handleAgreementComplete} onCancel={() => setCurrentStep("CREDENTIALS")} isLoading={isGranting} appData={appData} />;
 
       case "REENABLE_ACCOUNT":
-        return <ReenableAccountStep tempSessionId={tempSessionId} onComplete={processAction} />;
+        return <ReenableAccountStep key="reenable_account" tempSessionId={tempSessionId} onComplete={processAction} />;
 
       case "SUDO_VERIFICATION":
         if (!tempSessionId || !sudoMeta) return null;
         return (
           <SudoVerificationStep
+            key="sudo_verification"
             tempSessionId={tempSessionId}
             sudoMeta={sudoMeta}
             onSuccess={(redirectUrl) => {

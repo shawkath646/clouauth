@@ -71,9 +71,12 @@ export class MicrosoftOAuthProvider implements IOAuthProvider {
     }
 
     const data = await response.json();
+    const email = data.mail || (data.userPrincipalName?.includes("@") ? data.userPrincipalName : undefined);
+    const emailVerified = Boolean(data.mail);
     return {
       id: data.id,
-      email: data.mail || data.userPrincipalName,
+      email,
+      emailVerified,
       name: data.displayName,
       avatar: undefined,
     };

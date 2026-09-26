@@ -86,7 +86,9 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
           </div>
         ) : (
           sessions.map((session, index) => {
-            const isCurrent = index === 0;
+            const isCurrent = profile.current_session_id
+              ? session.id === profile.current_session_id
+              : index === 0;
             const isMobile = session.user_agent?.toLowerCase().includes("mobile");
             const isTablet = session.user_agent?.toLowerCase().includes("tablet");
             const DeviceIcon = isMobile ? Smartphone : isTablet ? Tablet : Laptop;

@@ -71,6 +71,10 @@ export function ApplicationsSection({ initialApps }: { initialApps: DeveloperApp
 
   const handleRotateSecret = async (app: DeveloperApp) => {
     const res = await rotateAppSecretAction(app.id);
+    if (res.sudoRequired && res.redirectUrl) {
+      router.push(res.redirectUrl);
+      return;
+    }
     if (res.success && res.newSecret) {
       toast.success(t("developerApps.rotateSuccess"));
       setCreatedSecret({

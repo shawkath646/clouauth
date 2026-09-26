@@ -1,3 +1,4 @@
+import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import type { ProfileVisibility } from "@/types/preferences.types";
@@ -46,11 +47,11 @@ export type PublicProfileResult =
  * - link_only: accessible with link, non-indexable
  * - private: hidden from guests, accessible only to the owner
  */
-export async function getPublicProfile(username: string): Promise<PublicProfileResult> {
+export const getPublicProfile = cache(async (username: string): Promise<PublicProfileResult> => {
   try {
     const cleanUsername = username.trim();
 
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: {
         username: cleanUsername,
       },
@@ -125,4 +126,4 @@ export async function getPublicProfile(username: string): Promise<PublicProfileR
     console.error("[getPublicProfile] Error fetching public profile:", error);
     return { status: "not_found" };
   }
-}
+});

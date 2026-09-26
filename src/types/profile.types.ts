@@ -16,6 +16,7 @@ export interface FullProfile {
     recovery_codes?: { id: string; used: boolean; created_on: Date | string }[];
     sessions: DBUserSession[];
     oauth_accounts: DBOAuthAccount[];
+    current_session_id?: string;
 }
 
 // 2. Secured full profile // remove auth related data

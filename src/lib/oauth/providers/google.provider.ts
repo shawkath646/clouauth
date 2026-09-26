@@ -21,7 +21,7 @@ export class GoogleOAuthProvider implements IOAuthProvider {
     url.searchParams.append("response_type", "code");
 
     const scope = this.isDrive
-      ? "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly"
+      ? "openid email profile https://www.googleapis.com/auth/drive.file"
       : "openid email profile";
 
     url.searchParams.append("scope", scope);

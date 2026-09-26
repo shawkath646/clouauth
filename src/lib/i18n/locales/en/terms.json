@@ -1,42 +1,64 @@
 {
   "meta": {
     "title": "Terms of Service",
-    "description": "Read the Terms of Service for using ClouAuth's identity and authentication platform."
+    "description": "Terms of Service governing your use of ClouAuth by clouburstlab, identity provider services, developer APIs, and connected cloud storage."
   },
   "header": {
+    "badge": "Legal & Terms of Service",
     "title": "Terms of Service",
-    "lastUpdated": "Last Updated: August 2026"
+    "subtitle": "Clear, transparent terms governing your account, developer integrations, and connected storage on ClouAuth by clouburstlab.",
+    "lastUpdated": "Last Updated: September 2026"
   },
   "sections": {
     "intro": {
       "title": "1. Acceptance of Terms",
-      "content": "By accessing or using the ClouAuth platform, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+      "content": "By accessing, creating an account on, or utilizing the ClouAuth platform (provided by clouburstlab, \"we\", \"us\", or \"our\"), you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not access or use our services."
     },
     "account": {
       "title": "2. Account Registration and Security",
-      "content": "You must provide accurate and complete information when registering an account. You are responsible for maintaining the confidentiality of your password, passkeys, and backup codes. You agree to notify us immediately of any unauthorized use of your account."
+      "content": "You must provide accurate and verifiable information when registering an account. You are responsible for safeguarding your authentication credentials, including passwords, passkeys (FIDO2 / WebAuthn), two-factor authenticators (TOTP), and recovery backup codes. You agree to notify clouburstlab immediately of any unauthorized access or compromise of your credentials. clouburstlab cannot and will not be liable for any loss or damage arising from your failure to protect your authentication credentials."
     },
     "developer": {
       "title": "3. Developer Applications and API Usage",
-      "content": "If you register third-party developer applications to use our OAuth 2.0 / OIDC endpoints, you agree to:",
+      "content": "Developers utilizing ClouAuth OpenID Connect (OIDC) or OAuth 2.0 endpoints, or registering developer applications, agree to adhere to the following obligations:",
       "list": [
-        "Provide accurate details regarding your application's purpose and redirect URIs.",
-        "Securely store your Client Secret and never expose it in public repositories or client-side code.",
-        "Respect rate limits and fair usage policies for our API endpoints.",
-        "Ensure your application complies with all applicable privacy laws regarding user data you request access to."
+        "Provide accurate details regarding your application purpose, organization, and redirect URIs.",
+        "Securely store your Client Secret and never expose it in public repositories, client-side bundles, or insecure environments.",
+        "Respect all documented rate limits, pagination rules, and fair usage policies across our API endpoints.",
+        "Comply with all applicable data privacy and consumer protection laws (including GDPR and CCPA) for any user data retrieved via our identity provider."
+      ]
+    },
+    "cloudStorage": {
+      "title": "4. Connected Cloud Storage Integrations",
+      "content": "ClouAuth enables users to link third-party cloud storage accounts (such as Google Drive, Microsoft OneDrive, and Dropbox) for account storage and synchronization. In connection with these integrations:",
+      "list": [
+        "You retain 100% full ownership, title, and intellectual property rights in all files, documents, and data stored in your connected cloud storage.",
+        "clouburstlab never sells, rents, monetizes, or transfers your cloud files to data brokers or advertising networks.",
+        "Your cloud files and OAuth access tokens are never utilized to train generalized artificial intelligence or machine learning models.",
+        "You may disconnect and revoke cloud drive authorization at any time directly through your profile settings or your cloud provider account controls."
       ]
     },
     "acceptableUse": {
-      "title": "4. Acceptable Use",
-      "content": "You agree not to use ClouAuth for any unlawful purposes or to conduct any activities that may harm, disrupt, or impair our servers, networks, or the experience of other users. This includes, but is not limited to, automated scraping, brute-force attacks, or distributing malware."
+      "title": "5. Acceptable Use Policy",
+      "content": "You agree not to misuse ClouAuth or assist others in doing so. Specifically, you agree not to conduct, attempt, or facilitate any of the following prohibited activities:",
+      "list": [
+        "Attempting brute-force attacks, credential stuffing, or circumventing authentication or rate-limiting safeguards.",
+        "Automated scraping, crawling, or unauthorized harvesting of user profiles, email addresses, or directory records.",
+        "Distributing malware, viruses, phishing lures, or unsolicited commercial communications through developer applications.",
+        "Interfering with, disrupting, or overburdening the operation, security, or network infrastructure of clouburstlab and its partner services."
+      ]
     },
     "termination": {
-      "title": "5. Termination",
-      "content": "We reserve the right to suspend or terminate your account and access to our services at our sole discretion, without notice, for conduct that we believe violates these Terms of Service or is harmful to other users, us, or third parties."
+      "title": "6. Termination and Account Deletion",
+      "content": "You may terminate your account at any time by executing the account deletion flow in your Danger Zone profile settings. Upon deletion, your credentials, active sessions, and provider connections will be permanently wiped. clouburstlab reserves the right to suspend or terminate accounts that breach these Terms, violate applicable laws, or pose an imminent threat to system security."
+    },
+    "disclaimer": {
+      "title": "7. Disclaimers and Limitation of Liability",
+      "content": "ClouAuth and all related services are provided on an \"AS IS\" and \"AS AVAILABLE\" basis without warranties of any kind, whether express, statutory, or implied. To the maximum extent permitted by applicable law, clouburstlab and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or loss of profits or data, arising out of your access to or inability to use the platform."
     },
     "changes": {
-      "title": "6. Changes to Terms",
-      "content": "We may modify these Terms of Service from time to time. We will notify you of any significant changes by posting the new terms on this page and updating the 'Last Updated' date. Continued use of the platform after any such changes constitutes your acceptance of the new terms."
+      "title": "8. Modifications and Contact Information",
+      "content": "We may update these Terms of Service periodically to reflect changes in our infrastructure, integrations, or legal obligations. We will notify users of substantive updates via our platform or email notifications. For legal inquiries, terms clarification, or notices, contact our compliance team at support@clouburstlab.com."
     }
   }
 }

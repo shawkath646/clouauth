@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent, useEffect } from "react";
+import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
 import { handleError } from "@/utils/error";
 import { SignInReturn } from "@/actions/auth/auth.actions";
+import { useReCaptcha } from "@/lib/recaptcha/client";
 
 interface CodeVerificationProps {
   onComplete: (result: SignInReturn) => void;
@@ -21,30 +22,38 @@ interface CodeVerificationProps {
 export default function CodeVerification({ onComplete, tempSessionId, methodType = "code" }: CodeVerificationProps) {
   const codeLength = methodType === "totp" ? 6 : 8;
   const { t } = useTranslations("signin");
+  const { executeRecaptcha } = useReCaptcha();
   const [code, setCode] = useState<string[]>(Array(codeLength).fill(""));
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const lastSubmittedRef = useRef<string>("");
 
   const handleResend = async () => {
     if (!tempSessionId) return;
     setIsResending(true);
     setErrorMsg(null);
     try {
-      const result = await triggerVerificationMethod(tempSessionId, "email");
+      const recaptchaToken = await executeRecaptcha("resend_code");
+      const result = await triggerVerificationMethod(
+        tempSessionId,
+        "email",
+        recaptchaToken ?? undefined
+      );
       if (!result.success) {
         setErrorMsg('error' in result && result.error ? result.error : "Failed to resend code.");
       } else {
         setCountdown(60);
         setCode(Array(codeLength).fill(""));
+        lastSubmittedRef.current = "";
         focusInput(0);
       }
     } catch (e: unknown) {
-        const em = handleError(e, "Failed to execute CodeVerification");
-        setErrorMsg(em);
-      } finally {
+      const em = handleError(e, "Failed to execute CodeVerification");
+      setErrorMsg(em);
+    } finally {
       setIsResending(false);
     }
   };
@@ -56,29 +65,52 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
     }
   }, [countdown]);
 
-  const handleVerify = async () => {
-    if (!tempSessionId) {
-      setErrorMsg("No active session. Please sign in again.");
-      return;
-    }
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      const response = methodType === "totp" 
-        ? await resolveTotpVerification(tempSessionId, code.join(""))
-        : await resolveCodeVerification(tempSessionId, code.join(""));
-      if (response && response.action === "ERROR") {
-        setErrorMsg(response.error || "Invalid code");
-      } else {
-        onComplete(response);
+  const triggerVerification = useCallback(
+    async (codeToVerify?: string[]) => {
+      const targetCode = (codeToVerify || code).join("");
+      if (targetCode.length !== codeLength || isLoading) return;
+
+      if (lastSubmittedRef.current === targetCode) return;
+      lastSubmittedRef.current = targetCode;
+
+      if (!tempSessionId) {
+        setErrorMsg("No active session. Please sign in again.");
+        return;
       }
-    } catch (e: unknown) {
+
+      setIsLoading(true);
+      setErrorMsg(null);
+
+      try {
+        const actionName = methodType === "totp" ? "verify_totp" : "verify_code";
+        const recaptchaToken = await executeRecaptcha(actionName);
+        const response =
+          methodType === "totp"
+            ? await resolveTotpVerification(tempSessionId, targetCode, recaptchaToken ?? undefined)
+            : await resolveCodeVerification(tempSessionId, targetCode, recaptchaToken ?? undefined);
+
+        if (response && response.action === "ERROR") {
+          setErrorMsg(response.error || "Invalid code");
+        } else {
+          onComplete(response);
+        }
+      } catch (e: unknown) {
         const em = handleError(e, "Failed to execute CodeVerification");
         setErrorMsg(em);
       } finally {
-      setIsLoading(false);
+        setIsLoading(false);
+      }
+    },
+    [code, codeLength, isLoading, tempSessionId, methodType, executeRecaptcha, onComplete]
+  );
+
+  // Auto-submit when all digits are filled
+  useEffect(() => {
+    const fullCode = code.join("");
+    if (fullCode.length === codeLength && fullCode !== lastSubmittedRef.current && !isLoading) {
+      triggerVerification(code);
     }
-  };
+  }, [code, codeLength, isLoading, triggerVerification]);
 
   const focusInput = (index: number) => {
     if (index >= 0 && index < codeLength) {
@@ -116,6 +148,10 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
 
     const nextFocusIndex = Math.min(pastedNumbers.length, codeLength - 1);
     focusInput(nextFocusIndex);
+
+    if (pastedNumbers.length === codeLength) {
+      triggerVerification(newCode);
+    }
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
@@ -152,6 +188,8 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
 
     if (index < codeLength - 1) {
       focusInput(index + 1);
+    } else if (newCode.join("").length === codeLength) {
+      triggerVerification(newCode);
     }
   };
 
@@ -214,8 +252,8 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
 
         <div className="flex flex-col gap-4">
           <Button
-            className="w-full h-12 text-base"
-            onClick={handleVerify}
+            className="w-full h-12 text-base cursor-pointer"
+            onClick={() => triggerVerification(code)}
             disabled={isLoading || !isComplete}
           >
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -230,7 +268,7 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
                   type="button"
                   onClick={handleResend}
                   disabled={countdown > 0 || isResending}
-                  className="text-primary font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                  className="text-primary font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-opacity cursor-pointer"
                 >
                   {isResending
                     ? t("resending")

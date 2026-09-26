@@ -1,52 +1,77 @@
 {
   "meta": {
-    "title": "Privacy Policy",
-    "description": "Learn how ClouAuth collects, uses, and protects your personal data, including information related to OIDC, SSO, and two-factor authentication."
+    "title": "隐私政策",
+    "description": "了解 clouburstlab 如何收集、使用和保护您的个人数据，包括与 Google Drive 集成、OAuth 和身份验证相关的信息。"
   },
   "header": {
-    "title": "Privacy Policy",
-    "lastUpdated": "Last Updated: August 2026"
+    "title": "隐私政策",
+    "lastUpdated": "最后更新：2026年9月26日",
+    "badge": "隐私与数据保护",
+    "subtitle": "您的隐私和数据安全是我们在 clouburstlab 构建一切服务的基础。"
   },
   "sections": {
     "intro": {
-      "title": "1. Introduction",
-      "content": "At ClouAuth, we take your privacy seriously. This Privacy Policy outlines the types of personal information we collect, how it is used, and how it is protected when you use our authentication and Single Sign-On (SSO) services."
+      "title": "1. 简介",
+      "content": "在 clouburstlab（“我们”或“我们的”），我们尊重您的隐私并致力于保护您的个人数据。本隐私政策说明了在您使用 clouburstlab 身份验证、单点登录 (SSO) 以及关联的云存储服务时，我们收集哪些个人数据、为何收集、如何处理以及您拥有的各项权利。"
     },
     "collection": {
-      "title": "2. Information We Collect",
-      "content": "We collect information to provide you with secure and seamless authentication services. This includes:",
+      "title": "2. 我们收集的信息",
+      "content": "我们收集提供安全身份验证和用户请求的账户功能所需的信息。信息的类别包括：",
       "list": [
-        "Account Data: Your name, username, email address, phone number, and physical address when provided.",
-        "Security Data: WebAuthn passkeys, TOTP seeds, and hashed backup codes used for Two-Factor Authentication (2FA).",
-        "OAuth Data: Information regarding third-party developer applications you authorize via our OpenID Connect (OIDC) endpoints.",
-        "Device & Session Data: IP addresses, browser types, and session tokens to maintain security and prevent unauthorized access."
+        "账户资料数据：您提供的姓名、电子邮件地址、用户名、个人头像、代词、简介以及地址信息。",
+        "安全与身份验证数据：通行密钥（WebAuthn 公钥）、哈希备份代码、TOTP 密钥以及安全哈希处理的密码（使用 bcrypt）。",
+        "第三方已关联账户：当您通过第三方提供商（Google、GitHub、Microsoft）进行身份验证或关联时，我们会收到您的基本个人资料标识符、电子邮箱以及 OAuth 认证令牌。",
+        "云存储与 Google Drive 数据：如果您明确关联了 Google Drive、OneDrive 或 Dropbox，我们会收到执行您具体请求的文件操作所必需的授权令牌和元数据。",
+        "设备与会话日志：IP 地址、用户代理、浏览器类型和会话时间戳，用于防范未经授权的访问并维护安全性。"
       ]
     },
     "usage": {
-      "title": "3. How We Use Your Information",
-      "content": "Your information is used strictly to provide, maintain, and improve our authentication services. Specifically, we use it to:",
+      "title": "3. 我们如何使用您的信息",
+      "content": "我们严格出于合法的运营目的处理您的信息：",
       "list": [
-        "Authenticate your identity across connected applications securely.",
-        "Manage your profile, preferences, and security settings.",
-        "Send critical security alerts (e.g., unrecognized logins or password resets).",
-        "Monitor for fraudulent activity and protect the integrity of our SSO platform."
+        "在关联的应用程序和服务之间安全地验证您的身份。",
+        "实现用户指示的云存储操作（例如在 Google Drive 中同步或访问文件）。",
+        "管理您的安全设置、多因素身份验证 (2FA) 和个人偏好。",
+        "防范欺诈、未经授权的登录和安全隐患。"
       ]
     },
+    "googleCompliance": {
+      "title": "4. Google API 服务及有限使用（Limited Use）披露",
+      "content": "clouburstlab 对从 Google API 收到的信息的使用和向任何其他应用的传输，均严格遵守 Google API 服务用户数据政策，包括有限使用（Limited Use）要求。",
+      "policyLinkText": "Google API Services User Data Policy",
+      "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
+      "specifics": [
+        "我们仅在您明确选择关联 Google Drive 时请求访问 Google Drive 权限范围（例如 drive.file 和 drive.readonly）。",
+        "我们绝不会将 Google 用户数据或 Drive 文件用于投放广告或营销目的。",
+        "我们绝不会使用 Google Workspace 或 Google Drive 数据来训练、重新训练或改进通用人工智能 (AI) 或机器学习 (ML) 模型。",
+        "严禁人工访问您的 Google 数据，除非我们获得您用于解决技术故障的明确许可、出于安全调查（如调查滥用行为）的必要，或法律法规要求。"
+      ]
+    },
+    "cloudDrives": {
+      "title": "5. 云存储集成（Google Drive、OneDrive、Dropbox）",
+      "content": "当您将云端硬盘关联至 clouburstlab 个人资料时，访问权限仅通过官方 OAuth 2.0 授权流程授予。我们仅访问您通过我们服务明确交互的文件或文件夹。您的访问令牌使用行业标准对称加密 (AES-256-GCM) 进行静态加密存储，未经您的直接指令，我们绝不会读取、更改或传输您的文件。"
+    },
     "sharing": {
-      "title": "4. Data Sharing and Third-Party Applications",
-      "content": "ClouAuth acts as an identity provider. We do not sell your personal data. We only share your data with third-party applications when you explicitly grant them permission during the OAuth authorization flow. You can review and revoke these permissions at any time from your Profile Dashboard."
+      "title": "6. 数据共享与第三方",
+      "content": "我们不会出售、出租或交易您的个人数据。仅当您通过我们的 OAuth/OpenID Connect 授权许可明确授予权限时，我们才会与第三方应用程序共享信息。您对这些应用程序拥有完全的透明度与控制权，并可随时撤销访问权限。"
+    },
+    "retention": {
+      "title": "7. 数据保留与您的权利",
+      "content": "您对自己的个人数据保留完全的控制权：",
+      "list": [
+        "访问与更新：您可以随时在个人中心控制面板查看和修改个人详细信息、电子邮箱和安全设置。",
+        "断开服务连接：您可以在“关联账户”中一键断开第三方登录或云端硬盘（Google Drive、OneDrive、Dropbox）。",
+        "撤销 Google 访问授权：您也可以随时通过 Google 账户权限设置 (https://myaccount.google.com/connections) 撤销 clouburstlab 对您 Google 账户的访问权限。",
+        "删除账户：您可以在个人资料设置中的“危险区域”(Danger Zone) 随时永久删除您的账户及所有关联凭据、令牌和记录。"
+      ]
     },
     "security": {
-      "title": "5. Data Security",
-      "content": "We implement industry-standard security measures, including encryption in transit and at rest, secure password hashing (bcrypt), and advanced session management, to protect your data from unauthorized access, alteration, or disclosure."
-    },
-    "rights": {
-      "title": "6. Your Privacy Rights",
-      "content": "You have the right to access, update, or delete your personal information at any time. You can manage your data directly through your Profile Dashboard. If you wish to permanently delete your account and all associated data, you may do so in the Danger Zone section of your profile."
+      "title": "8. 安全措施",
+      "content": "我们实施严格的技术和组织措施来保护您的信息安全。所有传输通信均使用 TLS 1.3/HTTPS 进行加密，敏感凭据与 OAuth 令牌在存储时均已加密，并实时监控认证会话中的异常活动。"
     },
     "contact": {
-      "title": "7. Contact Us",
-      "content": "If you have any questions or concerns about this Privacy Policy, please contact our privacy team."
+      "title": "9. 联系我们",
+      "content": "如果您对本隐私政策或我们的数据处理实践有任何疑问、建议或要求，请通过 support@clouburstlab.com 联系我们的隐私团队，或访问 https://clouburstlab.com。"
     }
   }
 }

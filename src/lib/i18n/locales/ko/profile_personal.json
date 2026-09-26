@@ -105,8 +105,16 @@
     "privacyPolicy": "개인정보 처리방침",
     "privacyPolicyDesc": "정보 처리 방식을 확인하세요.",
     "viewPolicy": "정책 보기",
-    "activityVisibility": "활동 공개 범위",
-    "activityVisibilityDesc": "내 활동을 볼 수 있는 사람을 관리하세요.",
-    "manage": "관리"
+    "profileTransparency": "프로필 투명성",
+    "profileTransparencyDesc": "공개 프로필 페이지를 볼 수 있는 사람과 웹에서의 표시 방식을 관리하세요.",
+    "public": "공개",
+    "publicDesc": "인터넷의 모든 사람이 프로필을 보고 검색을 통해 찾을 수 있습니다.",
+    "viewWithLinks": "링크가 있는 사용자만 보기",
+    "viewWithLinksDesc": "직접 프로필 링크를 가진 사람만 볼 수 있습니다. 검색 엔진에서 제외됩니다.",
+    "private": "비공개",
+    "privateDesc": "회원님만 프로필을 볼 수 있습니다. 방문자에게는 비공개 프로필로 표시됩니다.",
+    "viewPublicProfile": "공개 프로필 보기",
+    "copyLink": "링크 복사",
+    "linkCopied": "링크가 클립보드에 복사되었습니다!"
   }
 }

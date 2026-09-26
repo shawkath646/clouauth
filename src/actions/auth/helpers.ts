@@ -4,6 +4,7 @@ import { getEnv } from "@/utils/env";
 import { VerificationMethod } from "@/types/auth.types";
 import type { ExternalAuthProfile } from "./auth";
 import type { DBTempSession } from "@/types/session.types";
+import { headers } from "next/headers";
 import crypto from "crypto";
 
 export const MAX_ATTEMPTS = 5;
@@ -20,7 +21,7 @@ export const USER_WITH_AUTH_INCLUDE = {
   preferences: true,
   two_factor: {
     select: {
-      passkeys: { select: { id: true } },
+      passkeys: { select: { id: true, rp_id: true } },
       totp: { select: { id: true, enabled: true } },
       email: { select: { id: true } },
       email_id: true,
@@ -144,36 +145,81 @@ export async function upsertOAuthAccount(userId: string, profile: ExternalAuthPr
   });
 }
 
-export function getWebAuthnConfig() {
-  const rawOrigin = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
-  const origin = rawOrigin.replace(/\/+$/, "");
-  const devUrl = getEnv("NEXT_PUBLIC_DEV_URL", true).replace(/\/+$/, "");
+export async function getWebAuthnConfig() {
   const isDev = process.env.NODE_ENV !== "production";
+  const rawOrigin = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
+  let origin = rawOrigin.replace(/\/+$/, "");
+  const devUrl = getEnv("NEXT_PUBLIC_DEV_URL", true).replace(/\/+$/, "");
+  const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim();
 
+  let reqHost = "";
+  let reqOrigin = "";
+
+  try {
+    const h = await headers();
+    const forwardedHost = h.get("x-forwarded-host");
+    const host = forwardedHost || h.get("host");
+    const proto = h.get("x-forwarded-proto") || (isDev ? "http" : "https");
+    if (host) {
+      reqHost = host.split(":")[0].toLowerCase();
+      reqOrigin = `${proto}://${host}`.replace(/\/+$/, "");
+    }
+    const originHdr = h.get("origin");
+    if (originHdr) {
+      reqOrigin = originHdr.replace(/\/+$/, "");
+      try {
+        reqHost = new URL(originHdr).hostname.toLowerCase();
+      } catch {}
+    }
+  } catch {
+    // Outside request context (e.g. background tasks or unit tests)
+  }
+
+  // Determine effective host
   let originHost = "localhost";
   try {
-    originHost = new URL(origin).hostname;
+    originHost = new URL(origin).hostname.toLowerCase();
   } catch {
     originHost = "localhost";
   }
 
-  const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim();
+  const effectiveHost = reqHost || originHost;
+
+  if (reqOrigin) {
+    origin = reqOrigin;
+  }
 
   // Determine a valid RP ID:
   // In WebAuthn, rpId MUST be equal to or a registrable domain suffix of the origin domain.
-  // In development against localhost/127.0.0.1, rpID MUST be "localhost".
-  let rpID = envRpID;
-  if (!rpID || (isDev && (originHost === "localhost" || originHost === "127.0.0.1"))) {
+  // 1. If effectiveHost is localhost or 127.0.0.1, rpID MUST be "localhost".
+  // 2. If effectiveHost matches or ends with envRpID (e.g. auth.clouburstlab.com with clouburstlab.com), use envRpID.
+  // 3. Otherwise extract registrable suffix or fallback to effectiveHost.
+  let rpID = "localhost";
+  if (effectiveHost === "localhost" || effectiveHost === "127.0.0.1") {
     rpID = "localhost";
-  } else if (!rpID) {
-    rpID = originHost;
+  } else if (envRpID && (effectiveHost === envRpID || effectiveHost.endsWith(`.${envRpID}`))) {
+    rpID = envRpID;
+  } else if (envRpID && isDev) {
+    rpID = "localhost";
+  } else if (envRpID) {
+    rpID = envRpID;
+  } else {
+    const parts = effectiveHost.split(".");
+    if (parts.length > 2) {
+      rpID = parts.slice(-2).join(".");
+    } else {
+      rpID = effectiveHost;
+    }
   }
 
   const expectedOriginSet = new Set<string>();
   expectedOriginSet.add(origin);
+  if (rawOrigin) expectedOriginSet.add(rawOrigin.replace(/\/+$/, ""));
+  if (reqOrigin) expectedOriginSet.add(reqOrigin);
   if (isDev) {
     expectedOriginSet.add("http://localhost:3000");
     expectedOriginSet.add("http://127.0.0.1:3000");
+    expectedOriginSet.add("http://localhost:3001");
   }
   if (devUrl) {
     expectedOriginSet.add(devUrl);
@@ -181,12 +227,12 @@ export function getWebAuthnConfig() {
 
   const expectedRPIDSet = new Set<string>();
   expectedRPIDSet.add(rpID);
-  expectedRPIDSet.add(originHost);
+  expectedRPIDSet.add(effectiveHost);
   if (envRpID) expectedRPIDSet.add(envRpID);
   if (isDev) expectedRPIDSet.add("localhost");
   if (devUrl) {
     try {
-      expectedRPIDSet.add(new URL(devUrl).hostname);
+      expectedRPIDSet.add(new URL(devUrl).hostname.toLowerCase());
     } catch {
       // Ignore URL parse error
     }

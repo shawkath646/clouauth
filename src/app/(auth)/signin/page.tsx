@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     canonical: "/signin",
   },
   openGraph: {
-    title: "Sign In | clouburstlab",
+    title: "Sign In — clouburstlab",
     description:
       "Securely sign in to clouburstlab — your centralized identity provider. " +
       "Supports passkeys, 2FA, and social login via Google, GitHub, and Microsoft.",
@@ -89,15 +89,16 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
     }
   }
 
-  if (session) {
+  if (session && !tid) {
     if (!(isOAuthRequest && (appData || oauthError))) {
       const isSafeRedirect = returnTo?.startsWith('/') && !returnTo.startsWith('//');
       redirect(isSafeRedirect && returnTo ? returnTo : '/profile');
     }
   }
 
-  let initialStep: 'CREDENTIALS' | 'METHOD_SELECTION' | 'AGREEMENT' | 'REENABLE_ACCOUNT' = 'CREDENTIALS';
+  let initialStep: 'CREDENTIALS' | 'METHOD_SELECTION' | 'AGREEMENT' | 'REENABLE_ACCOUNT' | 'SUDO_VERIFICATION' = 'CREDENTIALS';
   let initialMethods: VerificationMethod[] = [];
+  let initialSudoMeta: import("@/actions/auth/verification").SudoMeta | null = null;
 
   let serverError: {
     title?: string;
@@ -128,6 +129,9 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
     } else if (resolved.step === 'METHOD_SELECTION') {
       initialStep = 'METHOD_SELECTION';
       initialMethods = resolved.methods;
+    } else if (resolved.step === 'SUDO_VERIFICATION') {
+      initialStep = 'SUDO_VERIFICATION';
+      initialSudoMeta = resolved.sudoMeta || null;
     } else if (resolved.error) {
       serverError = {
         title: "Verification Session Expired",
@@ -204,6 +208,7 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
               initialStep={initialStep}
               initialTempSessionId={tid}
               initialMethods={initialMethods}
+              sudoMeta={initialSudoMeta}
               appData={appData}
             />
           )}

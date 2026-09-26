@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     canonical: "/signup",
   },
   openGraph: {
-    title: "Create an Account | clouburstlab",
+    title: "Create an Account — clouburstlab",
     description:
       "Join clouburstlab — create a unified identity for all your applications. " +
       "Free, secure, and OIDC 2.0 compliant.",

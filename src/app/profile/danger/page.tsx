@@ -1,5 +1,6 @@
 import { DangerZoneSection } from "@/components/profile/danger-zone-section";
 import { getFullProfile } from "@/actions/profile/get-profile";
+import { requireSudoPage } from "@/actions/auth/sudo";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DangerZonePage() {
+  await requireSudoPage("/profile/danger");
   const result = await getFullProfile();
 
   if (!result.success || !result.data) {

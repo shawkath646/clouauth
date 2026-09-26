@@ -26,6 +26,7 @@ import { signIn, SignInReturn } from "@/actions/auth/auth.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
 import { handleError } from "@/utils/error";
 import { BrandName } from "@/components/ui/brand-name";
+import { useReCaptcha } from "@/lib/recaptcha/client";
 
 interface CredentialsStepProps {
   onNext: (result: SignInReturn) => void;
@@ -41,6 +42,8 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const { executeRecaptcha } = useReCaptcha();
+
   const form = useForm<z.input<ReturnType<typeof getSignInSchema>>>({
     resolver: zodResolver(getSignInSchema(tSchema)),
     defaultValues: {
@@ -54,7 +57,8 @@ export default function CredentialsStep({ onNext }: CredentialsStepProps) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await signIn(data as SignInValues);
+      const recaptchaToken = await executeRecaptcha("signin");
+      const response = await signIn(data as SignInValues, recaptchaToken ?? undefined);
       if (response && response.action === "ERROR") {
         setErrorMsg(response.error ?? "Invalid credentials");
       } else {

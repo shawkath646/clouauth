@@ -11,6 +11,7 @@ import {
   upsertOAuthAccount,
   generateUniqueUsername,
   requireUserSession,
+  getWebAuthnConfig,
 } from "./helpers";
 import { resolveUserAvatar } from "@/lib/avatar";
 
@@ -49,7 +50,7 @@ export type UserWithAuthRelations = FinalSignInUser & {
   last_name?: string;
   avatar?: string;
   two_factor?: {
-    passkeys?: { id: string }[];
+    passkeys?: { id: string; rp_id?: string | null }[];
     totp?: { id: string; enabled?: boolean } | null;
     email?: { id: string } | null;
     email_id?: string | null;
@@ -140,7 +141,9 @@ export async function evaluateAuthStepOrSignIn(
   if (user.two_factor) {
     const methods: VerificationMethod[] = [];
     const tf = user.two_factor;
-    if (tf.passkeys && tf.passkeys.length > 0) methods.push(verificationMethodMap.passkeys);
+    const { rpID } = await getWebAuthnConfig();
+    const validPasskeys = tf.passkeys?.filter((p) => !p.rp_id || p.rp_id === rpID);
+    if (validPasskeys && validPasskeys.length > 0) methods.push(verificationMethodMap.passkeys);
     if (tf.totp && (tf.totp.enabled ?? true)) methods.push(verificationMethodMap.totp);
     if (tf.email || tf.email_id) methods.push(verificationMethodMap.email);
 

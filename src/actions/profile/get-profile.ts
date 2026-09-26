@@ -79,7 +79,8 @@ export async function getExtendedProfile(): Promise<{ success: boolean, data?: E
                 user_id: user.id,
                 theme: "system" as const,
                 language: "en",
-                timezone: "UTC"
+                timezone: "UTC",
+                profile_visibility: "public" as const
             }
         };
 
@@ -132,7 +133,8 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
                 user_id: user.id,
                 theme: "system",
                 language: "en",
-                timezone: "UTC"
+                timezone: "UTC",
+                profile_visibility: "public"
             },
             notifications: user.notifications || {
                 user_id: user.id,
@@ -271,7 +273,8 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 user_id: user.id,
                 theme: "system",
                 language: "en",
-                timezone: "UTC"
+                timezone: "UTC",
+                profile_visibility: "public"
             },
             notifications: user.notifications || {
                 user_id: user.id,

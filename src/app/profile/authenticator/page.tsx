@@ -16,7 +16,7 @@ export default async function AuthenticatorPage() {
   const authenticator = hasTotp ? { id: "totp", enabled: true, added_on: new Date() } : null;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       <AuthenticatorManagementPage authenticator={authenticator} />
     </div>
   );

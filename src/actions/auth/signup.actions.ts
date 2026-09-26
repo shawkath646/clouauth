@@ -8,9 +8,18 @@ import { generateAndUploadAvatar } from "@/lib/avatar";
 import { handleError, getErrorCode } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { generateUniqueUsername } from "./helpers";
+import { verifyRecaptcha } from "@/lib/recaptcha/server";
 
-export async function signUp(data: SignUpValues) {
+export async function signUp(data: SignUpValues, recaptchaToken?: string) {
   try {
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, { expectedAction: "signup" });
+    if (!recaptchaResult.success) {
+      return {
+        success: false,
+        error: recaptchaResult.error || "Security verification failed. Please try again.",
+      };
+    }
+
     const { t } = await getServerTranslations("schema_auth");
     const signUpSchema = getSignUpSchema(t);
     const parsed = signUpSchema.safeParse(data);

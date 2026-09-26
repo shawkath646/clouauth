@@ -1,3 +1,5 @@
+export type ProfileVisibility = "public" | "link_only" | "private";
+
 export interface DBNotificationPreference {
     user_id: string;
     email_security: boolean;
@@ -11,4 +13,5 @@ export interface DBUserPreference {
     theme: "light" | "dark" | "system";
     language: string;
     timezone: string;
+    profile_visibility: ProfileVisibility;
 }

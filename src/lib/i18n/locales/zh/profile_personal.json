@@ -105,8 +105,16 @@
     "privacyPolicy": "隐私政策",
     "privacyPolicyDesc": "查看我们如何处理您的信息。",
     "viewPolicy": "查看政策",
-    "activityVisibility": "活动可见性",
-    "activityVisibilityDesc": "控制谁可以查看您的活动。",
-    "manage": "管理"
+    "profileTransparency": "资料透明度",
+    "profileTransparencyDesc": "控制谁可以查看您的公开个人资料页面以及您在网络上的显示方式。",
+    "public": "公开",
+    "publicDesc": "互联网上的任何人都可以查看您的个人资料并通过搜索找到您。",
+    "viewWithLinks": "仅通过链接查看",
+    "viewWithLinksDesc": "仅拥有您直接个人资料链接的用户可以查看。对搜索引擎隐藏。",
+    "private": "私密",
+    "privateDesc": "仅您自己可以查看您的个人资料。访客将看到该资料为私密状态。",
+    "viewPublicProfile": "查看公开个人资料",
+    "copyLink": "复制链接",
+    "linkCopied": "链接已复制到剪贴板！"
   }
 }

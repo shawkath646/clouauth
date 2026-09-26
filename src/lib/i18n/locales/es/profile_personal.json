@@ -105,8 +105,16 @@
     "privacyPolicy": "Política de Privacidad",
     "privacyPolicyDesc": "Revise cómo manejamos su información.",
     "viewPolicy": "Ver Política",
-    "activityVisibility": "Visibilidad de Actividad",
-    "activityVisibilityDesc": "Controle quién puede ver su actividad.",
-    "manage": "Administrar"
+    "profileTransparency": "Transparencia del Perfil",
+    "profileTransparencyDesc": "Elija quién puede ver su página de perfil público y cómo aparece en la web.",
+    "public": "Público",
+    "publicDesc": "Cualquier persona en Internet puede ver su perfil y encontrarlo mediante búsqueda.",
+    "viewWithLinks": "Ver con enlaces",
+    "viewWithLinksDesc": "Solo las personas con el enlace directo pueden ver su perfil. Oculto de motores de búsqueda.",
+    "private": "Privado",
+    "privateDesc": "Solo usted puede ver su perfil. Los visitantes verán que este perfil es privado.",
+    "viewPublicProfile": "Ver Perfil Público",
+    "copyLink": "Copiar Enlace",
+    "linkCopied": "¡Enlace copiado al portapapeles!"
   }
 }

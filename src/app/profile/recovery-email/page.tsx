@@ -15,7 +15,7 @@ export default async function RecoveryEmailPage() {
   const isVerified = recoveryEmailObj ? recoveryEmailObj.verified : false;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       <RecoveryEmailManagementPage email={recoveryEmail} isVerified={isVerified} />
     </div>
   );

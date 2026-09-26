@@ -19,6 +19,7 @@ import {
   markTempSessionVerified,
   getWebAuthnConfig,
 } from "./helpers";
+import { verifyRecaptcha } from "@/lib/recaptcha/server";
 
 async function sendVerificationCode(userId: string, tempSessionId: string, destination: string) {
   try {
@@ -59,14 +60,19 @@ async function triggerPasskeyVerification(userId: string, tempSessionId: string)
       return { success: false as const, error: "No passkeys registered for this account." };
     }
 
-    const { rpID } = getWebAuthnConfig();
+    const { rpID } = await getWebAuthnConfig();
+
+    const matchingPasskeys = passkeys.filter((p) => !p.rp_id || p.rp_id === rpID);
+
+    if (matchingPasskeys.length === 0) {
+      return {
+        success: false as const,
+        error: `No passkeys registered for this domain (${rpID}). Please sign in with another method and add a passkey on this device.`,
+      };
+    }
 
     const options = await generateAuthenticationOptions({
       rpID,
-      allowCredentials: passkeys.map((passkey) => ({
-        id: passkey.credential_id,
-        type: "public-key",
-      })),
       userVerification: "preferred",
     });
 
@@ -91,9 +97,22 @@ export type TriggerVerificationResult = {
 
 export async function triggerVerificationMethod(
   tempSessionId: string,
-  methodType: string
+  methodType: string,
+  recaptchaToken?: string
 ): Promise<TriggerVerificationResult> {
   try {
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken, {
+        expectedAction: "resend_code",
+      });
+      if (!recaptchaResult.success) {
+        return {
+          success: false,
+          error: recaptchaResult.error || "Security verification failed. Please try again.",
+        };
+      }
+    }
+
     const tempSession = await requireValidTempSession(tempSessionId);
 
     const user = await prisma.user.findUnique({
@@ -136,9 +155,20 @@ export async function triggerVerificationMethod(
 
 export async function resolveCodeVerification(
   tempSessionId: string,
-  code: string
+  code: string,
+  recaptchaToken?: string
 ): Promise<SignInReturn> {
   try {
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, {
+      expectedAction: "verify_code",
+    });
+    if (!recaptchaResult.success) {
+      return {
+        action: "ERROR",
+        error: recaptchaResult.error || "Security verification failed. Please try again.",
+      };
+    }
+
     const tempSession = await requireValidTempSession(tempSessionId);
 
     if (!tempSession.code_hash) {
@@ -205,7 +235,7 @@ export async function resolvePasskeyVerification(
       return { action: "ERROR", error: "Passkey not recognized for this account." };
     }
 
-    const { expectedOrigin, expectedRPID } = getWebAuthnConfig();
+    const { expectedOrigin, expectedRPID } = await getWebAuthnConfig();
 
     const rawKey = passkey.public_key.trim();
     const isBase64Url = rawKey.includes("-") || rawKey.includes("_");
@@ -256,9 +286,20 @@ export async function resolvePasskeyVerification(
 
 export async function resolveTotpVerification(
   tempSessionId: string,
-  code: string
+  code: string,
+  recaptchaToken?: string
 ): Promise<SignInReturn> {
   try {
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, {
+      expectedAction: "verify_totp",
+    });
+    if (!recaptchaResult.success) {
+      return {
+        action: "ERROR",
+        error: recaptchaResult.error || "Security verification failed. Please try again.",
+      };
+    }
+
     const tempSession = await requireValidTempSession(tempSessionId);
 
     const lockoutError = checkLockout(tempSession.locked_until);

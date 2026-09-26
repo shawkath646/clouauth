@@ -1,52 +1,77 @@
 {
   "meta": {
-    "title": "Privacy Policy",
-    "description": "Learn how ClouAuth collects, uses, and protects your personal data, including information related to OIDC, SSO, and two-factor authentication."
+    "title": "개인정보 처리방침",
+    "description": "clouburstlab이 Google Drive 연동, OAuth 및 인증과 관련된 정보를 포함하여 개인 데이터를 어떻게 수집, 사용 및 보호하는지 확인하세요."
   },
   "header": {
-    "title": "Privacy Policy",
-    "lastUpdated": "Last Updated: August 2026"
+    "title": "개인정보 처리방침",
+    "lastUpdated": "최종 수정일: 2026년 9월 26일",
+    "badge": "개인정보 및 데이터 보호",
+    "subtitle": "귀하의 개인정보와 데이터 보안은 clouburstlab이 구축하는 모든 서비스의 핵심입니다."
   },
   "sections": {
     "intro": {
-      "title": "1. Introduction",
-      "content": "At ClouAuth, we take your privacy seriously. This Privacy Policy outlines the types of personal information we collect, how it is used, and how it is protected when you use our authentication and Single Sign-On (SSO) services."
+      "title": "1. 소개",
+      "content": "clouburstlab(\"당사\", \"우리\")은 사용자의 개인정보를 존중하며 개인 데이터를 보호하기 위해 최선을 다하고 있습니다. 본 개인정보 처리방침은 clouburstlab 인증, 통합 로그인(SSO) 및 연결된 클라우드 스토리지 서비스를 이용할 때 당사가 수집하는 개인 데이터의 종류, 수집 이유, 처리 방식 및 귀하의 권리를 설명합니다."
     },
     "collection": {
-      "title": "2. Information We Collect",
-      "content": "We collect information to provide you with secure and seamless authentication services. This includes:",
+      "title": "2. 수집하는 정보",
+      "content": "당사는 안전한 인증 서비스와 사용자가 요청한 계정 기능을 제공하기 위해 필요한 정보를 수집합니다. 수집 정보의 범주는 다음과 같습니다:",
       "list": [
-        "Account Data: Your name, username, email address, phone number, and physical address when provided.",
-        "Security Data: WebAuthn passkeys, TOTP seeds, and hashed backup codes used for Two-Factor Authentication (2FA).",
-        "OAuth Data: Information regarding third-party developer applications you authorize via our OpenID Connect (OIDC) endpoints.",
-        "Device & Session Data: IP addresses, browser types, and session tokens to maintain security and prevent unauthorized access."
+        "계정 프로필 데이터: 제공된 경우 이름, 이메일 주소, 사용자 이름, 프로필 사진(아바타), 대명사, 소개글 및 주소.",
+        "보안 및 인증 데이터: 패스키(WebAuthn 공개키), 해시된 백업 코드, TOTP 보안 키 및 안전하게 해시된 비밀번호(bcrypt 사용).",
+        "타사 연결 계정: 타사 제공업체(Google, GitHub, Microsoft)를 통해 인증하거나 연결할 때 기본 프로필 식별자, 이메일 및 OAuth 인증 토큰을 수신합니다.",
+        "클라우드 스토리지 및 Google Drive 데이터: Google Drive, OneDrive 또는 Dropbox를 명시적으로 연결하는 경우 사용자가 구체적으로 요청한 파일 작업을 수행하는 데 필요한 인증 토큰과 메타데이터를 수신합니다.",
+        "기기 및 세션 로그: 무단 접근을 방지하고 보안을 유지하기 위한 IP 주소, 사용자 에이전트, 브라우저 유형 및 세션 타임스탬프."
       ]
     },
     "usage": {
-      "title": "3. How We Use Your Information",
-      "content": "Your information is used strictly to provide, maintain, and improve our authentication services. Specifically, we use it to:",
+      "title": "3. 정보 이용 목적",
+      "content": "당사는 합법적인 운영 목적으로만 정보를 처리합니다:",
       "list": [
-        "Authenticate your identity across connected applications securely.",
-        "Manage your profile, preferences, and security settings.",
-        "Send critical security alerts (e.g., unrecognized logins or password resets).",
-        "Monitor for fraudulent activity and protect the integrity of our SSO platform."
+        "연결된 애플리케이션 및 서비스에서 사용자의 신원을 안전하게 인증하기 위해.",
+        "사용자가 지시한 클라우드 스토리지 작업(예: Google Drive의 파일 동기화 또는 액세스)을 지원하기 위해.",
+        "보안 설정, 다단계 인증(2FA) 및 프로필 기본 설정을 관리하기 위해.",
+        "사기, 무단 로그인 및 보안 취약점으로부터 시스템을 보호하기 위해."
       ]
     },
+    "googleCompliance": {
+      "title": "4. Google API 서비스 및 제한적 사용(Limited Use) 공개",
+      "content": "Google API로부터 수신한 정보의 사용 및 다른 앱으로의 전송과 관련하여 clouburstlab은 제한적 사용 요구 사항을 포함한 Google API 서비스 사용자 데이터 정책을 철저히 준수합니다.",
+      "policyLinkText": "Google API Services User Data Policy",
+      "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
+      "specifics": [
+        "당사는 사용자가 명시적으로 Google Drive 연결을 선택한 경우에만 Google Drive 권한(예: drive.file, drive.readonly)에 대한 접근을 요청합니다.",
+        "당사는 Google 사용자 데이터나 Drive 파일을 광고 제공 또는 마케팅 목적으로 사용하지 않습니다.",
+        "당사는 범용 인공지능(AI) 또는 머신러닝(ML) 모델을 훈련, 재훈련 또는 개선하기 위해 Google Workspace 또는 Google Drive 데이터를 사용하지 않습니다.",
+        "기술 지원을 위한 명시적인 동의가 있거나, 보안 조사(예: 남용 조사)에 필요하거나, 법률에 의해 요구되는 경우를 제외하고는 사람의 Google 데이터 열람을 엄격히 금지합니다."
+      ]
+    },
+    "cloudDrives": {
+      "title": "5. 클라우드 스토리지 연동 (Google Drive, OneDrive, Dropbox)",
+      "content": "clouburstlab 프로필에 클라우드 드라이브를 연결하면 공식 OAuth 2.0 권한 부여 흐름을 통해서만 접근 권한이 부여됩니다. 당사는 서비스를 통해 사용자가 명시적으로 상호작용하는 파일이나 폴더에만 접근합니다. 액세스 토큰은 업계 표준 대칭 암호화(AES-256-GCM)를 사용하여 안전하게 저장되며, 사용자의 직접적인 지시 없이 파일을 열람, 변경 또는 전송하지 않습니다."
+    },
     "sharing": {
-      "title": "4. Data Sharing and Third-Party Applications",
-      "content": "ClouAuth acts as an identity provider. We do not sell your personal data. We only share your data with third-party applications when you explicitly grant them permission during the OAuth authorization flow. You can review and revoke these permissions at any time from your Profile Dashboard."
+      "title": "6. 데이터 공유 및 제3자 제공",
+      "content": "당사는 개인 데이터를 판매, 대여 또는 거래하지 않습니다. 사용자가 OAuth/OpenID Connect 동의 대화 상자를 통해 명시적으로 권한을 부여한 경우에만 타사 애플리케이션과 정보를 공유합니다. 귀하는 이러한 애플리케이션에 대해 완전한 투명성과 통제권을 가지며 언제든지 접근 권한을 철회할 수 있습니다."
+    },
+    "retention": {
+      "title": "7. 데이터 보유 및 권리",
+      "content": "사용자는 자신의 개인 데이터에 대해 완전한 통제권을 유지합니다:",
+      "list": [
+        "접근 및 수정: 프로필 대시보드에서 언제든지 개인 정보, 이메일 주소 및 보안 수단을 확인하고 수정할 수 있습니다.",
+        "서비스 연결 해제: '연결된 계정'에서 클릭 한 번으로 타사 로그인 또는 클라우드 드라이브 연결을 해제할 수 있습니다.",
+        "Google 접근 권한 철회: Google 계정 권한(https://myaccount.google.com/connections)을 통해 언제든지 clouburstlab의 접근 권한을 취소할 수 있습니다.",
+        "계정 삭제: 프로필 설정의 위험 구역(Danger Zone)을 사용하여 언제든지 계정과 모든 관련 자격 증명, 토큰 및 기록을 영구적으로 삭제할 수 있습니다."
+      ]
     },
     "security": {
-      "title": "5. Data Security",
-      "content": "We implement industry-standard security measures, including encryption in transit and at rest, secure password hashing (bcrypt), and advanced session management, to protect your data from unauthorized access, alteration, or disclosure."
-    },
-    "rights": {
-      "title": "6. Your Privacy Rights",
-      "content": "You have the right to access, update, or delete your personal information at any time. You can manage your data directly through your Profile Dashboard. If you wish to permanently delete your account and all associated data, you may do so in the Danger Zone section of your profile."
+      "title": "8. 보안 조치",
+      "content": "당사는 사용자의 정보를 보호하기 위해 강력한 기술적 및 관리적 조치를 구현합니다. 모든 통신은 TLS 1.3/HTTPS를 통해 전송 중 암호화되며, 민감한 자격 증명 및 OAuth 토큰은 저장 시 암호화되고, 비정상적인 활동에 대해 인증 세션을 지속적으로 모니터링합니다."
     },
     "contact": {
-      "title": "7. Contact Us",
-      "content": "If you have any questions or concerns about this Privacy Policy, please contact our privacy team."
+      "title": "9. 문의하기",
+      "content": "본 개인정보 처리방침 또는 데이터 관리에 관한 질문, 피드백 또는 요청 사항이 있으시면 support@clouburstlab.com으로 문의하시거나 https://clouburstlab.com을 방문해 주시기 바랍니다."
     }
   }
 }

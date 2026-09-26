@@ -57,12 +57,14 @@ model PasskeyCredential {
   sign_count    Int    @default(0)
 
   device_name  String?
+  rp_id        String?
   created_on   DateTime  @default(now())
   last_used_on DateTime?
 
   two_factor TwoFactor @relation(fields: [two_factor_id], references: [user_id], onDelete: Cascade)
 
   @@index([two_factor_id])
+  @@index([two_factor_id, rp_id])
 }
 
 model TotpMethod {

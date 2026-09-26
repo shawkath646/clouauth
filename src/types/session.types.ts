@@ -13,6 +13,7 @@ export interface DBUserSession {
     previous_refresh_token_hash?: string | null;
     created_on: Date;
     updated_on: Date;
+    last_authenticated_on?: Date;
     session_expires_on: Date;
     expires_on: Date;
     revoked_on?: Date | null;

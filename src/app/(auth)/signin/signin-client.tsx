@@ -10,19 +10,22 @@ import CodeVerification from "./code-verification";
 import PasskeyVerification, { type PasskeyAuthOptions } from "./passkey-verification";
 import AgreementStep from "./agreement-step";
 import ReenableAccountStep from "./reenable-account-step";
+import SudoVerificationStep from "./sudo-verification-step";
 import { VerificationMethod } from "@/types/auth.types";
+import type { SudoMeta } from "@/actions/auth/verification";
 import { triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
 import { toast } from "sonner";
 import { handleError } from "@/utils/error";
 import { SignInReturn } from "@/actions/auth/auth.actions";
 
-type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | "REENABLE_ACCOUNT";
+type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | "REENABLE_ACCOUNT" | "SUDO_VERIFICATION";
 
 interface SigninClientProps {
   initialStep?: Step;
   initialTempSessionId?: string | null;
   initialMethods?: VerificationMethod[];
+  sudoMeta?: SudoMeta | null;
   appData?: {
     name: string;
     icon: string | null;
@@ -33,6 +36,7 @@ export default function SigninClient({
   initialStep = "CREDENTIALS",
   initialTempSessionId = null,
   initialMethods = [],
+  sudoMeta = null,
   appData,
 }: SigninClientProps) {
   const router = useRouter();
@@ -231,6 +235,21 @@ export default function SigninClient({
 
       case "REENABLE_ACCOUNT":
         return <ReenableAccountStep tempSessionId={tempSessionId} onComplete={processAction} />;
+
+      case "SUDO_VERIFICATION":
+        if (!tempSessionId || !sudoMeta) return null;
+        return (
+          <SudoVerificationStep
+            tempSessionId={tempSessionId}
+            sudoMeta={sudoMeta}
+            onSuccess={(redirectUrl) => {
+              setIsAuthenticating(true);
+              setIsSuccess(true);
+              setAuthMessage("Identity verified! Redirecting...");
+              router.replace(redirectUrl);
+            }}
+          />
+        );
 
       default:
         return null;

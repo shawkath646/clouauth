@@ -24,6 +24,7 @@ import { signUp } from "@/actions/auth/signup.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
 import SocialProviders from "@/components/social-providers";
 import { handleError } from "@/utils/error";
+import { useReCaptcha } from "@/lib/recaptcha/client";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -36,6 +37,8 @@ export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const { executeRecaptcha } = useReCaptcha();
 
   const form = useForm<SignUpValues>({
     resolver: zodResolver(getSignUpSchema(tSchema)),
@@ -51,7 +54,8 @@ export default function SignUpForm() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await signUp(data);
+      const recaptchaToken = await executeRecaptcha("signup");
+      const response = await signUp(data, recaptchaToken ?? undefined);
       if (response.success) {
         router.push(response.redirectUrl || "/dashboard");
       } else {

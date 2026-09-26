@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
   const [isVerifying, setIsVerifying] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const { t: tUI } = useTranslations("profile_security");
+  const lastSubmittedCodeRef = useRef("");
 
   const handleStartSetup = async () => {
     setIsAdding(true);
@@ -51,17 +52,23 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
     }
   };
 
-  const handleVerify = async () => {
-    if (!secret || code.length < 6) return;
+  const handleVerify = async (codeVal?: string) => {
+    const targetCode = (codeVal !== undefined ? codeVal : code).trim();
+    if (!secret || targetCode.length < 6 || isVerifying) return;
+
+    if (lastSubmittedCodeRef.current === targetCode) return;
+    lastSubmittedCodeRef.current = targetCode;
+
     setIsVerifying(true);
     try {
-      const res = await verifyAndEnableTotpAction(secret, code);
+      const res = await verifyAndEnableTotpAction(secret, targetCode);
       if (res.success) {
         toast.success(tUI("authenticator.verifySuccess"));
         setIsAdding(false);
         setQrCodeUrl(null);
         setSecret(null);
         setCode("");
+        lastSubmittedCodeRef.current = "";
       } else {
         toast.error(tUI("authenticator.verifyFailed"), { description: res.error });
       }
@@ -115,7 +122,13 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
                   type="text"
                   placeholder="000000"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setCode(val);
+                    if (val.length === 6) {
+                      handleVerify(val);
+                    }
+                  }}
                   className="text-center text-lg tracking-[0.5em] font-mono h-12"
                 />
               </div>
@@ -135,7 +148,7 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
                 </Button>
                 <Button 
                   className="w-1/2" 
-                  onClick={handleVerify} 
+                  onClick={() => handleVerify()} 
                   disabled={isVerifying || code.length < 6}
                 >
                   {isVerifying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

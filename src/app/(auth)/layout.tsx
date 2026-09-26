@@ -9,6 +9,7 @@ import { BackgroundStars } from "@/components/landing/background-stars";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
 import { FooterLinks } from "@/components/landing/footer-links";
+import { ReCaptchaDisclaimer } from "@/lib/recaptcha/client";
 
 export default async function AuthLayout({
   children,
@@ -46,9 +47,13 @@ export default async function AuthLayout({
             <FooterLinks />
           </div>
 
+          <div className="pointer-events-auto text-center max-w-xs sm:max-w-sm md:max-w-md">
+            <ReCaptchaDisclaimer />
+          </div>
+
           <Link
             href="/"
-            className="transition-transform hover:scale-101 pointer-events-auto"
+            className="transition-transform hover:scale-101 pointer-events-auto shrink-0"
           >
             {/* Light Mode Logo */}
             <Image

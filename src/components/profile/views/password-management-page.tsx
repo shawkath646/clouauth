@@ -162,17 +162,6 @@ export function PasswordManagementPage({
       title={tUI("password.title")}
       description={tUI("password.desc")}
       noPadding
-      headerAction={
-        hasPassword ? (
-          <Button
-            onClick={() => setIsEditing(true)}
-            size="sm"
-            variant="outline"
-          >
-            {tUI("password.changeBtn")}
-          </Button>
-        ) : undefined
-      }
     >
       {!hasPassword ? (
         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

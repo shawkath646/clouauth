@@ -1,5 +1,6 @@
 import { getFullProfile } from "@/actions/profile/get-profile";
 import { PasswordManagementPage } from "@/components/profile/views/password-management-page";
+import { requireSudoPage } from "@/actions/auth/sudo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,16 +9,17 @@ export const metadata: Metadata = {
 };
 
 export default async function PasswordPage() {
+  await requireSudoPage("/profile/password");
   const profileRes = await getFullProfile();
-  const profile = (profileRes.success && "profile" in profileRes ? profileRes.profile : null) as import("@/types/profile.types").FullProfile | null;
+  const profile = profileRes.success ? profileRes.data : null;
 
-  const hasPassword = !!profile?.password;
+  const hasPassword = Boolean(profile?.password);
   const lastChangedOn = profile?.password?.last_changed_on
     ? new Date(profile.password.last_changed_on).toLocaleDateString()
     : undefined;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       <PasswordManagementPage
         hasPassword={hasPassword}
         lastChangedOn={lastChangedOn}

@@ -8,9 +8,10 @@ model NotificationPreference {
 }
 
 model UserPreference {
-  user_id  String @id
-  theme    String @default("system")
-  language String @default("en")
-  timezone String @default("UTC")
-  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id            String @id
+  theme              String @default("system")
+  language           String @default("en")
+  timezone           String @default("UTC")
+  profile_visibility String @default("public")
+  user               User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }

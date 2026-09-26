@@ -105,8 +105,16 @@
     "privacyPolicy": "Privacy Policy",
     "privacyPolicyDesc": "Review how we handle your information.",
     "viewPolicy": "View Policy",
-    "activityVisibility": "Activity Visibility",
-    "activityVisibilityDesc": "Control who can see your activity.",
-    "manage": "Manage"
+    "profileTransparency": "Profile Transparency",
+    "profileTransparencyDesc": "Choose who can see your profile page and how your account appears across the web.",
+    "public": "Public",
+    "publicDesc": "Anyone on the internet can view your profile and find you via search.",
+    "viewWithLinks": "View with links",
+    "viewWithLinksDesc": "Only people with your direct profile link can view your profile. Hidden from search engines.",
+    "private": "Private",
+    "privateDesc": "Only you can see your profile. Visitors will see that this profile is private.",
+    "viewPublicProfile": "View Public Profile",
+    "copyLink": "Copy Link",
+    "linkCopied": "Profile link copied to clipboard!"
   }
 }

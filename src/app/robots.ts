@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/signin", "/signup", "/docs", "/developers", "/privacy", "/terms"],
+        allow: ["/", "/signin", "/signup", "/docs", "/developers", "/privacy", "/terms", "/p/"],
         disallow: [
           "/profile/",
           "/api/",

@@ -12,11 +12,14 @@ import { getServerTranslations } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
 
 export const metadata: Metadata = {
-  title: "API Documentation | ClouAuth",
-  description: "Official API reference and OIDC discovery documentation for the ClouAuth identity provider. Learn how to authenticate and manage users.",
+  title: "API Documentation & OIDC Discovery",
+  description: "Official API reference and OIDC discovery documentation for the ClouAuth identity provider by clouburstlab.",
+  alternates: {
+    canonical: "/docs",
+  },
   openGraph: {
-    title: "API Documentation | ClouAuth",
-    description: "Official API reference and OIDC discovery documentation for the ClouAuth identity provider.",
+    title: "API Documentation & OIDC Discovery — clouburstlab",
+    description: "Official API reference and OIDC discovery documentation for the ClouAuth identity provider by clouburstlab.",
   },
 };
 

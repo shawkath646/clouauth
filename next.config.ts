@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
         {
           key: "Content-Security-Policy",
-          value: `default-src 'self'; script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.clouburstlab.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https:; font-src 'self' data:; connect-src 'self' https://accounts.google.com https://*.googleapis.com https://api.github.com; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';`,
+          value: `default-src 'self'; script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://accounts.google.com https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com/recaptcha/; img-src 'self' data: blob: https://assets.clouburstlab.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https:; font-src 'self' data:; connect-src 'self' https://accounts.google.com https://*.googleapis.com https://api.github.com https://www.google.com/recaptcha/; frame-src 'self' https://accounts.google.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; object-src 'none'; base-uri 'self';`,
         },
       ],
     },

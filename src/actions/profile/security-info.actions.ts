@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { handleError } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { sendEmail } from "@/lib/email";
+import { checkSudoAction } from "@/actions/auth/sudo";
 
 import {
   getPasswordSchema,
@@ -20,8 +21,12 @@ import {
 
 export async function updatePasswordAction(data: PasswordValues) {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) return { success: false, error: "Unauthorized" };
+    const sudoCheck = await checkSudoAction("/profile/password");
+    if (!sudoCheck.authorized) {
+      return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
+    }
+
+    const sessionData = sudoCheck.sessionData;
 
     const { t } = await getServerTranslations("schema_security");
     const passwordSchema = getPasswordSchema(t);
@@ -153,8 +158,12 @@ export async function addPhoneMethodAction(data: PhoneValues) {
 
 export async function removeTwoFactorMethodAction(methodId: string) {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) return { success: false, error: "Unauthorized" };
+    const sudoCheck = await checkSudoAction("/profile/authenticator");
+    if (!sudoCheck.authorized) {
+      return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
+    }
+
+    const sessionData = sudoCheck.sessionData;
 
     if (methodId === "totp") {
       await prisma.totpMethod.deleteMany({
@@ -171,10 +180,14 @@ export async function removeTwoFactorMethodAction(methodId: string) {
   }
 }
 
-export async function generateBackupCodesAction(): Promise<{ success: boolean; codes?: string[]; error?: string }> {
+export async function generateBackupCodesAction(): Promise<{ success: boolean; codes?: string[]; error?: string; sudoRequired?: boolean; redirectUrl?: string }> {
   try {
-    const sessionData = await getUserSession();
-    if (!sessionData) return { success: false, error: "Unauthorized" };
+    const sudoCheck = await checkSudoAction("/profile/backup-codes");
+    if (!sudoCheck.authorized) {
+      return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
+    }
+
+    const sessionData = sudoCheck.sessionData;
 
     await prisma.recoveryCode.deleteMany({
       where: { user_id: sessionData.user.id },

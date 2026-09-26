@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const { t } = useTranslations("schema_security");
   const { t: tUI } = useTranslations("profile_security");
+  const lastSubmittedCodeRef = useRef("");
 
   const form = useForm<EmailValues>({
     resolver: zodResolver(getEmailSchema(t)),
@@ -66,16 +67,22 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode || verificationCode.length !== 6) return;
+  const handleVerifyCode = async (codeVal?: string) => {
+    const targetCode = (codeVal !== undefined ? codeVal : verificationCode).trim();
+    if (!targetCode || targetCode.length !== 6 || isVerifyingCode) return;
+
+    if (lastSubmittedCodeRef.current === targetCode) return;
+    lastSubmittedCodeRef.current = targetCode;
+
     setIsVerifyingCode(true);
-    const res = await verifyRecoveryEmailAction(verificationCode);
+    const res = await verifyRecoveryEmailAction(targetCode);
     setIsVerifyingCode(false);
     
     if (res.success) {
       toast.success("Recovery email verified successfully");
       setIsVerifyingState(false);
       setVerificationCode("");
+      lastSubmittedCodeRef.current = "";
     } else {
       toast.error("Verification failed", { description: res.error });
     }
@@ -95,7 +102,13 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
               type="text"
               placeholder="000000"
               value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setVerificationCode(val);
+                if (val.length === 6) {
+                  handleVerifyCode(val);
+                }
+              }}
               className="text-center text-lg tracking-[0.5em] font-mono h-12"
             />
           </div>
@@ -113,7 +126,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
             </Button>
             <Button 
               type="button" 
-              onClick={handleVerifyCode} 
+              onClick={() => handleVerifyCode()} 
               disabled={isVerifyingCode || verificationCode.length !== 6}
               className="w-1/2"
             >

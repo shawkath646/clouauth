@@ -251,3 +251,30 @@ export async function updateProfilePreferences(data: z.infer<typeof preferencesS
   }
   return { success: true };
 }
+
+export async function updateProfileVisibility(visibility: import("@/types/preferences.types").ProfileVisibility) {
+  try {
+    const sessionData = await getUserSession();
+    if (!sessionData) return { success: false, error: "Unauthorized" };
+
+    if (!["public", "link_only", "private"].includes(visibility)) {
+      return { success: false, error: "Invalid profile visibility value." };
+    }
+
+    await prisma.userPreference.upsert({
+      where: { user_id: sessionData.user.id },
+      update: { profile_visibility: visibility },
+      create: {
+        user_id: sessionData.user.id,
+        profile_visibility: visibility,
+      },
+    });
+
+    revalidatePath("/profile");
+    revalidatePath("/profile/privacy");
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: handleError(e, "Failed to execute updateProfileVisibility") };
+  }
+}
+

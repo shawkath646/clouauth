@@ -8,11 +8,14 @@ import { getServerTranslations } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
 
 export const metadata: Metadata = {
-  title: "Developer Integration Guide | ClouAuth",
-  description: "Step-by-step tutorial on how to register and integrate your application with ClouAuth using OAuth 2.0.",
+  title: "Developer Integration Guide",
+  description: "Step-by-step tutorial on how to register and integrate your application with ClouAuth by clouburstlab using OAuth 2.0 and PKCE.",
+  alternates: {
+    canonical: "/developers",
+  },
   openGraph: {
-    title: "Developer Integration Guide | ClouAuth",
-    description: "Step-by-step tutorial on how to register and integrate your application with ClouAuth using OAuth 2.0.",
+    title: "Developer Integration Guide — clouburstlab",
+    description: "Step-by-step tutorial on how to register and integrate your application with ClouAuth by clouburstlab using OAuth 2.0 and PKCE.",
   },
 };
 

@@ -1,42 +1,64 @@
 {
   "meta": {
-    "title": "Terms of Service",
-    "description": "Read the Terms of Service for using ClouAuth's identity and authentication platform."
+    "title": "شروط الخدمة",
+    "description": "شروط الخدمة التي تحكم استخدامك لمنصة ClouAuth المقدمة من clouburstlab، وخدمات موفر الهوية، وواجهات برمجة التطبيقات للمطورين، والتخزين السحابي المتصل."
   },
   "header": {
-    "title": "Terms of Service",
-    "lastUpdated": "Last Updated: August 2026"
+    "badge": "الشؤون القانونية وشروط الخدمة",
+    "title": "شروط الخدمة",
+    "subtitle": "شروط واضحة وشفافة تحكم حسابك وتكاملات المطورين والتخزين السحابي المتصل على منصة ClouAuth من clouburstlab.",
+    "lastUpdated": "آخر تحديث: سبتمبر 2026"
   },
   "sections": {
     "intro": {
-      "title": "1. Acceptance of Terms",
-      "content": "By accessing or using the ClouAuth platform, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+      "title": "1. قبول الشروط",
+      "content": "من خلال الوصول إلى منصة ClouAuth أو إنشاء حساب عليها أو استخدامها (المقدمة من clouburstlab، والمشار إليها بـ 'نحن' أو 'لنا')، فإنك توافق على الالتزام بشروط الخدمة هذه وسياسة الخصوصية الخاصة بنا. إذا كنت لا توافق على هذه الشروط، يرجى عدم الوصول إلى خدماتنا أو استخدامها."
     },
     "account": {
-      "title": "2. Account Registration and Security",
-      "content": "You must provide accurate and complete information when registering an account. You are responsible for maintaining the confidentiality of your password, passkeys, and backup codes. You agree to notify us immediately of any unauthorized use of your account."
+      "title": "2. تسجيل الحساب وأمانه",
+      "content": "يجب عليك تقديم معلومات دقيقة وقابلة للتحقق عند تسجيل الحساب. أنت مسؤول عن الحفاظ على سرية وأمان بيانات الاعتماد الخاصة بك، بما في ذلك كلمات المرور ومفاتيح المرور (FIDO2 / WebAuthn) وأدوات المصادقة الثنائية (TOTP) ورموز النسخ الاحتياطي للاسترداد. أنت توافق على إخطار clouburstlab فوراً بأي وصول غير مصرح به أو اختراق لبيانات الاعتماد الخاصة بك. لن تكون clouburstlab مسؤولة عن أي خسارة أو ضرر ينشأ عن إخفاقك في حماية بيانات اعتمادك."
     },
     "developer": {
-      "title": "3. Developer Applications and API Usage",
-      "content": "If you register third-party developer applications to use our OAuth 2.0 / OIDC endpoints, you agree to:",
+      "title": "3. تطبيقات المطورين واستخدام واجهة برمجة التطبيقات",
+      "content": "يوافق المطورون الذين يستخدمون نقاط نهاية OpenID Connect (OIDC) أو OAuth 2.0 في ClouAuth، أو الذين يسجلون تطبيقات مطورين، على الالتزام بالمعايير التالية:",
       "list": [
-        "Provide accurate details regarding your application's purpose and redirect URIs.",
-        "Securely store your Client Secret and never expose it in public repositories or client-side code.",
-        "Respect rate limits and fair usage policies for our API endpoints.",
-        "Ensure your application complies with all applicable privacy laws regarding user data you request access to."
+        "تقديم تفاصيل دقيقة بشأن الغرض من التطبيق، والمؤسسة، ومعرفات إعادة التوجيه (Redirect URIs).",
+        "تخزين السر الخاص بالعميل (Client Secret) بأمان وعدم الكشف عنه في المستودعات العامة أو حزم جانب العميل.",
+        "الالتزام بجميع حدود المعدل الموثقة وقواعد ترقيم الصفحات وسياسات الاستخدام العادل عبر واجهات برمجة التطبيقات.",
+        "الامتثال لجميع قوانين حماية البيانات والخصوصية المعمول بها (بما في ذلك GDPR وCCPA) لأي بيانات مستخدم يتم الوصول إليها."
+      ]
+    },
+    "cloudStorage": {
+      "title": "4. تكاملات التخزين السحابي المتصلة",
+      "content": "تتيح ClouAuth للمستخدمين ربط حسابات التخزين السحابي التابعة لجهات خارجية (مثل Google Drive وMicrosoft OneDrive وDropbox) لتخزين البيانات ومزامنتها. فيما يتعلق بهذه التكاملات:",
+      "list": [
+        "أنت تحتفظ بالملكية الكاملة بنسبة 100% وحقوق الملكية الفكرية لجميع الملفات والمستندات والبيانات المخزنة في محركات الأقراص السحابية المتصلة.",
+        "لا تقوم clouburstlab مطلقاً ببيع أو تأجير أو تحقيق الدخل من ملفاتك السحابية أو نقلها إلى وسطاء البيانات أو الشبكات الإعلانية.",
+        "لا تُستخدم ملفاتك السحابية ورموز وصول OAuth أبداً لتدريب نماذج الذكاء الاصطناعي العامة أو التعلم الآلي.",
+        "يمكنك إلغاء ربط وإلغاء تفويض محرك الأقراص السحابي في أي وقت مباشرة من خلال إعدادات ملفك الشخصي أو إعدادات موفر التخزين السحابي."
       ]
     },
     "acceptableUse": {
-      "title": "4. Acceptable Use",
-      "content": "You agree not to use ClouAuth for any unlawful purposes or to conduct any activities that may harm, disrupt, or impair our servers, networks, or the experience of other users. This includes, but is not limited to, automated scraping, brute-force attacks, or distributing malware."
+      "title": "5. سياسة الاستخدام المقبول",
+      "content": "أنت توافق على عدم إساءة استخدام ClouAuth أو مساعدة الآخرين في القيام بذلك. وعلى وجه التحديد، فإنك توافق على عدم القيام بأي من الأنشطة المحظورة التالية:",
+      "list": [
+        "محاولات هجمات القوة الغاشمة، أو حشو بيانات الاعتماد، أو التحايل على تدابير أمان المصادقة أو حدود المعدل.",
+        "الكشط الآلي (scraping) أو الزحف أو الجمع غير المصرح به لملفات تعريف المستخدمين أو عناوين البريد الإلكتروني.",
+        "توزيع البرامج الضارة أو الفيروسات أو محاولات التصيد الاحتيالي أو الرسائل التجارية غير المرغوب فيها عبر تطبيقات المطورين.",
+        "التدخل في تشغيل أو أمان أو البنية التحتية لشبكة clouburstlab وخدماتها الشريكة أو تعطيلها."
+      ]
     },
     "termination": {
-      "title": "5. Termination",
-      "content": "We reserve the right to suspend or terminate your account and access to our services at our sole discretion, without notice, for conduct that we believe violates these Terms of Service or is harmful to other users, us, or third parties."
+      "title": "6. إنهاء الحساب وحذفه",
+      "content": "يمكنك إنهاء حسابك في أي وقت عن طريق تشغيل تدفق حذف الحساب في إعدادات ملفك الشخصي في منطقة الخطر (Danger Zone). عند الحذف، سيتم محو بيانات الاعتماد والجلسات النشطة واتصالات الموفر نهائياً. تحتفظ clouburstlab بالحق في تعليق أو إنهاء الحسابات التي تنتهك هذه الشروط أو تخالف القوانين المعمول بها أو تشكل تهديداً لأمان النظام."
+    },
+    "disclaimer": {
+      "title": "7. إخلاء المسؤولية وحدودها",
+      "content": "يتم توفير ClouAuth وجميع الخدمات ذات الصلة على أساس 'كما هي' و'كما هي متاحة' دون أي ضمانات من أي نوع، سواء كانت صريحة أو ضمنية. إلى أقصى حد يسمح به القانون المعمول به، لن تكون clouburstlab والشركات التابعة لها مسؤولة عن أي أضرار غير مباشرة أو عرضية أو خاصة أو تبعية تنشأ عن وصولك إلى المنصة أو عدم قدرتك على استخدامها."
     },
     "changes": {
-      "title": "6. Changes to Terms",
-      "content": "We may modify these Terms of Service from time to time. We will notify you of any significant changes by posting the new terms on this page and updating the 'Last Updated' date. Continued use of the platform after any such changes constitutes your acceptance of the new terms."
+      "title": "8. التعديلات ومعلومات الاتصال",
+      "content": "يجوز لنا تحديث شروط الخدمة هذه بشكل دوري لتعكس التغييرات في بنيتنا التحتية أو تكاملاتنا أو التزاماتنا القانونية. سنخطر المستخدمين بالتحديثات الجوهرية عبر المنصة أو إشعارات البريد الإلكتروني. للاستفسارات القانونية أو الإشعارات، تواصل مع فريق الامتثال لدينا على support@clouburstlab.com."
     }
   }
 }

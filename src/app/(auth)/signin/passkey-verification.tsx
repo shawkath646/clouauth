@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { Loader2, Fingerprint, AlertCircle } from "lucide-react";
-import { startAuthentication, browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { startAuthentication, browserSupportsWebAuthn, WebAuthnAbortService } from "@simplewebauthn/browser";
 import { resolvePasskeyVerification, triggerVerificationMethod } from "@/actions/auth/verification.actions";
 import { toast } from "sonner";
 import { handleError } from "@/utils/error";
@@ -32,6 +32,9 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      try {
+        WebAuthnAbortService.cancelCeremony();
+      } catch {}
     };
   }, []);
 
@@ -51,6 +54,7 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
       return;
     }
 
+    hasTriggeredRef.current = true;
     isVerifyingRef.current = true;
     setIsLoading(true);
 
@@ -114,9 +118,17 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
 
   useEffect(() => {
     if (hasTriggeredRef.current) return;
-    hasTriggeredRef.current = true;
-    handleVerify(false);
-  }, [handleVerify, tempSessionId]);
+
+    const timer = setTimeout(() => {
+      if (mountedRef.current && !hasTriggeredRef.current) {
+        handleVerify(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [handleVerify]);
 
   return (
     <motion.div

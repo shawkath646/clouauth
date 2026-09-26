@@ -21,11 +21,20 @@ import {
   requireValidTempSession,
   USER_WITH_AUTH_INCLUDE,
 } from "./helpers";
+import { verifyRecaptcha } from "@/lib/recaptcha/server";
 
 export type { SignInReturn, AccountDisabledReturn };
 
-export async function signIn(data: SignInValues): Promise<SignInReturn> {
+export async function signIn(data: SignInValues, recaptchaToken?: string): Promise<SignInReturn> {
   try {
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, { expectedAction: "signin" });
+    if (!recaptchaResult.success) {
+      return {
+        action: "ERROR",
+        error: recaptchaResult.error || "Security verification failed. Please try again.",
+      };
+    }
+
     const { t } = await getServerTranslations("schema_auth");
     const parsed = getSignInSchema(t).safeParse(data);
 

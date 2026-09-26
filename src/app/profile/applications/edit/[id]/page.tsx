@@ -49,7 +49,7 @@ export default async function EditApplicationPage({ params }: EditApplicationPag
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       <main className="w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl border border-border/50 shadow-sm">
         <ApplicationForm initialData={formattedApp} />
       </main>

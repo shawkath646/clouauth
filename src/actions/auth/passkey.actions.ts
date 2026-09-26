@@ -24,7 +24,7 @@ export async function triggerPasskeyRegistration() {
       },
     });
 
-    const { rpID } = getWebAuthnConfig();
+    const { rpID } = await getWebAuthnConfig();
     const rpName = getEnv("NEXT_PUBLIC_APP_NAME", true) || "ClouAuth";
     const userDisplayName =
       [sessionData.user.first_name, sessionData.user.last_name].filter(Boolean).join(" ") ||
@@ -90,7 +90,7 @@ export async function resolvePasskeyRegistration(
       return { success: false, error: "Invalid registration payload from authenticator." };
     }
 
-    const { expectedOrigin, expectedRPID } = getWebAuthnConfig();
+    const { expectedOrigin, expectedRPID, rpID } = await getWebAuthnConfig();
 
     const verification = await verifyRegistrationResponse({
       response: payload,
@@ -129,6 +129,7 @@ export async function resolvePasskeyRegistration(
         public_key: Buffer.from(credential.publicKey).toString("base64"),
         sign_count: credential.counter,
         device_name: deviceName.trim() || "Passkey / Security Key",
+        rp_id: rpID,
       },
     });
 

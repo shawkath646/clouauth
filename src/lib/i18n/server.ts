@@ -151,11 +151,22 @@ function flattenDictionary(dict: Record<string, unknown>, prefix = ''): Record<s
     const pre = prefix.length ? prefix + '.' : '';
     const value = dict[key];
 
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        if (typeof item === 'string') {
+          acc[`${pre}${key}.${index}`] = item;
+        } else if (typeof item === 'number' || typeof item === 'boolean') {
+          acc[`${pre}${key}.${index}`] = String(item);
+        } else if (typeof item === 'object' && item !== null) {
+          Object.assign(acc, flattenDictionary(item as Record<string, unknown>, `${pre}${key}.${index}`));
+        }
+      });
+    } else if (typeof value === 'object' && value !== null) {
       Object.assign(acc, flattenDictionary(value as Record<string, unknown>, pre + key));
-    }
-    else if (typeof value === 'string') {
+    } else if (typeof value === 'string') {
       acc[pre + key] = value;
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      acc[pre + key] = String(value);
     }
 
     return acc;

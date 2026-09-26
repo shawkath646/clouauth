@@ -10,7 +10,7 @@ export default async function PhonePage() {
   const phones: React.ComponentProps<typeof PhoneManagementPage>["phones"] = [];
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       <PhoneManagementPage phones={phones} />
     </div>
   );

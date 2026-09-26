@@ -1,42 +1,64 @@
 {
   "meta": {
-    "title": "Terms of Service",
-    "description": "Read the Terms of Service for using ClouAuth's identity and authentication platform."
+    "title": "服务条款",
+    "description": "规范您使用由 clouburstlab 提供的 ClouAuth 平台、身份提供商服务、开发者 API 和关联云存储的服务条款。"
   },
   "header": {
-    "title": "Terms of Service",
-    "lastUpdated": "Last Updated: August 2026"
+    "badge": "法律与服务条款",
+    "title": "服务条款",
+    "subtitle": "规范您在 clouburstlab 旗下的 ClouAuth 上的账户、开发者集成和关联存储的清晰透明条款。",
+    "lastUpdated": "最后更新：2026年9月"
   },
   "sections": {
     "intro": {
-      "title": "1. Acceptance of Terms",
-      "content": "By accessing or using the ClouAuth platform, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+      "title": "1. 条款的接受",
+      "content": "访问、创建账户或使用由 clouburstlab（以下简称“我们”）提供的 ClouAuth 平台，即表示您同意受本服务条款和我们的隐私政策约束。如果您不同意这些条款，请勿访问或使用我们的服务。"
     },
     "account": {
-      "title": "2. Account Registration and Security",
-      "content": "You must provide accurate and complete information when registering an account. You are responsible for maintaining the confidentiality of your password, passkeys, and backup codes. You agree to notify us immediately of any unauthorized use of your account."
+      "title": "2. 账户注册与安全",
+      "content": "您在注册账户时必须提供准确且可验证的信息。您有责任维护身份验证凭据的机密性和安全性，包括密码、通行密钥（Passkeys - FIDO2 / WebAuthn）、双重身份验证器（TOTP）和恢复备用码。您同意在发现任何未经授权的访问或凭据泄露时立即通知 clouburstlab。对于因您未能保护身份验证凭据而导致的任何损失，clouburstlab 不承担责任。"
     },
     "developer": {
-      "title": "3. Developer Applications and API Usage",
-      "content": "If you register third-party developer applications to use our OAuth 2.0 / OIDC endpoints, you agree to:",
-      "list": [
-        "Provide accurate details regarding your application's purpose and redirect URIs.",
-        "Securely store your Client Secret and never expose it in public repositories or client-side code.",
-        "Respect rate limits and fair usage policies for our API endpoints.",
-        "Ensure your application complies with all applicable privacy laws regarding user data you request access to."
+      "title": "3. 开发者应用程序与 API 使用",
+      "content": "使用 ClouAuth OpenID Connect (OIDC) 或 OAuth 2.0 端点，或注册开发者应用程序的开发者，同意遵守以下义务："
+      ,"list": [
+        "提供有关应用程序用途、组织机构和重定向 URI 的真实准确信息。",
+        "安全存储您的客户端密钥（Client Secret），切勿将其暴露在公开仓库、前端代码包或不安全的环境中。",
+        "遵守所有记录在案的 API 速率限制、分页规则和公平使用政策。",
+        "针对通过我们的身份提供商访问的任何用户数据，遵守所有适用的数据保护和隐私法规（包括 GDPR 和 CCPA）。"
+      ]
+    },
+    "cloudStorage": {
+      "title": "4. 关联云存储集成",
+      "content": "ClouAuth 允许用户关联第三方云存储账户（例如 Google Drive、Microsoft OneDrive 和 Dropbox）以进行账户存储和同步。关于这些集成："
+      ,"list": [
+        "您保留在关联云存储中存储的所有文件、文档和数据的 100% 完整所有权和知识产权。",
+        "clouburstlab 绝不出售、出租、转让您的云端文件，亦不将其货币化提供给数据经纪商或广告网络。",
+        "您的云端文件和 OAuth 访问令牌绝不会用于训练通用人工智能或机器学习模型。",
+        "您可以随时直接通过个人资料设置或云服务商账户控制面板断开连接并撤销云存储授权。"
       ]
     },
     "acceptableUse": {
-      "title": "4. Acceptable Use",
-      "content": "You agree not to use ClouAuth for any unlawful purposes or to conduct any activities that may harm, disrupt, or impair our servers, networks, or the experience of other users. This includes, but is not limited to, automated scraping, brute-force attacks, or distributing malware."
+      "title": "5. 合理使用政策",
+      "content": "您同意不滥用 ClouAuth 或协助他人滥用。具体而言，您同意不进行、尝试或协助以下任何受禁止的活动："
+      ,"list": [
+        "尝试暴力破解、撞库攻击，或规避身份验证或速率限制安全措施。",
+        "自动抓取（scraping）、爬取或未经授权采集用户个人资料、电子邮件地址或目录记录。",
+        "通过开发者应用程序分发恶意软件、病毒、钓鱼信息或未经请求的垃圾商业信息。",
+        "干扰、破坏或过度占用 clouburstlab 及其合作服务的正常运行、安全或网络基础设施。"
+      ]
     },
     "termination": {
-      "title": "5. Termination",
-      "content": "We reserve the right to suspend or terminate your account and access to our services at our sole discretion, without notice, for conduct that we believe violates these Terms of Service or is harmful to other users, us, or third parties."
+      "title": "6. 终止与账户注销",
+      "content": "您可以随时通过个人资料设置中的危险区域（Danger Zone）执行注销流程来注销您的账户。注销后，您的凭据、活动会话和第三方连接将被永久删除。clouburstlab 保留暂停或终止违反本条款、违反适用法律或对系统安全构成迫在眉睫威胁的账户的权利。"
+    },
+    "disclaimer": {
+      "title": "7. 免责声明与责任限制",
+      "content": "ClouAuth 及所有相关服务均按“原样”（AS IS）和“现有”（AS AVAILABLE）的基础提供，不提供任何明示或暗示的保证。在适用法律允许的最大范围内，clouburstlab 及其关联方对因您访问或无法使用平台而引起的任何间接、偶然、特殊、后果性或惩罚性损害不承担责任。"
     },
     "changes": {
-      "title": "6. Changes to Terms",
-      "content": "We may modify these Terms of Service from time to time. We will notify you of any significant changes by posting the new terms on this page and updating the 'Last Updated' date. Continued use of the platform after any such changes constitutes your acceptance of the new terms."
+      "title": "8. 条款变更与联系方式",
+      "content": "我们可能会定期更新本服务条款，以反映我们的基础设施、集成服务或法律义务的变化。我们将通过平台通知或电子邮件将实质性更新告知用户。如有法律咨询、条款疑问或通知，请通过 support@clouburstlab.com 联系我们的合规团队。"
     }
   }
 }

@@ -1,52 +1,77 @@
 {
   "meta": {
-    "title": "Privacy Policy",
-    "description": "Learn how ClouAuth collects, uses, and protects your personal data, including information related to OIDC, SSO, and two-factor authentication."
+    "title": "سياسة الخصوصية",
+    "description": "تعرف على كيفية قيام clouburstlab بجمع بياناتك الشخصية واستخدامها وحمايتها، بما في ذلك المعلومات المتعلقة بتكامل Google Drive وOAuth والمصادقة."
   },
   "header": {
-    "title": "Privacy Policy",
-    "lastUpdated": "Last Updated: August 2026"
+    "title": "سياسة الخصوصية",
+    "lastUpdated": "آخر تحديث: 26 سبتمبر 2026",
+    "badge": "الخصوصية وحماية البيانات",
+    "subtitle": "خصوصيتك وأمان بياناتك هما الأساس في كل ما نبنيه في clouburstlab."
   },
   "sections": {
     "intro": {
-      "title": "1. Introduction",
-      "content": "At ClouAuth, we take your privacy seriously. This Privacy Policy outlines the types of personal information we collect, how it is used, and how it is protected when you use our authentication and Single Sign-On (SSO) services."
+      "title": "1. مقدمة",
+      "content": "في clouburstlab (\"نحن\" أو \"الخاص بنا\")، نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية. توضح سياسة الخصوصية هذه البيانات الشخصية التي نجمعها، وسبب جمعها، وكيفية التعامل معها، وحقوقك عند استخدام خدمات المصادقة وتسجيل الدخول الموحد (SSO) والتخزين السحابي المرتبط من clouburstlab."
     },
     "collection": {
-      "title": "2. Information We Collect",
-      "content": "We collect information to provide you with secure and seamless authentication services. This includes:",
+      "title": "2. المعلومات التي نجمعها",
+      "content": "نجمع المعلومات اللازمة لتقديم خدمات مصادقة آمنة وميزات الحساب التي يطلبها المستخدم. وتشمل فئات المعلومات:",
       "list": [
-        "Account Data: Your name, username, email address, phone number, and physical address when provided.",
-        "Security Data: WebAuthn passkeys, TOTP seeds, and hashed backup codes used for Two-Factor Authentication (2FA).",
-        "OAuth Data: Information regarding third-party developer applications you authorize via our OpenID Connect (OIDC) endpoints.",
-        "Device & Session Data: IP addresses, browser types, and session tokens to maintain security and prevent unauthorized access."
+        "بيانات الملف الشخصي للحساب: اسمك، وعنوان بريدك الإلكتروني، واسم المستخدم، وصورة الملف الشخصي، والضمائر، والسيرة الذاتية، والعنوان عند تقديمه.",
+        "بيانات الأمان والمصادقة: مفاتيح المرور (مفاتيح WebAuthn العامة)، ورموز النسخ الاحتياطي المشفرة، وأسرار TOTP، وكلمات المرور المشفرة بأمان (باستخدام bcrypt).",
+        "حسابات الجهات الخارجية المتصلة: عندما تقوم بالمصادقة أو الاتصال بمزودي خدمات خارجيين (Google وGitHub وMicrosoft)، نتلقى معرّف ملفك الشخصي الأساسي وبريدك الإلكتروني ورموز مصادقة OAuth.",
+        "بيانات التخزين السحابي وGoogle Drive: إذا قمت بالاتصال صراحة بـ Google Drive أو OneDrive أو Dropbox، فإننا نتلقى رموز التفويض والبيانات الوصفية اللازمة لتنفيذ عمليات الملفات التي تطلبها على وجه التحديد.",
+        "سجلات الأجهزة والجلسات: عناوين IP ووكلاء المستخدم وأنواع المتصفحات والطوابع الزمنية للجلسات للحماية من الوصول غير المصرح به والحفاظ على الأمان."
       ]
     },
     "usage": {
-      "title": "3. How We Use Your Information",
-      "content": "Your information is used strictly to provide, maintain, and improve our authentication services. Specifically, we use it to:",
+      "title": "3. كيف نستخدم معلوماتك",
+      "content": "نعالج معلوماتك فقط لأغراض تشغيلية مشروعة:",
       "list": [
-        "Authenticate your identity across connected applications securely.",
-        "Manage your profile, preferences, and security settings.",
-        "Send critical security alerts (e.g., unrecognized logins or password resets).",
-        "Monitor for fraudulent activity and protect the integrity of our SSO platform."
+        "للتحقق من هويتك بأمان عبر التطبيقات والخدمات المتصلة.",
+        "لتمكين عمليات التخزين السحابي الموجهة من المستخدم (مثل مزامنة الملفات أو الوصول إليها في Google Drive).",
+        "لإدارة إعدادات الأمان الخاصة بك، والمصادقة الثنائية (2FA)، وتفضيلات الملف الشخصي.",
+        "للحماية من الاحتيال، وعمليات تسجيل الدخول غير المصرح بها، والثغرات الأمنية."
       ]
     },
+    "googleCompliance": {
+      "title": "4. خدمات Google API وإفصاح الاستخدام المحدود",
+      "content": "إن استخدام clouburstlab ونقلها لأي تطبيق آخر للمعلومات المستلمة من واجهات برمجة تطبيقات Google يلتزم بسياسة بيانات مستخدم خدمات Google API، بما في ذلك متطلبات الاستخدام المحدود (Limited Use).",
+      "policyLinkText": "Google API Services User Data Policy",
+      "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
+      "specifics": [
+        "نحن نطلب فقط الوصول إلى أذونات Google Drive (مثل drive.file وdrive.readonly) عندما تختار صراحة ربط Google Drive الخاص بك.",
+        "نحن لا نستخدم بيانات مستخدمي Google أو ملفات Drive لعرض الإعلانات أو لأغراض التسويق.",
+        "نحن لا نستخدم بيانات Google Workspace أو Google Drive لتدريب أو إعادة تدريب أو تحسين نماذج الذكاء الاصطناعي (AI) أو التعلم الآلي (ML) العامة.",
+        "يُحظر تمامًا وصول البشر إلى بيانات Google الخاصة بك ما لم نحصل على إذن صريح منك لحل المشكلات الفنية، أو كان ذلك ضروريًا للتحقيقات الأمنية، أو بموجب القانون."
+      ]
+    },
+    "cloudDrives": {
+      "title": "5. تكاملات التخزين السحابي (Google Drive وOneDrive وDropbox)",
+      "content": "عند توصيل محرك أقراص سحابي بملفك الشخصي في clouburstlab، يتم منح حق الوصول بشكل صارم من خلال تدفقات تفويض OAuth 2.0 الرسمية. نحن نصل فقط إلى الملفات أو المجلدات التي تتفاعل معها صراحة من خلال خدماتنا. يتم تشفير رموز الوصول الخاصة بك في حالة السكون باستخدام التشفير المتماثل المتوافق مع معايير الصناعة (AES-256-GCM)، ولا نقرأ ملفاتك أو نعدلها أو ننقلها أبدًا دون تعليمات مباشرة منك."
+    },
     "sharing": {
-      "title": "4. Data Sharing and Third-Party Applications",
-      "content": "ClouAuth acts as an identity provider. We do not sell your personal data. We only share your data with third-party applications when you explicitly grant them permission during the OAuth authorization flow. You can review and revoke these permissions at any time from your Profile Dashboard."
+      "title": "6. مشاركة البيانات والأطراف الثالثة",
+      "content": "نحن لا نبيع أو نؤجر أو نتاجر ببياناتك الشخصية. نحن نشارك المعلومات مع تطبيقات الطرف الثالث فقط عندما تمنحهم صراحة إذنًا من خلال مربعات حوار الموافقة OAuth/OpenID Connect. لديك الشفافية والتحكم الكاملان في هذه التطبيقات ويمكنك إلغاء الوصول في أي وقت."
+    },
+    "retention": {
+      "title": "7. الاحتفاظ بالبيانات وحقوقك",
+      "content": "أنت تحتفظ بالسيطرة الكاملة على بياناتك الشخصية:",
+      "list": [
+        "الوصول والتحديث: يمكنك عرض وتحديث تفاصيلك الشخصية وعناوين بريدك الإلكتروني وطرق الأمان في أي وقت في لوحة تحكم ملفك الشخصي.",
+        "قطع اتصال الخدمات: يمكنك فصل عمليات تسجيل الدخول التابعة لجهات خارجية أو محركات الأقراص السحابية بنقرة واحدة في الحسابات المتصلة.",
+        "إلغاء وصول Google: يمكنك أيضًا إلغاء وصول clouburstlab إلى حساب Google الخاص بك في أي وقت عبر أذونات حساب Google (https://myaccount.google.com/connections).",
+        "حذف الحساب: يمكنك حذف حسابك وجميع بيانات الاعتماد والرموز والسجلات المرتبطة به نهائيًا في أي وقت باستخدام منطقة الخطر (Danger Zone) في إعدادات ملفك الشخصي."
+      ]
     },
     "security": {
-      "title": "5. Data Security",
-      "content": "We implement industry-standard security measures, including encryption in transit and at rest, secure password hashing (bcrypt), and advanced session management, to protect your data from unauthorized access, alteration, or disclosure."
-    },
-    "rights": {
-      "title": "6. Your Privacy Rights",
-      "content": "You have the right to access, update, or delete your personal information at any time. You can manage your data directly through your Profile Dashboard. If you wish to permanently delete your account and all associated data, you may do so in the Danger Zone section of your profile."
+      "title": "8. تدابير الأمان",
+      "content": "نطبق تدابير فنية وتنظيمية قوية لحماية معلوماتك. يتم تشفير جميع الاتصالات أثناء النقل باستخدام TLS 1.3/HTTPS، ويتم تشفير بيانات الاعتماد الحساسة ورموز OAuth في حالة السكون، وتتم مراقبة جلسات المصادقة بحثًا عن أي نشاط غير معتاد."
     },
     "contact": {
-      "title": "7. Contact Us",
-      "content": "If you have any questions or concerns about this Privacy Policy, please contact our privacy team."
+      "title": "9. اتصل بنا",
+      "content": "إذا كانت لديك أي أسئلة أو تعليقات أو طلبات بخصوص سياسة الخصوصية هذه أو ممارسات البيانات لدينا، يُرجى التواصل مع فريق الخصوصية لدينا عبر support@clouburstlab.com أو زيارة https://clouburstlab.com."
     }
   }
 }

@@ -7,6 +7,7 @@ import { cookies, headers } from "next/headers";
 import { signOutAll } from "@/actions/auth/auth";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME } from "@/constants/session.constants";
 import { requireUserSession } from "@/actions/auth/helpers";
+import { checkSudoAction } from "@/actions/auth/sudo";
 
 export interface DeleteAccountInput {
   password?: string;
@@ -16,6 +17,11 @@ export interface DeleteAccountInput {
 
 export async function disableAccount() {
   try {
+    const sudoCheck = await checkSudoAction("/profile/danger");
+    if (!sudoCheck.authorized) {
+      return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
+    }
+
     const sessionData = await requireUserSession();
     const userId = sessionData.user.id;
 
@@ -51,6 +57,11 @@ export async function disableAccount() {
 
 export async function deleteAccount(input: DeleteAccountInput = {}) {
   try {
+    const sudoCheck = await checkSudoAction("/profile/danger");
+    if (!sudoCheck.authorized) {
+      return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
+    }
+
     const sessionData = await requireUserSession();
     const userId = sessionData.user.id;
 

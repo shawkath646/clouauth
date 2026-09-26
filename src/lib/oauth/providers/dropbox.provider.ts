@@ -1,38 +1,29 @@
 import { getEnv } from "@/utils/env";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
-export class GoogleOAuthProvider implements IOAuthProvider {
-  private clientId = getEnv("GOOGLE_CLIENT_ID");
-  private clientSecret = getEnv("GOOGLE_CLIENT_SECRET");
-  private isDrive: boolean;
-  private redirectUri: string;
-
-  constructor(isDrive: boolean = false) {
-    this.isDrive = isDrive;
-    const base = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
-    const driveRedirect = getEnv("GOOGLE_DRIVE_REDIRECT_URI", true);
-    this.redirectUri = this.isDrive && driveRedirect ? driveRedirect : `${base}/api/oauth/callback/google`;
-  }
+export class DropboxOAuthProvider implements IOAuthProvider {
+  private clientId = getEnv("DROPBOX_CLIENT_ID", true);
+  private clientSecret = getEnv("DROPBOX_CLIENT_SECRET", true);
+  private redirectUri = `${getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000"}/api/oauth/callback/dropbox`;
 
   getAuthorizationUrl(state: string): string {
-    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    if (!this.clientId) {
+      throw new Error("Dropbox integration is not configured. Please set DROPBOX_CLIENT_ID and DROPBOX_CLIENT_SECRET in your environment.");
+    }
+    const url = new URL("https://www.dropbox.com/oauth2/authorize");
     url.searchParams.append("client_id", this.clientId);
     url.searchParams.append("redirect_uri", this.redirectUri);
     url.searchParams.append("response_type", "code");
-
-    const scope = this.isDrive
-      ? "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly"
-      : "openid email profile";
-
-    url.searchParams.append("scope", scope);
     url.searchParams.append("state", state);
-    url.searchParams.append("access_type", "offline");
-    url.searchParams.append("prompt", "consent");
+    url.searchParams.append("token_access_type", "offline");
     return url.toString();
   }
 
   async exchangeCode(code: string): Promise<OAuthTokens> {
-    const response = await fetch("https://oauth2.googleapis.com/token", {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error("Dropbox integration is not configured.");
+    }
+    const response = await fetch("https://api.dropboxapi.com/oauth2/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -48,7 +39,7 @@ export class GoogleOAuthProvider implements IOAuthProvider {
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Failed to exchange code: ${errorData}`);
+      throw new Error(`Failed to exchange code with Dropbox: ${errorData}`);
     }
 
     const data = await response.json();
@@ -60,22 +51,23 @@ export class GoogleOAuthProvider implements IOAuthProvider {
   }
 
   async getUserProfile(accessToken: string): Promise<OAuthUserProfile> {
-    const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+    const response = await fetch("https://api.dropboxapi.com/2/users/get_current_account", {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch user profile from Google");
+      throw new Error("Failed to fetch user profile from Dropbox");
     }
 
     const data = await response.json();
     return {
-      id: data.sub,
+      id: data.account_id,
       email: data.email,
-      name: data.name,
-      avatar: data.picture,
+      name: data.name?.display_name || "Dropbox User",
+      avatar: data.profile_photo_url,
     };
   }
 }

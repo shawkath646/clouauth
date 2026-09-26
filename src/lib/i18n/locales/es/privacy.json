@@ -1,52 +1,77 @@
 {
   "meta": {
-    "title": "Privacy Policy",
-    "description": "Learn how ClouAuth collects, uses, and protects your personal data, including information related to OIDC, SSO, and two-factor authentication."
+    "title": "Política de Privacidad",
+    "description": "Conozca cómo clouburstlab recopila, utiliza y protege sus datos personales, incluida la información relacionada con integraciones de Google Drive, OAuth y autenticación."
   },
   "header": {
-    "title": "Privacy Policy",
-    "lastUpdated": "Last Updated: August 2026"
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: 26 de septiembre de 2026",
+    "badge": "Privacidad y Protección de Datos",
+    "subtitle": "Su privacidad y la seguridad de sus datos son fundamentales para todo lo que construimos en clouburstlab."
   },
   "sections": {
     "intro": {
-      "title": "1. Introduction",
-      "content": "At ClouAuth, we take your privacy seriously. This Privacy Policy outlines the types of personal information we collect, how it is used, and how it is protected when you use our authentication and Single Sign-On (SSO) services."
+      "title": "1. Introducción",
+      "content": "En clouburstlab (\"nosotros\", \"nos\" o \"nuestro\"), respetamos su privacidad y estamos comprometidos a proteger sus datos personales. Esta Política de Privacidad explica qué datos personales recopilamos, por qué los recopilamos, cómo se procesan y sus derechos al utilizar los servicios de autenticación, Inicio de Sesión Único (SSO) y almacenamiento en la nube conectado de clouburstlab."
     },
     "collection": {
-      "title": "2. Information We Collect",
-      "content": "We collect information to provide you with secure and seamless authentication services. This includes:",
+      "title": "2. Información que recopilamos",
+      "content": "Recopilamos la información necesaria para ofrecer una autenticación segura y las funciones de cuenta solicitadas por el usuario. Las categorías de información incluyen:",
       "list": [
-        "Account Data: Your name, username, email address, phone number, and physical address when provided.",
-        "Security Data: WebAuthn passkeys, TOTP seeds, and hashed backup codes used for Two-Factor Authentication (2FA).",
-        "OAuth Data: Information regarding third-party developer applications you authorize via our OpenID Connect (OIDC) endpoints.",
-        "Device & Session Data: IP addresses, browser types, and session tokens to maintain security and prevent unauthorized access."
+        "Datos de perfil de la cuenta: Su nombre, dirección de correo electrónico, nombre de usuario, foto de perfil (avatar), pronombres, biografía y dirección cuando se proporcione.",
+        "Datos de seguridad y autenticación: Claves de acceso (claves públicas WebAuthn), códigos de respaldo cifrados, secretos TOTP y contraseñas cifradas de forma segura (mediante bcrypt).",
+        "Cuentas conectadas de terceros: Cuando se autentica o conecta proveedores externos (Google, GitHub, Microsoft), recibimos su identificador de perfil básico, correo electrónico y tokens de autenticación OAuth.",
+        "Datos de almacenamiento en la nube y Google Drive: Si conecta explícitamente Google Drive, OneDrive o Dropbox, recibimos tokens de autorización y metadatos necesarios para realizar las operaciones de archivos que usted solicite específicamente.",
+        "Registros de dispositivos y sesiones: Direcciones IP, agentes de usuario, tipos de navegador y marcas de tiempo de sesión para proteger contra accesos no autorizados y mantener la seguridad."
       ]
     },
     "usage": {
-      "title": "3. How We Use Your Information",
-      "content": "Your information is used strictly to provide, maintain, and improve our authentication services. Specifically, we use it to:",
+      "title": "3. Cómo utilizamos su información",
+      "content": "Procesamos su información estrictamente para fines operativos legítimos:",
       "list": [
-        "Authenticate your identity across connected applications securely.",
-        "Manage your profile, preferences, and security settings.",
-        "Send critical security alerts (e.g., unrecognized logins or password resets).",
-        "Monitor for fraudulent activity and protect the integrity of our SSO platform."
+        "Para autenticar su identidad de forma segura en aplicaciones y servicios conectados.",
+        "Para habilitar operaciones de almacenamiento en la nube dirigidas por el usuario (como sincronizar o acceder a archivos en Google Drive).",
+        "Para administrar su configuración de seguridad, autenticación multifactor (2FA) y preferencias de perfil.",
+        "Para proteger contra fraudes, inicios de sesión no autorizados y vulnerabilidades de seguridad."
       ]
     },
+    "googleCompliance": {
+      "title": "4. Servicios de API de Google y Declaración de Uso Limitado",
+      "content": "El uso y la transferencia a cualquier otra aplicación por parte de clouburstlab de la información recibida de las API de Google se adherirá a la Política de Datos de Usuario de los Servicios de las API de Google, incluidos los requisitos de Uso Limitado.",
+      "policyLinkText": "Política de Datos de Usuario de los Servicios de las API de Google",
+      "policyUrl": "https://developers.google.com/terms/api-services-user-data-policy",
+      "specifics": [
+        "Solo solicitamos acceso a permisos de Google Drive (como drive.file y drive.readonly) cuando usted decide conectar explícitamente su Google Drive.",
+        "NO utilizamos datos de usuarios de Google ni archivos de Drive para publicar anuncios ni para fines comerciales.",
+        "NO utilizamos datos de Google Workspace ni de Google Drive para entrenar, reentrenar o mejorar modelos generalizados de inteligencia artificial (IA) o aprendizaje automático (ML).",
+        "El acceso humano a sus datos de Google está estrictamente prohibido, a menos que tengamos su permiso explícito para resolver problemas técnicos, sea necesario para investigaciones de seguridad (como investigar abusos) o lo exija la ley."
+      ]
+    },
+    "cloudDrives": {
+      "title": "5. Integraciones de Almacenamiento en la Nube (Google Drive, OneDrive, Dropbox)",
+      "content": "Cuando conecta una unidad en la nube a su perfil de clouburstlab, el acceso se concede estrictamente a través de flujos oficiales de autorización OAuth 2.0. Solo accedemos a los archivos o carpetas con los que usted interactúa explícitamente a través de nuestros servicios. Sus tokens de acceso están cifrados en reposo utilizando cifrado simétrico estándar de la industria (AES-256-GCM), y nunca leemos, modificamos ni transferimos sus archivos sin su instrucción directa."
+    },
     "sharing": {
-      "title": "4. Data Sharing and Third-Party Applications",
-      "content": "ClouAuth acts as an identity provider. We do not sell your personal data. We only share your data with third-party applications when you explicitly grant them permission during the OAuth authorization flow. You can review and revoke these permissions at any time from your Profile Dashboard."
+      "title": "6. Compartición de Datos y Terceros",
+      "content": "No vendemos, alquilamos ni comercializamos sus datos personales. Solo compartimos información con aplicaciones de terceros cuando usted les otorga permiso explícito a través de nuestros diálogos de consentimiento OAuth/OpenID Connect. Usted tiene total transparencia y control sobre estas aplicaciones y puede revocar el acceso en cualquier momento."
+    },
+    "retention": {
+      "title": "7. Retención de Datos y sus Derechos",
+      "content": "Usted conserva el control total sobre sus datos personales:",
+      "list": [
+        "Acceso y actualización: Puede ver y actualizar sus datos personales, direcciones de correo electrónico y métodos de seguridad en cualquier momento en el Panel de Perfil.",
+        "Desconectar servicios: Puede desconectar inicios de sesión de terceros o unidades en la nube (Google Drive, OneDrive, Dropbox) con un solo clic en Cuentas Conectadas.",
+        "Revocar acceso de Google: También puede revocar el acceso de clouburstlab a su cuenta de Google en cualquier momento a través de Permisos de la cuenta de Google (https://myaccount.google.com/connections).",
+        "Eliminación de cuenta: Puede eliminar permanentemente su cuenta y todas las credenciales, tokens y registros asociados en cualquier momento utilizando la Zona de Peligro en la configuración de su perfil."
+      ]
     },
     "security": {
-      "title": "5. Data Security",
-      "content": "We implement industry-standard security measures, including encryption in transit and at rest, secure password hashing (bcrypt), and advanced session management, to protect your data from unauthorized access, alteration, or disclosure."
-    },
-    "rights": {
-      "title": "6. Your Privacy Rights",
-      "content": "You have the right to access, update, or delete your personal information at any time. You can manage your data directly through your Profile Dashboard. If you wish to permanently delete your account and all associated data, you may do so in the Danger Zone section of your profile."
+      "title": "8. Medidas de Seguridad",
+      "content": "Implementamos rigurosas medidas técnicas y organizativas para proteger su información. Todas las comunicaciones están cifradas en tránsito mediante TLS 1.3/HTTPS, las credenciales confidenciales y los tokens OAuth se cifran en reposo, y las sesiones de autenticación se supervisan para detectar actividades anómalas."
     },
     "contact": {
-      "title": "7. Contact Us",
-      "content": "If you have any questions or concerns about this Privacy Policy, please contact our privacy team."
+      "title": "9. Contacto",
+      "content": "Si tiene preguntas, comentarios o solicitudes sobre esta Política de Privacidad o nuestras prácticas de datos, comuníquese con nuestro equipo de privacidad en support@clouburstlab.com o visite https://clouburstlab.com."
     }
   }
 }

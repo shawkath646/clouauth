@@ -9,6 +9,7 @@ import { getEnv } from "@/utils/env";
 import JsonLd from "@/components/json-ld";
 import "./globals.css";
 import GoogleOneTap from "@/components/google-one-tap";
+import { ReCaptchaProvider } from "@/lib/recaptcha/client";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -29,14 +30,14 @@ export const metadata: Metadata = {
 
   title: {
     default: "ClouAuth — Secure Authentication & Identity Provider",
-    template: "%s | ClouAuth",
+    template: "%s — clouburstlab",
   },
 
   description:
     "ClouAuth is a centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider for clouburstlab ecosystem. " +
     "Sign in, manage your account, passkeys, and connected applications — all in one place.",
 
-  applicationName: "ClouAuth",
+  applicationName: "ClouAuth by clouburstlab",
   authors: [
     {
       name: "Shawkat Hossain Maruf",
@@ -49,6 +50,7 @@ export const metadata: Metadata = {
 
   keywords: [
     "clouburstlab",
+    "ClouAuth",
     "identity provider",
     "OIDC",
     "OAuth 2.0",
@@ -73,7 +75,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: BASE_URL,
-    siteName: "ClouAuth",
+    siteName: "clouburstlab",
     title: "ClouAuth — Secure Authentication & Identity Provider",
     description:
       "Centralized authentication, user management, and OIDC 2.0 Identity Provider for clouburstlab ecosystem. " +
@@ -204,9 +206,11 @@ export default async function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          {children}
-          {!session && <GoogleOneTap gClientId={gClientId} />}
-          <Toaster />
+          <ReCaptchaProvider>
+            {children}
+            {!session && <GoogleOneTap gClientId={gClientId} />}
+            <Toaster />
+          </ReCaptchaProvider>
         </ThemeProvider>
       </body>
     </html>

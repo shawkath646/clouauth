@@ -4,15 +4,28 @@ import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 export class MicrosoftOAuthProvider implements IOAuthProvider {
   private clientId = getEnv("MICROSOFT_CLIENT_ID");
   private clientSecret = getEnv("MICROSOFT_CLIENT_SECRET");
-  private redirectUri = `${getEnv("NEXT_PUBLIC_BASE_URL")}/api/oauth/callback/microsoft`;
-  private tenantId = getEnv("MICROSOFT_TENANT_ID");
+  private tenantId = getEnv("MICROSOFT_TENANT_ID", true) || "common";
+  private isDrive: boolean;
+  private redirectUri: string;
+
+  constructor(isDrive: boolean = false) {
+    this.isDrive = isDrive;
+    const base = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
+    const driveRedirect = getEnv("ONEDRIVE_REDIRECT_URI", true);
+    this.redirectUri = this.isDrive && driveRedirect ? driveRedirect : `${base}/api/oauth/callback/microsoft`;
+  }
 
   getAuthorizationUrl(state: string): string {
     const url = new URL(`https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/authorize`);
     url.searchParams.append("client_id", this.clientId);
     url.searchParams.append("redirect_uri", this.redirectUri);
     url.searchParams.append("response_type", "code");
-    url.searchParams.append("scope", "openid profile email offline_access");
+
+    const scope = this.isDrive
+      ? "openid profile email offline_access Files.Read Files.ReadWrite"
+      : "openid profile email offline_access";
+
+    url.searchParams.append("scope", scope);
     url.searchParams.append("state", state);
     url.searchParams.append("response_mode", "query");
     return url.toString();
@@ -62,7 +75,7 @@ export class MicrosoftOAuthProvider implements IOAuthProvider {
       id: data.id,
       email: data.mail || data.userPrincipalName,
       name: data.displayName,
-      avatar: undefined, // Microsoft Graph API requires a separate call to /me/photo/$value
+      avatar: undefined,
     };
   }
 }

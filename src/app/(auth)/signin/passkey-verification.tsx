@@ -133,36 +133,37 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
   return (
     <motion.div
       key="verification-passkey"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="w-full max-w-md p-5 sm:p-6 md:p-8 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col mx-auto"
+      initial={{ opacity: 0, y: 15, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -15, scale: 0.98 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="w-full max-w-[420px] p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/[0.08] shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
     >
-      <div className="flex items-center justify-center mb-5 relative">
-        <div className="text-center w-full">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            {t("passkey")}
-          </h1>
+      <div className="flex flex-col items-center text-center mb-5">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-xs">
+          <Fingerprint className="h-7 w-7 stroke-[2]" />
         </div>
-      </div>
-
-      <div className="space-y-6 flex flex-col items-center">
-        <div className="bg-primary/10 p-6 rounded-full">
-          <Fingerprint className="h-12 w-12 text-primary" />
-        </div>
-        <p className="text-sm text-muted-foreground text-center">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+          {t("passkey")}
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-[320px] leading-relaxed">
           {t("passkeyDesc")}
         </p>
+      </div>
 
+      <div className="space-y-4 flex flex-col items-center w-full">
         {!isSupported && (
-          <div className="flex items-center gap-2 p-3 text-xs rounded-xl bg-destructive/10 text-destructive border border-destructive/20 w-full">
+          <div className="flex items-center gap-2.5 p-3 text-xs rounded-xl bg-destructive/10 text-destructive border border-destructive/20 w-full">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>This browser does not support WebAuthn passkeys. Please use another sign-in method.</span>
           </div>
         )}
 
-        <Button className="w-full" onClick={() => handleVerify(true)} disabled={isLoading || !isSupported}>
+        <Button
+          className="w-full h-7 sm:h-8 text-sm sm:text-base font-semibold rounded-xl cursor-pointer"
+          onClick={() => handleVerify(true)}
+          disabled={isLoading || !isSupported}
+        >
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("verify")}
         </Button>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/lib/i18n/config';
-import { refreshSession } from './lib/session';
+import { refreshSession, getUserSessionByToken } from './lib/session';
 import { COOKIE_REFRESH_TOKEN_NAME, COOKIE_SESSION_TOKEN_NAME } from './constants/session.constants';
 import { getSecureCookieOptions } from './utils/utils';
 
@@ -24,11 +24,18 @@ export async function proxy(request: NextRequest) {
   );
 
   if (isProtectedRoute) {
-    const sessionToken = request.cookies.get('session_token')?.value;
+    const sessionToken = request.cookies.get(COOKIE_SESSION_TOKEN_NAME)?.value;
+    let isAuthenticated = false;
 
-    if (!sessionToken) {
-      const refreshToken = request.cookies.get('refresh_token')?.value;
-      let refreshSuccessful = false;
+    if (sessionToken) {
+      const activeSession = await getUserSessionByToken(sessionToken);
+      if (activeSession) {
+        isAuthenticated = true;
+      }
+    }
+
+    if (!isAuthenticated) {
+      const refreshToken = request.cookies.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
 
       if (refreshToken) {
         try {
@@ -36,26 +43,31 @@ export async function proxy(request: NextRequest) {
           const sessionMaxAge = Math.max(0, Math.floor((newAuthData.sessionExpiresOn.getTime() - Date.now()) / 1000));
           const refreshMaxAge = Math.max(0, Math.floor((newAuthData.refreshExpiresOn.getTime() - Date.now()) / 1000));
 
+          // Crucial: Update incoming request cookies so downstream Server Components receive the new session_token
+          request.cookies.set(COOKIE_SESSION_TOKEN_NAME, newAuthData.sessionToken);
+          request.cookies.set(COOKIE_REFRESH_TOKEN_NAME, newAuthData.refreshToken);
+
           responseCookiesToSet.push({
             name: COOKIE_SESSION_TOKEN_NAME,
             value: newAuthData.sessionToken,
-            options: getSecureCookieOptions({ maxAge: sessionMaxAge })
+            options: getSecureCookieOptions({ maxAge: sessionMaxAge }),
           });
 
           responseCookiesToSet.push({
             name: COOKIE_REFRESH_TOKEN_NAME,
             value: newAuthData.refreshToken,
-            options: getSecureCookieOptions({ maxAge: refreshMaxAge })
+            options: getSecureCookieOptions({ maxAge: refreshMaxAge }),
           });
-          refreshSuccessful = true;
+
+          isAuthenticated = true;
         } catch (error) {
-          console.error('Session refresh failed:', error);
+          console.error('Session refresh failed in proxy:', error);
         }
       }
+    }
 
-      if (!refreshSuccessful) {
-        return redirectToSignIn(url);
-      }
+    if (!isAuthenticated) {
+      return redirectToSignIn(url);
     }
   }
 
@@ -72,11 +84,14 @@ export async function proxy(request: NextRequest) {
     });
   }
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('cookie', request.cookies.toString());
+
   const response = NextResponse.next({
-    request: { headers: new Headers(request.headers) },
+    request: { headers: requestHeaders },
   });
 
-  responseCookiesToSet.forEach(e => response.cookies.set(e));
+  responseCookiesToSet.forEach((e) => response.cookies.set(e));
   return response;
 }
 
@@ -94,8 +109,14 @@ function resolveLocale(acceptLanguage: string | null): Locale | undefined {
 
 function redirectToSignIn(url: URL) {
   const signInUrl = new URL('/signin', url);
-  signInUrl.searchParams.set('return_to', url.pathname);
-  return NextResponse.redirect(signInUrl);
+  if (url.pathname !== '/signin' && !url.pathname.startsWith('/signin/')) {
+    signInUrl.searchParams.set('return_to', url.pathname + url.search);
+  }
+  const response = NextResponse.redirect(signInUrl);
+  // Clear stale cookies on redirect
+  response.cookies.set(COOKIE_SESSION_TOKEN_NAME, '', getSecureCookieOptions({ maxAge: 0 }));
+  response.cookies.set(COOKIE_REFRESH_TOKEN_NAME, '', getSecureCookieOptions({ maxAge: 0 }));
+  return response;
 }
 
 export const config = {

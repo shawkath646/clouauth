@@ -61,7 +61,29 @@
     "modalWarning": "Advertencia",
     "modalDesc": "Esta acción cerrará instantáneamente tu sesión en todos los dispositivos y desactivará tu cuenta.",
     "modalConfirm": "Sí, desactivar mi cuenta",
-    "modalCancel": "Cancelar"
+    "modalCancel": "Cancelar",
+    "disableFinalConfirm": "Esta es tu confirmación final. Tu cuenta será desactivada inmediatamente.",
+    "deleteModalTitle": "Eliminar Cuenta Permanentemente",
+    "deleteModalDesc": "Esta acción es permanente y no se puede deshacer. Una vez confirmada, se borrarán todas tus sesiones activas, llaves de acceso y configuraciones de cuenta.",
+    "whatWillHappen": "Lo que sucederá:",
+    "happenSessions": "Todos los inicios de sesión y sesiones activas se cerrarán al instante.",
+    "happenCredentials": "Las contraseñas, llaves de acceso, TOTP y códigos de recuperación serán destruidos.",
+    "happenOAuth": "Las integraciones OAuth y aplicaciones registradas se desvincularán.",
+    "happenCompliance": "La información de cumplimiento se archivará en nuestros registros de baja.",
+    "reasonLabel": "Motivo de la baja (opcional)",
+    "reasonPlaceholder": "Por favor especifica...",
+    "reasonNoLongerNeed": "Ya no necesito esta cuenta",
+    "reasonPrivacyConcerns": "Preocupaciones de privacidad o seguridad",
+    "reasonSwitchingAccount": "Cambiando a otra cuenta",
+    "reasonTooComplex": "Demasiado complejo o difícil de usar",
+    "reasonOther": "Otro motivo",
+    "continue": "Continuar",
+    "confirmDelete": "Eliminar Permanentemente",
+    "deleting": "Eliminando...",
+    "disableSuccess": "Cuenta desactivada con éxito",
+    "disableError": "Error al desactivar la cuenta",
+    "deleteSuccess": "Tu cuenta ha sido eliminada permanentemente.",
+    "deleteError": "Error al eliminar la cuenta"
   },
   "signInSecurity": {
     "title": "Inicio de Sesión y Seguridad",
@@ -75,6 +97,7 @@
     "method": "método",
     "methods": "métodos",
     "disabled": "Desactivado",
+    "enabled": "Activado",
     "passkeys": "Llaves de acceso",
     "passkeysDesc": "Inicio de sesión sin contraseña con biometría o llave de seguridad",
     "device": "dispositivo",
@@ -95,7 +118,12 @@
   "recentActivity": {
     "title": "Actividad de Seguridad Reciente",
     "desc": "Revise los eventos de seguridad recientes en su cuenta.",
-    "reviewAll": "Revisar todos los eventos de seguridad"
+    "reviewAll": "Revisar todos los eventos de seguridad",
+    "noActivity": "No se encontró actividad de seguridad reciente.",
+    "dialogTitle": "Actividad de Seguridad Reciente",
+    "dialogDesc": "Registro completo de auditoría de inicios de sesión, cambios de credenciales y acciones de seguridad.",
+    "refresh": "Actualizar",
+    "close": "Cerrar"
   },
   "activeSessions": {
     "title": "Sesiones Activas",
@@ -126,7 +154,8 @@
   },
   "cloudDrives": {
     "title": "Unidades en la Nube",
-    "desc": "Vincule su almacenamiento en la nube para sincronizar archivos y copias de seguridad sin problemas."
+    "desc": "Vincule su almacenamiento en la nube para sincronizar archivos y copias de seguridad sin problemas.",
+    "privacyNote": "El acceso a la unidad solo es necesario si necesita sincronización en la nube a través de aplicaciones de clouburstlab. Este acceso nunca será otorgado ni utilizado por aplicaciones de terceros."
   },
   "authenticator": {
     "setupTitle": "Set up Authenticator App",

@@ -84,6 +84,13 @@
           "part2": "para solicitar un nuevo token de acceso sin requerir que el usuario inicie sesión nuevamente."
         }
       }
+    },
+    "step7": {
+      "title": "Puente de Aplicaciones Internas e Integración M2M",
+      "description": "Verificación de sesión entre subdominios y almacenamiento en la nube",
+      "content": {
+        "intro": "Las aplicaciones internas en *.clouburstlab.com pueden verificar sesiones de usuario y obtener credenciales descifradas de Google Drive, OneDrive y Dropbox mediante la API del puente."
+      }
     }
   }
 }

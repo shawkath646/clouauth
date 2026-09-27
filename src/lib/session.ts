@@ -59,7 +59,7 @@ export async function createSession(userId: string, rememberMe: boolean = false)
     // Add 5 minutes grace period to DB expiry to prevent race conditions before browser deletes cookie
     const sessionExpiresOn = new Date(now.getTime() + sessionTtl * 1000 + 300 * 1000);
 
-    const rtTtl = rememberMe ? REFRESH_TOKEN_TTL_REMEMBER_ME : sessionTtl;
+    const rtTtl = rememberMe ? REFRESH_TOKEN_TTL_REMEMBER_ME : REFRESH_TOKEN_TTL;
     const refreshExpiresOn = new Date(now.getTime() + rtTtl * 1000);
 
     const headersList = await headers();
@@ -144,9 +144,9 @@ export async function createSession(userId: string, rememberMe: boolean = false)
 
     await setSessionCookies(
         sessionToken,
-        rememberMe ? refreshToken : null,
+        refreshToken,
         sessionTtl,
-        rememberMe ? rtTtl : 0
+        rtTtl
     );
 
     return {
@@ -182,15 +182,14 @@ export async function refreshSession(presentedRefreshToken: string, setCookies: 
     }
 
     // Replay Attack Detection: If the presented token doesn't match the active token, 
-    // it means an old token was reused. We immediately revoke the session to kick out the attacker.
+    // it means an old token was reused.
     if (!timingSafeEqualStr(session.refresh_token_hash, presentedHash)) {
-        // Allow 1-minute grace period for the previous refresh token in case of network failure
+        // Allow 2-minute grace period for the previous refresh token in case of network latency / concurrent requests
         const isPrevious = session.previous_refresh_token_hash && timingSafeEqualStr(session.previous_refresh_token_hash, presentedHash);
-        const gracePeriodValid = session.updated_on.getTime() + 60 * 1000 > Date.now();
+        const gracePeriodValid = session.updated_on.getTime() + 120 * 1000 > Date.now();
 
-        if (!(isPrevious && gracePeriodValid)) {
-            await revokeSession(session.id);
-            throw new Error("replay_attack_detected");
+        if (!isPrevious || !gracePeriodValid) {
+            throw new Error("invalid_grant");
         }
     }
 
@@ -261,10 +260,7 @@ export async function getSession(sessionToken: string): Promise<SafeDBUserSessio
     return sanitizeSession(session);
 }
 
-export async function getUserSession() {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
-
+export async function getUserSessionByToken(sessionToken: string) {
     if (!sessionToken || typeof sessionToken !== "string") return null;
 
     const parts = sessionToken.split('.');
@@ -283,7 +279,7 @@ export async function getUserSession() {
                     username: true,
                     emails: {
                         where: { is_primary: true },
-                        select: { address: true }
+                        select: { address: true, verified: true }
                     },
                     first_name: true,
                     last_name: true,
@@ -307,10 +303,93 @@ export async function getUserSession() {
     const { emails, ...restUser } = user;
     const transformedUser = {
         ...restUser,
-        email: emails[0]?.address || null
+        email: emails[0]?.address || null,
+        email_verified: Boolean(emails[0]?.verified),
     };
 
     return { session: sanitizeSession(sessionData as DBUserSession), user: transformedUser };
+}
+
+export async function getUserSessionByRefreshToken(refreshToken: string) {
+    if (!refreshToken || typeof refreshToken !== "string") return null;
+
+    const parts = refreshToken.split('.');
+    if (parts.length !== 2) return null;
+
+    const [sessionId, tokenValue] = parts;
+    const presentedHash = hashToken(tokenValue);
+
+    const sessionWithUser = await prisma.userSession.findUnique({
+        where: { id: sessionId },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    emails: {
+                        where: { is_primary: true },
+                        select: { address: true, verified: true }
+                    },
+                    first_name: true,
+                    last_name: true,
+                    avatar: true,
+                }
+            }
+        }
+    });
+
+    if (!sessionWithUser || sessionWithUser.revoked_on || sessionWithUser.expires_on < new Date()) {
+        return null;
+    }
+
+    const isCurrent = timingSafeEqualStr(sessionWithUser.refresh_token_hash, presentedHash);
+    const isPrevious = sessionWithUser.previous_refresh_token_hash && timingSafeEqualStr(sessionWithUser.previous_refresh_token_hash, presentedHash);
+    const gracePeriodValid = sessionWithUser.updated_on.getTime() + 120 * 1000 > Date.now();
+
+    if (!isCurrent && !(isPrevious && gracePeriodValid)) {
+        return null;
+    }
+
+    if (!sessionWithUser.user) return null;
+
+    const { user, ...sessionData } = sessionWithUser;
+    const { emails, ...restUser } = user;
+    const transformedUser = {
+        ...restUser,
+        email: emails[0]?.address || null,
+        email_verified: Boolean(emails[0]?.verified),
+    };
+
+    return { session: sanitizeSession(sessionData as DBUserSession), user: transformedUser };
+}
+
+export async function getUserSession() {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
+
+    if (sessionToken && typeof sessionToken === "string") {
+        const sessionData = await getUserSessionByToken(sessionToken);
+        if (sessionData) return sessionData;
+    }
+
+    // Seamless fallback: If session_token is expired or missing, check refresh_token
+    const refreshToken = cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
+    if (refreshToken && typeof refreshToken === "string") {
+        const sessionFromRefresh = await getUserSessionByRefreshToken(refreshToken);
+        if (sessionFromRefresh) {
+            // Attempt to refresh cookies if in a mutable context (Server Action / Route Handler)
+            try {
+                const newAuthData = await refreshSession(refreshToken, true);
+                const freshSession = await getUserSessionByToken(newAuthData.sessionToken);
+                if (freshSession) return freshSession;
+            } catch {
+                // In Server Component render, cookie mutation is disallowed by Next.js — return valid session data!
+            }
+            return sessionFromRefresh;
+        }
+    }
+
+    return null;
 }
 
 export async function signOut(sessionId?: string) {
@@ -325,9 +404,20 @@ export async function signOut(sessionId?: string) {
             if (parts.length === 2) {
                 await revokeSession(parts[0]);
             }
+        } else {
+            const refreshToken = cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
+            if (refreshToken) {
+                const parts = refreshToken.split('.');
+                if (parts.length === 2) {
+                    await revokeSession(parts[0]);
+                }
+            }
         }
     }
 
+    const clearCookieOptions = getSecureCookieOptions({ maxAge: 0 });
+    cookieStore.set(COOKIE_SESSION_TOKEN_NAME, "", clearCookieOptions);
+    cookieStore.set(COOKIE_REFRESH_TOKEN_NAME, "", clearCookieOptions);
     cookieStore.delete(COOKIE_SESSION_TOKEN_NAME);
     cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
 }
@@ -429,6 +519,33 @@ export async function createOAuthSession(userId: string, clientId: string, scope
         refreshToken,
         expiresIn: accessExpiresIn,
         scope: scope || "openid profile email"
+    };
+}
+
+export async function createClientCredentialsSession(clientId: string, scope: string) {
+    const accessExpiresIn = 3600; // 1 hour
+
+    const { SignJWT } = await import("jose");
+    const { getSecret } = await import("@/lib/jwt-secret");
+    const secret = getSecret();
+
+    const accessToken = await new SignJWT({
+        sub: clientId,
+        client_id: clientId,
+        scope: scope || "internal_service",
+        type: "client_credentials"
+    })
+    .setProtectedHeader({ alg: "HS256" })
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(`${accessExpiresIn}s`)
+    .sign(secret);
+
+    return {
+        accessToken,
+        tokenType: "Bearer",
+        expiresIn: accessExpiresIn,
+        scope: scope || "internal_service"
     };
 }
 

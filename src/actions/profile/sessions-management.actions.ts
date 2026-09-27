@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getUserSession, revokeSession, signOut } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { handleError } from "@/utils/error";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export async function revokeUserSessionAction(sessionId: string): Promise<{ success: boolean; isCurrent?: boolean; error?: string }> {
   try {
@@ -25,6 +26,13 @@ export async function revokeUserSessionAction(sessionId: string): Promise<{ succ
     } else {
       await revokeSession(sessionId);
     }
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "SESSION_REVOKED",
+      title: "Session revoked",
+      description: `Revoked session on ${targetSession.device_name || "device"}`,
+    });
 
     revalidatePath("/profile");
 
@@ -50,6 +58,12 @@ export async function revokeAllUserSessionsAction(includeCurrent: boolean = fals
           revoked_on: new Date(),
         },
       });
+      await recordSecurityActivity({
+        userId: sessionData.user.id,
+        event: "ALL_SESSIONS_REVOKED",
+        title: "All sessions signed out",
+        description: "Signed out of all devices including this device",
+      });
       await signOut();
       return { success: true, isCurrent: true };
     } else {
@@ -62,6 +76,12 @@ export async function revokeAllUserSessionsAction(includeCurrent: boolean = fals
         data: {
           revoked_on: new Date(),
         },
+      });
+      await recordSecurityActivity({
+        userId: sessionData.user.id,
+        event: "ALL_SESSIONS_REVOKED",
+        title: "All other sessions signed out",
+        description: "Signed out of all other active devices and sessions",
       });
       revalidatePath("/profile");
       return { success: true, isCurrent: false };

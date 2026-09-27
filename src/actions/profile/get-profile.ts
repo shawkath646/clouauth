@@ -9,6 +9,7 @@ import type {
 } from "@/types/profile.types";
 import type { DBUserPreference } from "@/types/preferences.types";
 import { handleError } from "@/utils/error";
+import { getUserSecurityActivities } from "@/lib/security-activity";
 
 export async function getMinimalProfile(): Promise<{ success: boolean, data?: MinimalProfile, error?: string }> {
     try {
@@ -170,84 +171,87 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
             return { success: false, error: "Unauthorized" };
         }
 
-        // Fetch only needed fields without sensitive hashes or tokens
-        const user = await prisma.user.findUnique({
-            where: { id: sessionData.user.id },
-            select: {
-                id: true,
-                username: true,
-                first_name: true,
-                last_name: true,
-                avatar: true,
-                bio: true,
-                date_of_birth: true,
-                pronouns: true,
-                username_last_changed: true,
-                created_on: true,
-                updated_on: true,
-                account_status: true,
-                emails: true,
-                addresses: true,
-                preferences: true,
-                notifications: true,
-                password: {
-                    select: {
-                        user_id: true,
-                        last_changed_on: true,
-                        force_change: true,
-                        failed_attempts: true,
-                        locked_until: true,
-                    }
-                },
-                two_factor: {
-                    select: {
-                        totp: { select: { enabled: true } },
-                        passkeys: {
-                            select: {
-                                id: true,
-                                two_factor_id: true,
-                                credential_id: true,
-                                sign_count: true,
-                                device_name: true,
-                                created_on: true,
-                                last_used_on: true,
+        // Fetch user and security activities safely in parallel
+        const [user, securityActivities] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: sessionData.user.id },
+                select: {
+                    id: true,
+                    username: true,
+                    first_name: true,
+                    last_name: true,
+                    avatar: true,
+                    bio: true,
+                    date_of_birth: true,
+                    pronouns: true,
+                    username_last_changed: true,
+                    created_on: true,
+                    updated_on: true,
+                    account_status: true,
+                    emails: true,
+                    addresses: true,
+                    preferences: true,
+                    notifications: true,
+                    password: {
+                        select: {
+                            user_id: true,
+                            last_changed_on: true,
+                            force_change: true,
+                            failed_attempts: true,
+                            locked_until: true,
+                        }
+                    },
+                    two_factor: {
+                        select: {
+                            totp: { select: { enabled: true } },
+                            passkeys: {
+                                select: {
+                                    id: true,
+                                    two_factor_id: true,
+                                    credential_id: true,
+                                    sign_count: true,
+                                    device_name: true,
+                                    created_on: true,
+                                    last_used_on: true,
+                                }
                             }
                         }
-                    }
-                },
-                recovery_codes: {
-                    select: {
-                        id: true,
-                        used: true,
-                        created_on: true,
-                    }
-                },
-                sessions: {
-                    select: {
-                        id: true,
-                        user_id: true,
-                        created_on: true,
-                        updated_on: true,
-                        session_expires_on: true,
-                        expires_on: true,
-                        revoked_on: true,
-                        ip_address: true,
-                        user_agent: true,
-                        device_name: true,
-                    }
-                },
-                oauth_accounts: {
-                    select: {
-                        id: true,
-                        user_id: true,
-                        provider: true,
-                        provider_user_id: true,
-                        created_on: true,
-                        expires_at: true,
-                    }
+                    },
+                    recovery_codes: {
+                        select: {
+                            id: true,
+                            used: true,
+                            created_on: true,
+                        }
+                    },
+                    sessions: {
+                        select: {
+                            id: true,
+                            user_id: true,
+                            created_on: true,
+                            updated_on: true,
+                            session_expires_on: true,
+                            expires_on: true,
+                            revoked_on: true,
+                            ip_address: true,
+                            user_agent: true,
+                            device_name: true,
+                        }
+                    },
+                    oauth_accounts: {
+                        select: {
+                            id: true,
+                            user_id: true,
+                            provider: true,
+                            provider_user_id: true,
+                            created_on: true,
+                            expires_at: true,
+                        }
+                    },
                 }
-            }
-        });
+            }),
+            getUserSecurityActivities(sessionData.user.id, 10).catch(() => [])
+        ]);
 
         if (!user) return { success: false, error: "User not found" };
 
@@ -324,7 +328,11 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 refresh_token: "[REDACTED]",
                 expires_at: acc.expires_at
             })),
-            current_session_id: sessionData.session.id
+            current_session_id: sessionData.session.id,
+            security_activities: (securityActivities || []).map((act) => ({
+                ...act,
+                created_on: act.created_on instanceof Date ? act.created_on.toISOString() : String(act.created_on),
+            }))
         };
 
         return { success: true, data: fullProfile };

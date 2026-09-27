@@ -83,6 +83,7 @@ export default function SigninClient({
           break;
 
         case "METHOD_SELECTION":
+          toast.dismiss();
           setIsAuthenticating(false);
           setIsSuccess(false);
           setTempSessionId(result.tempSessionId);
@@ -112,10 +113,13 @@ export default function SigninClient({
             router.refresh();
           } else {
             const target =
-              returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+              returnTo &&
+              returnTo.startsWith("/") &&
+              !returnTo.startsWith("//") &&
+              !returnTo.startsWith("/signin")
                 ? returnTo
                 : "/profile";
-            router.replace(target);
+            window.location.href = target;
           }
           break;
         }
@@ -217,15 +221,35 @@ export default function SigninClient({
         return <CredentialsStep key="credentials" onNext={processAction} />;
 
       case "METHOD_SELECTION":
-        return <VerificationMethodStep key="method_selection" onSelectMethod={handleMethodSelect} availableMethods={availableMethods} />;
+        return (
+          <VerificationMethodStep
+            key="method_selection"
+            onSelectMethod={handleMethodSelect}
+            availableMethods={availableMethods}
+          />
+        );
 
       case "VERIFICATION":
         switch (selectedMethod?.type) {
           case "code":
           case "totp":
-            return <CodeVerification key={`verification-${selectedMethod.type}`} onComplete={processAction} tempSessionId={tempSessionId} methodType={selectedMethod.type} />;
+            return (
+              <CodeVerification
+                key={`verification-${selectedMethod.type}`}
+                onComplete={processAction}
+                tempSessionId={tempSessionId}
+                methodType={selectedMethod.type}
+              />
+            );
           case "passkey":
-            return <PasskeyVerification key="verification-passkey" onComplete={processAction} tempSessionId={tempSessionId} options={passkeyOptions} />;
+            return (
+              <PasskeyVerification
+                key="verification-passkey"
+                onComplete={processAction}
+                tempSessionId={tempSessionId}
+                options={passkeyOptions}
+              />
+            );
           default:
             return null;
         }

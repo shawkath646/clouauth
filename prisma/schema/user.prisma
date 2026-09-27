@@ -26,6 +26,7 @@ model User {
   sessions              UserSession[]
   apps                  UserApp[]               @relation("UserApps")
   email_queue           EmailQueue[]
+  security_activities   SecurityActivity[]
 }
 
 model UserEmail {

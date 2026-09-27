@@ -91,7 +91,10 @@ export default async function SignInPage(props: PageProps<'/signin'>) {
 
   if (session && !tid) {
     if (!(isOAuthRequest && (appData || oauthError))) {
-      const isSafeRedirect = returnTo?.startsWith('/') && !returnTo.startsWith('//');
+      const isSafeRedirect =
+        returnTo?.startsWith('/') &&
+        !returnTo.startsWith('//') &&
+        !returnTo.startsWith('/signin');
       redirect(isSafeRedirect && returnTo ? returnTo : '/profile');
     }
   }

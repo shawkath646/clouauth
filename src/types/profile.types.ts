@@ -3,6 +3,21 @@ import type { DBNotificationPreference, DBUserPreference } from "./preferences.t
 import type { DBPasswordCredential, DBOAuthAccount } from "./auth.types";
 import type { DBUserSession } from "./session.types";
 
+export interface DBSecurityActivity {
+    id: string;
+    user_id: string;
+    event: string;
+    title: string;
+    description?: string | null;
+    ip_address?: string | null;
+    user_agent?: string | null;
+    device?: string | null;
+    city?: string | null;
+    country?: string | null;
+    status: string;
+    created_on: Date | string;
+}
+
 // 1. Full profile
 export interface FullProfile {
     user: DBUser;
@@ -17,6 +32,7 @@ export interface FullProfile {
     sessions: DBUserSession[];
     oauth_accounts: DBOAuthAccount[];
     current_session_id?: string;
+    security_activities?: DBSecurityActivity[];
 }
 
 // 2. Secured full profile // remove auth related data

@@ -14,6 +14,7 @@ import { decryptSymmetric } from "@/lib/encryption";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
 import { getUserSession } from "@/lib/session";
 import { getWebAuthnConfig, checkLockout, handleFailedAttempt } from "./helpers";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export interface SudoActionResult {
   success: boolean;
@@ -44,6 +45,13 @@ async function completeSudoSuccess(
   await prisma.tempSession.delete({
     where: { id: tempSessionId },
   }).catch(() => {});
+
+  await recordSecurityActivity({
+    userId,
+    event: "SUDO_VERIFIED",
+    title: "Elevated access granted",
+    description: "Sudo re-authentication confirmed for sensitive settings access",
+  });
 
   let returnTo = "/profile";
   if (payloadString) {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { FullProfile } from "@/types/profile.types";
 import { SOCIAL_PROVIDERS, DRIVE_PROVIDERS } from "@/constants/providers.constant";
-import { HardDrive, Cloud, Box, Loader2 } from "lucide-react";
+import { HardDrive, Cloud, Box, Loader2, ShieldCheck } from "lucide-react";
 import { initializeOAuthProvider, disconnectOAuthAccount } from "@/actions/oauth/oauth.actions";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { toast } from "sonner";
@@ -140,6 +140,14 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
       </SectionCard>
 
       <SectionCard title={t("cloudDrives.title")} description={t("cloudDrives.desc")} noPadding>
+        <div className="mx-5 my-4 sm:mx-6 p-3.5 rounded-xl bg-primary/5 border border-primary/15 flex items-start gap-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+          <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <span>
+            {t("cloudDrives.privacyNote")}
+          </span>
+        </div>
+        <Separator className="opacity-50" />
+
         {DRIVE_PROVIDERS.map((provider, index) => {
           const connected = isConnected(provider.id);
           const isDisconnecting = disconnectingProvider === provider.id;

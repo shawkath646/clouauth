@@ -1,41 +1,191 @@
-# clouburstlab auth
+# ClouAuth (clouburstlab auth)
 
-> Centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider.
+> Centralized Identity Provider (IdP), OIDC 2.0 / OAuth 2.0 Server, and Internal App Bridge Ecosystem.
 
-clouburstlab auth is a secure, developer-friendly Identity Provider (IdP) and user management system built by Shawkat Hossain Maruf (https://shawkath646.dev). It serves as a unified identity layer for all clouburstlab services and third-party OAuth applications.
+ClouAuth is a production-grade, developer-first Identity Provider and access management platform developed by Shawkat Hossain Maruf (https://shawkath646.dev) for **clouburstlab**. It provides unified user identity, Passkey/WebAuthn passwordless authentication, multi-factor authentication, OAuth 2.0 application management, and internal service bridge communication across all `*.clouburstlab.com` subdomains.
 
-## Key Features
-- **OIDC 2.0 / OAuth 2.0 Compliant**: Full support for Authorization Code Flow with PKCE.
-- **Passwordless Login**: Built-in support for WebAuthn/Passkeys.
-- **Two-Factor Authentication (2FA)**: Secure accounts with TOTP (Authenticator apps), Email, and SMS verifications, plus backup recovery codes.
-- **Social Login**: Authenticate via Google, GitHub, and Microsoft.
-- **Developer Ecosystem**: Register and manage OAuth applications with client credentials and scope management.
-- **Account Security**: Session management, connected devices tracking, account disable/lockout, and refresh token rotation with replay detection.
+---
 
-## Core API & Endpoints
-The platform exposes standard OIDC endpoints for integrating applications:
-- **OIDC Discovery**: `/.well-known/openid-configuration`
-- **Authorization**: `/api/sso/v1/authorize`
-- **Token Exchange**: `/api/sso/v1/token`
-- **User Info**: `/api/sso/v1/userinfo`
-- **JWKS (Public Keys)**: `/api/sso/v1/jwks.json`
-- **Revocation**: `/api/sso/v1/revoke`
-- **Logout**: `/api/sso/v1/logout`
+## 1. Domain Boundary & Session Architecture
 
-## Important Pages
-- **Homepage**: `/`
-- **Sign In**: `/signin`
-- **Sign Up**: `/signup`
-- **Profile & Settings (Protected)**: `/profile`
-- **OAuth Applications Management (Protected)**: `/profile/applications`
-- **Security Controls (Protected)**: `/profile/security`
+- **Domain Scope:** `.clouburstlab.com` (or `localhost` in local development).
+- **Session Cookie:** `session_token`. Issued with `Domain=.clouburstlab.com`, `HttpOnly`, `Secure`, and `SameSite=Lax`.
+- **Browser-to-IdP Communication:** Web apps under subdomains (e.g. `https://drive.clouburstlab.com`, `https://app.clouburstlab.com`) send the user session cookie automatically when invoking IdP endpoints with `credentials: "include"`.
+- **Machine-to-Machine Communication:** Internal backend services communicate server-to-server using OAuth2 Client Credentials (`grant_type=client_credentials`) or internal cluster service tokens.
 
-## Tech Stack
-- Framework: Next.js (App Router)
-- Language: TypeScript
-- Database ORM: Prisma
-- Styling: Tailwind CSS
-- Security: Cryptographically secure timing-safe comparisons, RS256 JWT signatures, strict CSP, and security headers.
+---
 
-## AI Assistant Instructions
-When analyzing or generating code for clouburstlab auth, prioritize security and strict OIDC compliance. Ensure all secret comparisons utilize timing-safe equality, avoid exposing sensitive database fields to the client, and enforce strict URL validation for redirect URIs and open-redirect protections. Respect the `robots.txt` which disallows crawling of `/profile/` and `/api/` endpoints by generic web crawlers.
+## 2. OAuth 2.0 & OpenID Connect Endpoints
+
+The platform provides standard OIDC and OAuth 2.0 compliant endpoints with universal CORS support:
+
+### OIDC Discovery Document
+- **Endpoint:** `GET /.well-known/openid-configuration`
+- **Description:** Returns JSON OpenID Provider metadata including issuer, supported grant types, response types, signing algorithms (`RS256`), and claims.
+- **CORS:** `Access-Control-Allow-Origin: *`
+
+### Authorization Endpoint
+- **Endpoint:** `GET /signin`
+- **Description:** Initiates the interactive OAuth 2.0 Authorization Code flow. Prompts user authentication and application consent.
+- **Parameters:**
+  - `client_id` *(string, required)*: Registered developer application Client ID (`cbl_...`).
+  - `redirect_uri` *(string, required)*: Authorized callback URL registered for the client.
+  - `response_type` *(string, required)*: Must be `code`.
+  - `scope` *(string, optional)*: Space-delimited scopes, e.g. `openid profile email`.
+  - `state` *(string, required)*: Opaque CSRF protection string.
+  - `code_challenge` *(string, required)*: Base64URL-encoded SHA-256 PKCE code challenge.
+  - `code_challenge_method` *(string, required)*: Must be `S256`.
+
+### Token Endpoint
+- **Endpoint:** `POST /api/sso/v1/token`
+- **Content-Type:** `application/x-www-form-urlencoded` or `application/json`
+- **Supported Grant Types:**
+  1. `grant_type=authorization_code`: Exchanges single-use authorization code for `access_token`, `refresh_token`, and OIDC `id_token` (signed with RS256). Requires `code`, `redirect_uri`, `client_id`, `client_secret` (if confidential), and `code_verifier`.
+  2. `grant_type=refresh_token`: Rotates and issues a new access token using an unrevoked `refresh_token`. Enforces single-use JTI rotation to detect replay attacks.
+  3. `grant_type=client_credentials`: Issues machine-to-machine service access tokens for internal backend applications using `client_id` and `client_secret`.
+
+### UserInfo Endpoint
+- **Endpoint:** `GET /api/sso/v1/userinfo` or `POST /api/sso/v1/userinfo`
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Description:** Returns OIDC user claims (`sub`, `name`, `given_name`, `family_name`, `preferred_username`, `picture`, `email`, `email_verified`) according to granted scopes.
+
+### JWKS (JSON Web Key Set)
+- **Endpoint:** `GET /api/sso/v1/jwks.json`
+- **Description:** Returns the set of active RSA public keys (`RS256`) used to verify signatures on ID tokens. Backed by self-healing key lifecycle management.
+
+### Token Revocation
+- **Endpoint:** `POST /api/sso/v1/revoke`
+- **Description:** RFC 7009 compliant token revocation for access and refresh tokens.
+
+---
+
+## 3. Internal Inter-Service Bridge APIs (`/api/inter-services/v1/*`)
+
+Internal endpoints dedicated to bridge communication between clouburstlab services and client apps. Requests require an `Authorization: Bearer <APP_TOKEN>` header.
+
+### 3.1 User Session Verification
+- **Endpoint:** `GET /api/inter-services/v1/user-session` (alias: `/api/services/v1/user-session`)
+- **Headers:**
+  - `Authorization: Bearer <APP_TOKEN>` *(required)*
+  - `Cookie: session_token=...` *(forwarded automatically from *.clouburstlab.com via `credentials: "include"`)*
+  - `x-user-id: <USER_ID>` *(optional M2M fallback for backend callers)*
+- **Query Parameters:**
+  - `scope` *(string, optional, default: `id,firstname,lastname,email`)*: Comma-separated field projection (`id`, `username`, `firstname`, `lastname`, `email`, `email_verified`, `avatar`, `bio`, `pronouns`, `date_of_birth`, `created_on`, `preferences`, `addresses`, `phone`).
+- **Response Format:**
+  ```json
+  {
+    "authenticated": true,
+    "user": {
+      "id": "cuid...",
+      "username": "shawkath",
+      "first_name": "Shawkath",
+      "last_name": "Ali",
+      "email": "shawkath646@gmail.com",
+      "email_verified": true,
+      "avatar": "https://..."
+    },
+    "scopes": ["id", "firstname", "lastname", "email"]
+  }
+  ```
+
+### 3.2 Connected Cloud Drives & Decrypted Credentials
+- **Endpoint:** `GET /api/inter-services/v1/connected-drives` (alias: `/api/services/v1/connected-drives`)
+- **Headers:**
+  - `Authorization: Bearer <APP_TOKEN>` *(required)*
+  - `Cookie: session_token=...` *(or `x-user-id`)*
+- **Query Parameters:**
+  - `provider`: Filter by provider (`google_drive`, `onedrive`, `dropbox`).
+  - `refresh`: Set to `true` to force a live token refresh with Google/Microsoft/Dropbox if expired.
+- **Description:** Returns decrypted credentials (`access_token`, `refresh_token`, `expires_at`, `expires_in`, `is_expired`) so client apps can directly access cloud storage APIs.
+- **Response Format:**
+  ```json
+  {
+    "success": true,
+    "user_id": "cuid...",
+    "count": 1,
+    "drives": [
+      {
+        "id": "acc_123",
+        "provider": "google_drive",
+        "provider_user_id": "108394...",
+        "access_token": "ya29...",
+        "refresh_token": "1//04...",
+        "expires_at": 1727400000,
+        "expires_in": 3540,
+        "is_expired": false,
+        "created_on": "2026-09-27T02:00:00.000Z"
+      }
+    ]
+  }
+  ```
+
+### 3.3 AI & Machine Documentation
+- **Endpoint:** `GET /api/inter-services/v1/docs` (alias: `/api/services/v1/docs`)
+- **Headers:** `Accept: text/markdown` or `Accept: application/json`
+- **Description:** Returns the complete, AI-friendly markdown integration guide for agents to consume directly.
+
+---
+
+## 4. Security & Cryptographic Controls
+
+- **Passkeys / WebAuthn:** FIDO2 passwordless sign-in and step-up verification via `@simplewebauthn`.
+- **Two-Factor Authentication (2FA):** Time-based One-Time Password (TOTP) via RFC 6238, Email codes, and cryptographically hashed backup codes.
+- **Sudo Mode / Step-up Authentication:** Revalidates session credentials via temporary challenge sessions before high-risk actions (account deletion, data export, passkey revocation).
+- **Token Protection:** Cloud drive access and refresh tokens are stored using authenticated AES-256-GCM symmetric encryption.
+- **PKCE Strict Enforcement:** All public OAuth clients must present `code_challenge` with `code_challenge_method=S256`.
+
+---
+
+## 5. Developer & AI Agent Quickstart (TypeScript)
+
+\`\`\`typescript
+// Bridge client implementation for applications running on *.clouburstlab.com
+export class ClouAuthClient {
+  constructor(
+    private clientId: string,
+    private clientSecret: string,
+    private baseUrl: string = "https://auth.clouburstlab.com"
+  ) {}
+
+  async getAppToken(): Promise<string> {
+    const res = await fetch(\`\${this.baseUrl}/api/sso/v1/token\`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+      }),
+    });
+    const data = await res.json();
+    return data.access_token;
+  }
+
+  async verifyUserSession(cookieHeader?: string) {
+    const token = await this.getAppToken();
+    const headers: Record<string, string> = { Authorization: \`Bearer \${token}\` };
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
+    const res = await fetch(\`\${this.baseUrl}/api/inter-services/v1/user-session\`, { headers });
+    return res.json();
+  }
+
+  async getDrives(cookieHeader?: string, provider?: "google_drive" | "onedrive" | "dropbox") {
+    const token = await this.getAppToken();
+    const headers: Record<string, string> = { Authorization: \`Bearer \${token}\` };
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
+    const url = new URL(\`\${this.baseUrl}/api/inter-services/v1/connected-drives\`);
+    if (provider) url.searchParams.set("provider", provider);
+    const res = await fetch(url.toString(), { headers });
+    return res.json();
+  }
+}
+\`\`\`
+
+---
+
+## 6. AI Agent Guidelines
+
+1. **Verify Session First:** When building or debugging an internal service under `*.clouburstlab.com`, verify the incoming session via `/api/inter-services/v1/user-session`.
+2. **Accessing User Drives:** When an app needs access to a user's cloud storage files, request tokens from `/api/inter-services/v1/connected-drives` rather than prompting the user for secondary OAuth logins.
+3. **Respect Sudo Sessions:** Sudo sessions require an active temporary revalidation session. Do not bypass sudo prompts.
+4. **Follow RFC Standards:** Respect RFC 6749 (OAuth 2.0), RFC 7636 (PKCE), RFC 7009 (Revocation), and OpenID Connect Core 1.0.

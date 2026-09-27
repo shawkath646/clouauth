@@ -5,6 +5,7 @@
   "quickLinks": "Enlaces Rápidos",
   "parameters": "Parámetros",
   "response": "Respuesta",
+  "example": "Ejemplo de Solicitud",
   "table": {
     "name": "Nombre",
     "type": "Tipo",
@@ -70,15 +71,32 @@
       },
       "response": "Respuesta vacía 200 OK en caso de éxito."
     },
-    "logout": {
-      "name": "Endpoint de Cierre de Sesión",
-      "description": "Finaliza la sesión del usuario en el proveedor de identidad.",
+    "user_session": {
+      "name": "Puente de Sesión de Usuario Inter-Servicios",
+      "description": "Verifica la sesión activa del usuario a través de cookies de subdominio (*.clouburstlab.com) y devuelve datos de perfil filtrados.",
       "params": {
-        "id_token_hint": "El ID Token emitido previamente al cliente.",
-        "post_logout_redirect_uri": "A dónde redirigir después de cerrar sesión.",
-        "state": "Valor opaco devuelto a la URI de redirección."
+        "authorization": "Token Bearer de la aplicación.",
+        "cookie": "Cookie de sesión del usuario ('session_token').",
+        "scope": "Filtro de proyección de campos (ej. 'id,firstname,lastname,email,avatar').",
+        "user_id": "ID de usuario opcional para llamadas directas de backend a backend."
       },
-      "response": "Redirige a la post_logout_redirect_uri."
+      "response": "Objeto JSON con { authenticated: true, user: { ...campos }, scopes }."
+    },
+    "connected_drives": {
+      "name": "Almacenamiento en la Nube Conectado y Credenciales",
+      "description": "Devuelve credenciales OAuth descifradas para las unidades conectadas del usuario (Google Drive, OneDrive, Dropbox).",
+      "params": {
+        "authorization": "Token Bearer de la aplicación.",
+        "cookie": "Cookie de sesión del usuario ('session_token').",
+        "provider": "Filtro opcional: 'google_drive', 'onedrive' o 'dropbox'.",
+        "refresh": "Booleano opcional ('true') para actualizar tokens expirados proactivamente."
+      },
+      "response": "Objeto JSON con access_token y refresh_token descifrados con TTL."
+    },
+    "bridge_docs": {
+      "name": "Documentación Automática para IA y Agentes",
+      "description": "Devuelve la documentación completa en formato Markdown puro para agentes automatizados y LLMs.",
+      "response": "Documento Markdown sin formato (Content-Type: text/markdown)."
     }
   }
 }

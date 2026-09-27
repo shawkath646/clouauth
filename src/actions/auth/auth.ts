@@ -14,6 +14,7 @@ import {
   getWebAuthnConfig,
 } from "./helpers";
 import { resolveUserAvatar } from "@/lib/avatar";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export { MAX_ATTEMPTS, LOCKOUT_DURATION_MS, verificationMethodMap };
 
@@ -49,6 +50,7 @@ export type UserWithAuthRelations = FinalSignInUser & {
   first_name?: string;
   last_name?: string;
   avatar?: string;
+  emails?: { id?: string; address: string; is_primary?: boolean }[];
   two_factor?: {
     passkeys?: { id: string; rp_id?: string | null }[];
     totp?: { id: string; enabled?: boolean } | null;
@@ -72,7 +74,8 @@ export interface ExternalAuthProfile {
 export async function processFinalSignIn(
   user: FinalSignInUser,
   rememberMe: boolean,
-  tempSessionId?: string
+  tempSessionId?: string,
+  activityDetails?: { event?: string; title?: string; description?: string }
 ): Promise<SignInReturn> {
   if (user.account_status && !user.account_status.is_active) {
     if (user.account_status.self_enable) {
@@ -87,6 +90,13 @@ export async function processFinalSignIn(
   }
 
   await createSession(user.id, rememberMe);
+
+  await recordSecurityActivity({
+    userId: user.id,
+    event: activityDetails?.event || "LOGIN_SUCCESS",
+    title: activityDetails?.title || "Signed in successfully",
+    description: activityDetails?.description || "New session established",
+  });
 
   if (user.preferences) {
     const cookieStore = await cookies();
@@ -147,6 +157,24 @@ export async function evaluateAuthStepOrSignIn(
     if (tf.totp && (tf.totp.enabled ?? true)) methods.push(verificationMethodMap.totp);
     if (tf.email || tf.email_id) methods.push(verificationMethodMap.email);
 
+    // Supplementary Email 2FA Method:
+    // When 2FA is active (passkeys or TOTP), always provide email code verification
+    // as a supplementary fallback method so the user is never locked out if their primary 2FA method is unavailable.
+    if (methods.length > 0 && !methods.some((m) => m.id === "email")) {
+      const hasEmail = Boolean(user.emails && user.emails.length > 0);
+      if (hasEmail) {
+        methods.push(verificationMethodMap.email);
+      } else {
+        const foundEmail = await prisma.userEmail.findFirst({
+          where: { user_id: user.id },
+          select: { id: true },
+        });
+        if (foundEmail) {
+          methods.push(verificationMethodMap.email);
+        }
+      }
+    }
+
     if (methods.length > 0) {
       const tempSession = await createTempSession(user.id, {
         rememberMe,
@@ -162,7 +190,33 @@ export async function evaluateAuthStepOrSignIn(
   }
 
   // 3. Complete sign in
-  return await processFinalSignIn(user, rememberMe);
+  let title = "Signed in successfully";
+  let description = "Signed in with password";
+  let event = "LOGIN_PASSWORD";
+
+  if (authMethod) {
+    if (authMethod.startsWith("oauth:")) {
+      const provider = authMethod.replace("oauth:", "");
+      const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+      event = "LOGIN_OAUTH";
+      title = `Signed in with ${providerName}`;
+      description = `OAuth sign-in using ${providerName}`;
+    } else if (authMethod === "one_tap" || authMethod === "google_one_tap") {
+      event = "LOGIN_GOOGLE_ONE_TAP";
+      title = "Signed in with Google One Tap";
+      description = "Fast sign-in with Google One Tap";
+    } else if (authMethod === "passkey") {
+      event = "LOGIN_PASSKEY";
+      title = "Signed in with Passkey";
+      description = "Biometric / security key authentication";
+    }
+  }
+
+  return await processFinalSignIn(user, rememberMe, undefined, {
+    event,
+    title,
+    description,
+  });
 }
 
 export async function authenticateExternalUser(
@@ -175,6 +229,13 @@ export async function authenticateExternalUser(
 
   if (currentSession) {
     await upsertOAuthAccount(currentSession.user.id, profile);
+    const providerName = profile.provider.charAt(0).toUpperCase() + profile.provider.slice(1);
+    await recordSecurityActivity({
+      userId: currentSession.user.id,
+      event: "OAUTH_CONNECTED",
+      title: `Connected ${providerName}`,
+      description: `Linked ${providerName} account for sign-in and integration`,
+    });
     return { action: "LOGIN_SUCCESS" };
   }
 
@@ -197,13 +258,14 @@ export async function authenticateExternalUser(
   // Refresh OAuth tokens and expiry on re-login for existing connected accounts
   if (existingOAuthAccount && targetUser) {
     await upsertOAuthAccount(targetUser.id, profile);
-    if (!targetUser.avatar && profile.avatar) {
+    const hasOnlyPlaceholderAvatar = !targetUser.avatar || targetUser.avatar.endsWith(".svg");
+    if (hasOnlyPlaceholderAvatar && profile.avatar) {
       const resolvedAvatar = await resolveUserAvatar(
         profile.avatar,
         targetUser.first_name || "User",
         targetUser.last_name || ""
       );
-      if (resolvedAvatar) {
+      if (resolvedAvatar && !resolvedAvatar.endsWith(".svg")) {
         await prisma.user.update({
           where: { id: targetUser.id },
           data: { avatar: resolvedAvatar },
@@ -246,13 +308,14 @@ export async function authenticateExternalUser(
       await upsertOAuthAccount(existingEmail.user.id, profile);
       targetUser = existingEmail.user;
 
-      if (!targetUser.avatar && profile.avatar) {
+      const hasOnlyPlaceholderAvatar = !targetUser.avatar || targetUser.avatar.endsWith(".svg");
+      if (hasOnlyPlaceholderAvatar && profile.avatar) {
         const resolvedAvatar = await resolveUserAvatar(
           profile.avatar,
           targetUser.first_name || "User",
           targetUser.last_name || ""
         );
-        if (resolvedAvatar) {
+        if (resolvedAvatar && !resolvedAvatar.endsWith(".svg")) {
           await prisma.user.update({
             where: { id: targetUser.id },
             data: { avatar: resolvedAvatar },
@@ -324,7 +387,8 @@ export async function authenticateExternalUser(
 
 export async function finalizeSignIn(
   userId: string,
-  tempSessionId: string
+  tempSessionId: string,
+  activityDetails?: { event?: string; title?: string; description?: string }
 ): Promise<SignInReturn> {
   const ts = await prisma.tempSession.findUnique({ where: { id: tempSessionId } });
 
@@ -344,7 +408,11 @@ export async function finalizeSignIn(
   if (!user) return { action: "ERROR", error: "User not found." };
 
   await deleteTempSession(tempSessionId);
-  return processFinalSignIn(user, ts.remember_me, undefined);
+  return processFinalSignIn(user, ts.remember_me, undefined, activityDetails || {
+    event: "LOGIN_2FA",
+    title: "Signed in with two-step verification",
+    description: "Successfully completed two-step verification",
+  });
 }
 
 export async function signOutAll(userId: string) {
@@ -355,5 +423,11 @@ export async function signOutAll(userId: string) {
   await prisma.userSession.updateMany({
     where: { user_id: userId, revoked_on: null },
     data: { revoked_on: new Date() },
+  });
+  await recordSecurityActivity({
+    userId,
+    event: "ALL_SESSIONS_REVOKED",
+    title: "All sessions signed out",
+    description: "Signed out of all active devices and sessions",
   });
 }

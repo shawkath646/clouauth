@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { getEnv } from "@/utils/env";
 import { encryptSymmetric } from "@/lib/encryption";
 import { requireUserSession } from "./helpers";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export async function generateTotpSecretAction() {
   try {
@@ -59,6 +60,13 @@ export async function verifyAndEnableTotpAction(secret: string, token: string) {
         digits: 6,
         period: 30,
       },
+    });
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "TOTP_ENABLED",
+      title: "Authenticator app enabled",
+      description: "TOTP two-step verification configured and enabled",
     });
 
     revalidatePath("/profile");

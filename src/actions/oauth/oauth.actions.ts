@@ -10,6 +10,7 @@ import { getSecureCookieOptions } from "@/utils/utils";
 import { requireUserSession } from "@/actions/auth/helpers";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export async function grantOAuthAccess(
   client_id: string,
@@ -219,6 +220,14 @@ export async function disconnectOAuthAccount(provider: string) {
         user_id: session.user.id,
         provider: normalizedProvider,
       },
+    });
+
+    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    await recordSecurityActivity({
+      userId: session.user.id,
+      event: "OAUTH_DISCONNECTED",
+      title: `Disconnected ${providerName}`,
+      description: `Removed linked account for ${providerName}`,
     });
 
     revalidatePath("/profile/connected");

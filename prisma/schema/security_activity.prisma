@@ -1,0 +1,19 @@
+model SecurityActivity {
+  id          String   @id @default(cuid())
+  user_id     String
+  event       String
+  title       String
+  description String?  @db.Text
+  ip_address  String?
+  user_agent  String?  @db.Text
+  device      String?
+  city        String?
+  country     String?
+  status      String   @default("success")
+  created_on  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, created_on])
+}

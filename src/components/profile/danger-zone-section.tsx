@@ -20,8 +20,6 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
-  Eye,
-  EyeOff,
   ShieldAlert,
   AlertCircle,
 } from "lucide-react";
@@ -35,16 +33,10 @@ interface DangerZoneSectionProps {
   hasPassword?: boolean;
 }
 
-const DELETION_REASONS = [
-  "I no longer need this account",
-  "Privacy or security concerns",
-  "Switching to another account",
-  "Too complex or hard to use",
-  "Other reason",
-];
-
 export function DangerZoneSection({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   username = "",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hasPassword = true,
 }: DangerZoneSectionProps) {
   const { t } = useTranslations("profile_security");
@@ -55,34 +47,30 @@ export function DangerZoneSection({
   const [isDisabling, setIsDisabling] = useState(false);
 
   // Delete account dialog state
-  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedReason, setSelectedReason] = useState<string>(DELETION_REASONS[0]);
+  const [selectedReasonKey, setSelectedReasonKey] = useState<string>("reasonNoLongerNeed");
   const [customReason, setCustomReason] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [confirmUsername, setConfirmUsername] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const resetDeleteState = () => {
-    setDeleteStep(1);
-    setPassword("");
-    setShowPassword(false);
-    setConfirmUsername("");
     setDeleteError(null);
     setCustomReason("");
-    setSelectedReason(DELETION_REASONS[0]);
+    setSelectedReasonKey("reasonNoLongerNeed");
   };
 
   const handleDisable = async () => {
     setIsDisabling(true);
     try {
       const res = await disableAccount();
+      if (res.sudoRequired && res.redirectUrl) {
+        router.push(res.redirectUrl);
+        return;
+      }
       if (res.success) {
-        toast.success("Account disabled successfully");
+        toast.success(t("dangerZone.disableSuccess"));
         router.push("/signin");
       } else {
-        toast.error(res.error || "Failed to disable account");
+        toast.error(res.error || t("dangerZone.disableError"));
       }
     } finally {
       setIsDisabling(false);
@@ -94,26 +82,28 @@ export function DangerZoneSection({
     setIsDeleting(true);
 
     const reason =
-      selectedReason === "Other reason" && customReason.trim()
+      selectedReasonKey === "reasonOther" && customReason.trim()
         ? customReason.trim()
-        : selectedReason;
+        : t(`dangerZone.${selectedReasonKey}`);
 
     try {
-      const res = await deleteAccount({
-        password: hasPassword ? password : undefined,
-        confirmUsername: !hasPassword ? confirmUsername : undefined,
-        reason,
-      });
+      const res = await deleteAccount({ reason });
+
+      if (res.sudoRequired && res.redirectUrl) {
+        router.push(res.redirectUrl);
+        return;
+      }
 
       if (res.success) {
-        toast.success("Your account has been permanently deleted.");
+        toast.success(t("dangerZone.deleteSuccess"));
         router.push("/signin");
       } else {
-        setDeleteError(res.error || "Failed to delete account");
-        toast.error(res.error || "Failed to delete account");
+        const errorMsg = res.error || t("dangerZone.deleteError");
+        setDeleteError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "An unexpected error occurred.";
+      const msg = e instanceof Error ? e.message : t("dangerZone.deleteError");
       setDeleteError(msg);
       toast.error(msg);
     } finally {
@@ -121,9 +111,13 @@ export function DangerZoneSection({
     }
   };
 
-  const isDeleteReady = hasPassword
-    ? password.trim().length > 0
-    : confirmUsername.trim() === username.trim();
+  const reasonOptions = [
+    { key: "reasonNoLongerNeed", label: t("dangerZone.reasonNoLongerNeed") },
+    { key: "reasonPrivacyConcerns", label: t("dangerZone.reasonPrivacyConcerns") },
+    { key: "reasonSwitchingAccount", label: t("dangerZone.reasonSwitchingAccount") },
+    { key: "reasonTooComplex", label: t("dangerZone.reasonTooComplex") },
+    { key: "reasonOther", label: t("dangerZone.reasonOther") },
+  ];
 
   return (
     <div className="space-y-6">
@@ -146,181 +140,86 @@ export function DangerZoneSection({
             </AlertDialogTrigger>
 
             <AlertDialogContent className="rounded-2xl border-destructive/30 bg-background/95 backdrop-blur-xl max-w-md w-full p-6">
-              {deleteStep === 1 ? (
-                <>
-                  <AlertDialogHeader className="space-y-2 text-left">
-                    <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-1">
-                      <AlertTriangle className="w-6 h-6" />
-                    </div>
-                    <AlertDialogTitle className="text-xl font-bold text-destructive">
-                      Permanently Delete Account
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm text-muted-foreground">
-                      This action is <strong className="text-foreground">permanent and cannot be reversed</strong>. Once confirmed, all your active sessions, passkeys, and account settings will be erased.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
+              <AlertDialogHeader className="space-y-2 text-left">
+                <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-1">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <AlertDialogTitle className="text-xl font-bold text-destructive">
+                  {t("dangerZone.deleteModalTitle")}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm text-muted-foreground">
+                  {t("dangerZone.deleteModalDesc")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
 
-                  <div className="my-4 space-y-3 rounded-xl bg-destructive/5 border border-destructive/15 p-4 text-xs text-muted-foreground">
-                    <p className="font-semibold text-destructive flex items-center gap-1.5 text-sm">
-                      <ShieldAlert className="w-4 h-4 shrink-0" />
-                      What will happen:
-                    </p>
-                    <ul className="list-disc pl-4 space-y-1">
-                      <li>All active logins and sessions will be instantly terminated.</li>
-                      <li>Passwords, passkeys, TOTP, and recovery codes will be destroyed.</li>
-                      <li>OAuth integrations and registered applications will be unlinked.</li>
-                      <li>Essential compliance info will be archived in our graveyard record.</li>
-                    </ul>
-                  </div>
+              <div className="my-4 space-y-3 rounded-xl bg-destructive/5 border border-destructive/15 p-4 text-xs text-muted-foreground">
+                <p className="font-semibold text-destructive flex items-center gap-1.5 text-sm">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  {t("dangerZone.whatWillHappen")}
+                </p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>{t("dangerZone.happenSessions")}</li>
+                  <li>{t("dangerZone.happenCredentials")}</li>
+                  <li>{t("dangerZone.happenOAuth")}</li>
+                  <li>{t("dangerZone.happenCompliance")}</li>
+                </ul>
+              </div>
 
-                  <div className="space-y-2 mb-4 text-left">
-                    <Label htmlFor="delete-reason" className="text-xs font-medium text-foreground">
-                      Reason for leaving (optional)
-                    </Label>
-                    <select
-                      id="delete-reason"
-                      value={selectedReason}
-                      onChange={(e) => setSelectedReason(e.target.value)}
-                      className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    >
-                      {DELETION_REASONS.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-
-                    {selectedReason === "Other reason" && (
-                      <Input
-                        placeholder="Please specify..."
-                        value={customReason}
-                        onChange={(e) => setCustomReason(e.target.value)}
-                        className="mt-2 text-sm"
-                        maxLength={200}
-                      />
-                    )}
-                  </div>
-
-                  <AlertDialogFooter className="flex-row justify-end gap-2">
-                    <AlertDialogCancel className="rounded-full mt-0">
-                      {t("dangerZone.modalCancel")}
-                    </AlertDialogCancel>
-                    <Button
-                      variant="destructive"
-                      className="rounded-full"
-                      onClick={() => setDeleteStep(2)}
-                    >
-                      Continue
-                    </Button>
-                  </AlertDialogFooter>
-                </>
-              ) : (
-                <>
-                  <AlertDialogHeader className="space-y-2 text-left">
-                    <div className="w-12 h-12 rounded-full bg-destructive/15 text-destructive flex items-center justify-center mb-1">
-                      <ShieldAlert className="w-6 h-6" />
-                    </div>
-                    <AlertDialogTitle className="text-xl font-bold text-destructive">
-                      Identity Verification
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm text-muted-foreground">
-                      {hasPassword
-                        ? "Please enter your current account password to confirm that this is your request."
-                        : `To confirm deletion, please type your username below:`}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-
-                  {deleteError && (
-                    <div className="my-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{deleteError}</span>
-                    </div>
-                  )}
-
-                  <div className="my-4 space-y-2 text-left">
-                    {hasPassword ? (
-                      <div>
-                        <Label htmlFor="delete-password" className="text-xs font-medium text-foreground mb-1 block">
-                          Current Password
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="delete-password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              if (deleteError) setDeleteError(null);
-                            }}
-                            className="pr-10 text-sm"
-                            autoComplete="current-password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Label htmlFor="confirm-username" className="text-xs font-medium text-foreground mb-1 block">
-                          Type <code className="font-bold text-destructive px-1 py-0.5 rounded bg-muted font-mono">{username}</code> to confirm:
-                        </Label>
-                        <Input
-                          id="confirm-username"
-                          placeholder={username}
-                          value={confirmUsername}
-                          onChange={(e) => {
-                            setConfirmUsername(e.target.value);
-                            if (deleteError) setDeleteError(null);
-                          }}
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <AlertDialogFooter className="flex-row justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      className="rounded-full"
-                      disabled={isDeleting}
-                      onClick={() => {
-                        setDeleteStep(1);
-                        setDeleteError(null);
-                      }}
-                    >
-                      Back
-                    </Button>
-                    <AlertDialogCancel
-                      className="rounded-full mt-0"
-                      disabled={isDeleting}
-                      onClick={resetDeleteState}
-                    >
-                      {t("dangerZone.modalCancel")}
-                    </AlertDialogCancel>
-                    <Button
-                      variant="destructive"
-                      className="rounded-full"
-                      disabled={!isDeleteReady || isDeleting}
-                      onClick={handleDelete}
-                    >
-                      {isDeleting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : (
-                        "Permanently Delete"
-                      )}
-                    </Button>
-                  </AlertDialogFooter>
-                </>
+              {deleteError && (
+                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{deleteError}</span>
+                </div>
               )}
+
+              <div className="space-y-2 mb-4 text-left">
+                <Label htmlFor="delete-reason" className="text-xs font-medium text-foreground">
+                  {t("dangerZone.reasonLabel")}
+                </Label>
+                <select
+                  id="delete-reason"
+                  value={selectedReasonKey}
+                  onChange={(e) => setSelectedReasonKey(e.target.value)}
+                  className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {reasonOptions.map((r) => (
+                    <option key={r.key} value={r.key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedReasonKey === "reasonOther" && (
+                  <Input
+                    placeholder={t("dangerZone.reasonPlaceholder")}
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    className="mt-2 text-sm"
+                    maxLength={200}
+                  />
+                )}
+              </div>
+
+              <AlertDialogFooter className="flex-row justify-end gap-2">
+                <AlertDialogCancel className="rounded-full mt-0" disabled={isDeleting}>
+                  {t("dangerZone.modalCancel")}
+                </AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  className="rounded-full"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t("dangerZone.deleting")}
+                    </>
+                  ) : (
+                    t("dangerZone.confirmDelete")
+                  )}
+                </Button>
+              </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
@@ -358,7 +257,7 @@ export function DangerZoneSection({
                       className="rounded-full bg-orange-500 hover:bg-orange-600 text-white"
                       onClick={() => setDisableStep(2)}
                     >
-                      Continue
+                      {t("dangerZone.continue")}
                     </Button>
                   </AlertDialogFooter>
                 </>
@@ -367,7 +266,7 @@ export function DangerZoneSection({
                   <AlertDialogHeader>
                     <AlertDialogTitle>{t("dangerZone.modalWarning")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This is your final confirmation. Your account will be disabled immediately.
+                      {t("dangerZone.disableFinalConfirm")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

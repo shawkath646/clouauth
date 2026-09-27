@@ -18,6 +18,9 @@ export const verificationMethodMap: Record<string, VerificationMethod> = {
 export const USER_WITH_AUTH_INCLUDE = {
   account_status: true,
   preferences: true,
+  emails: {
+    select: { id: true, address: true, is_primary: true },
+  },
   two_factor: {
     select: {
       passkeys: { select: { id: true, rp_id: true } },

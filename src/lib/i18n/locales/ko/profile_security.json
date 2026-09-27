@@ -61,7 +61,29 @@
     "modalWarning": "경고",
     "modalDesc": "이 작업은 모든 기기에서 즉시 로그아웃하고 계정을 비활성화합니다.",
     "modalConfirm": "예, 계정을 비활성화합니다",
-    "modalCancel": "취소"
+    "modalCancel": "취소",
+    "disableFinalConfirm": "최종 확인입니다. 계정이 즉시 비활성화됩니다.",
+    "deleteModalTitle": "계정 영구 삭제",
+    "deleteModalDesc": "이 작업은 영구적이며 취소할 수 없습니다. 확인되면 모든 활성 세션, 패스키 및 계정 설정이 삭제됩니다.",
+    "whatWillHappen": "진행 시 변경 사항:",
+    "happenSessions": "모든 활성 로그인 및 세션이 즉시 종료됩니다.",
+    "happenCredentials": "비밀번호, 패스키, TOTP 및 복구 코드가 파기됩니다.",
+    "happenOAuth": "OAuth 연동 및 등록된 애플리케이션 연결이 해제됩니다.",
+    "happenCompliance": "필수 규정 준수 정보는 삭제 기록 보관소에 저장됩니다.",
+    "reasonLabel": "탈퇴 사유 (선택 사항)",
+    "reasonPlaceholder": "사유를 입력해 주세요...",
+    "reasonNoLongerNeed": "더 이상 이 계정이 필요하지 않음",
+    "reasonPrivacyConcerns": "개인정보 보호 또는 보안 문제",
+    "reasonSwitchingAccount": "다른 계정으로 전환",
+    "reasonTooComplex": "너무 복잡하거나 사용하기 어려움",
+    "reasonOther": "기타 사유",
+    "continue": "계속",
+    "confirmDelete": "영구 삭제",
+    "deleting": "삭제 중...",
+    "disableSuccess": "계정이 성공적으로 비활성화되었습니다",
+    "disableError": "계정 비활성화 실패",
+    "deleteSuccess": "계정이 영구적으로 삭제되었습니다.",
+    "deleteError": "계정 삭제 실패"
   },
   "signInSecurity": {
     "title": "로그인 및 보안",
@@ -75,6 +97,7 @@
     "method": "개 방법",
     "methods": "개 방법",
     "disabled": "비활성화됨",
+    "enabled": "활성화됨",
     "passkeys": "패스키",
     "passkeysDesc": "생체 인식 또는 보안 키로 비밀번호 없이 로그인",
     "device": "개 기기",
@@ -95,7 +118,12 @@
   "recentActivity": {
     "title": "최근 보안 활동",
     "desc": "계정의 최근 보안 이벤트를 검토하세요.",
-    "reviewAll": "모든 보안 이벤트 검토"
+    "reviewAll": "모든 보안 이벤트 검토",
+    "noActivity": "최근 보안 활동이 없습니다.",
+    "dialogTitle": "최근 보안 활동",
+    "dialogDesc": "최근 로그인, 자격 증명 수정 및 보안 조치의 전체 감사 로그입니다.",
+    "refresh": "새로고침",
+    "close": "닫기"
   },
   "activeSessions": {
     "title": "활성 세션",
@@ -126,7 +154,8 @@
   },
   "cloudDrives": {
     "title": "클라우드 드라이브",
-    "desc": "클라우드 저장소를 연결하여 파일과 백업을 원활하게 동기화하세요."
+    "desc": "클라우드 저장소를 연결하여 파일과 백업을 원활하게 동기화하세요.",
+    "privacyNote": "드라이브 접근 권한은 clouburstlab 앱을 통한 클라우드 동기화가 필요한 경우에만 필요합니다. 이 접근 권한은 제3자 애플리케이션에 절대 부여되지 않습니다."
   },
   "authenticator": {
     "setupTitle": "Set up Authenticator App",

@@ -81,27 +81,40 @@ export async function generateAndUploadAvatar(
 export async function uploadExternalAvatar(externalUrl: string): Promise<string | null> {
     try {
         const { validateImageMagicBytes } = await import("@/utils/image-validator");
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+        let buffer: Buffer;
 
-        const res = await fetch(externalUrl, {
-            signal: controller.signal,
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-            },
-        });
-        clearTimeout(timeout);
+        // Check if the input is a base64 Data URI
+        if (externalUrl.startsWith("data:")) {
+            const parts = externalUrl.split(",");
+            if (parts.length !== 2) return null;
 
-        if (!res.ok) return null;
+            // Extract the raw base64 string and decode it
+            buffer = Buffer.from(parts[1], "base64");
+        } else {
+            // Proceed with standard HTTP/HTTPS fetch
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
 
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+            const res = await fetch(externalUrl, {
+                signal: controller.signal,
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                },
+            });
+            clearTimeout(timeout);
+
+            if (!res.ok) return null;
+
+            const arrayBuffer = await res.arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
+        }
 
         if (buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
             return null;
         }
 
+        // Magic bytes validation inherently verifies the structure of the decoded base64 buffer
         const validated = validateImageMagicBytes(buffer);
         if (!validated) return null;
 

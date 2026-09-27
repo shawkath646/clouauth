@@ -22,6 +22,7 @@ import {
   USER_WITH_AUTH_INCLUDE,
 } from "./helpers";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export type { SignInReturn, AccountDisabledReturn };
 
@@ -99,6 +100,14 @@ export async function enableAccount(tempSessionId: string): Promise<SignInReturn
     });
 
     await createSession(tempSession.user_id, tempSession.remember_me);
+
+    await recordSecurityActivity({
+      userId: tempSession.user_id,
+      event: "ACCOUNT_REENABLED",
+      title: "Account re-enabled",
+      description: "Account was reactivated successfully by the user",
+    });
+
     await deleteTempSession(tempSessionId);
 
     return { action: "LOGIN_SUCCESS" };

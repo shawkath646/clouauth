@@ -1,7 +1,7 @@
 {
   "title": "Developer Integration Guide",
   "descriptionPart1": "Follow this step-by-step tutorial to integrate your applications with",
-  "descriptionPart2": "We support the industry-standard OAuth 2.0 Authorization Code Flow with PKCE for secure authentication.",
+  "descriptionPart2": "We support the industry-standard OAuth 2.0 Authorization Code Flow with PKCE, Client Credentials for machine-to-machine integration, and an internal bridge for connected cloud storage.",
   "steps": {
     "step1": {
       "title": "Register your Application",
@@ -47,19 +47,19 @@
     },
     "step3": {
       "title": "Implement Authorization Flow",
-      "description": "Redirect to authorize",
+      "description": "Redirect to sign in & consent",
       "content": {
-        "intro": "Redirect the user to the authorization endpoint. Make sure to generate a PKCE code_challenge."
+        "intro": "Redirect the user to the /signin authorization endpoint with response_type=code and a cryptographic PKCE code_challenge."
       }
     },
     "step4": {
       "title": "Exchange Code for Token",
-      "description": "Handle the callback",
+      "description": "Handle the callback & verify PKCE",
       "content": {
         "intro": {
           "part1": "Once the user authenticates, they are redirected back to your app with a",
           "code": "code",
-          "part2": "Exchange it for access tokens."
+          "part2": "Exchange it at /api/sso/v1/token for access, refresh, and ID tokens."
         }
       }
     },
@@ -70,7 +70,7 @@
         "intro": {
           "part1": "Now that you have the",
           "code": "access_token",
-          "part2": "use it to fetch the user's profile from the /api/sso/v1/userinfo endpoint."
+          "part2": "use it to fetch the user's profile claims from the /api/sso/v1/userinfo endpoint."
         }
       }
     },
@@ -81,8 +81,15 @@
         "intro": {
           "part1": "When the access token expires, use the",
           "code": "refresh_token",
-          "part2": "to request a new access token without requiring the user to sign in again."
+          "part2": "with grant_type=refresh_token to request a new access token seamlessly."
         }
+      }
+    },
+    "step7": {
+      "title": "Internal App Bridge & Machine-to-Machine Integration",
+      "description": "Cross-subdomain session verification & cloud drives",
+      "content": {
+        "intro": "Internal applications within the *.clouburstlab.com domain can leverage the bridge APIs to seamlessly inspect active user sessions and retrieve decrypted Google Drive, OneDrive, and Dropbox credentials."
       }
     }
   }

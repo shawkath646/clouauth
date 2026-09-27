@@ -10,6 +10,7 @@ import {
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 import { requireUserSession, requireValidTempSession, getWebAuthnConfig } from "./helpers";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export async function triggerPasskeyRegistration() {
   try {
@@ -133,6 +134,13 @@ export async function resolvePasskeyRegistration(
       },
     });
 
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "PASSKEY_ADDED",
+      title: "New passkey added",
+      description: `Registered passkey: ${passkey.device_name || "Security Key"}`,
+    });
+
     await deleteTempSession(tempSessionId).catch(() => {});
 
     return { success: true, passkey };
@@ -187,6 +195,13 @@ export async function deletePasskey(passkeyId: string) {
 
     await prisma.passkeyCredential.delete({
       where: { id: passkey.id },
+    });
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "PASSKEY_REMOVED",
+      title: "Passkey removed",
+      description: `Removed passkey: ${passkey.device_name || "Security Key"}`,
     });
 
     const remaining = await prisma.passkeyCredential.count({

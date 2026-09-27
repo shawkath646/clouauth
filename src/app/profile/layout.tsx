@@ -9,6 +9,7 @@ import { getFullProfile } from "@/actions/profile/get-profile";
 import { redirect } from "next/navigation";
 import { ProfileLayoutClient } from "@/components/profile/profile-layout-client";
 import { SignOutButton } from "@/components/profile/sign-out-button";
+import { Shield } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -58,7 +59,10 @@ export default async function ProfileLayout({
   };
   
   if (!result.success || !result.data) {
-    redirect("/signin");
+    if (result.error === "Unauthorized") {
+      redirect("/signin");
+    }
+    throw new Error(result.error || "Failed to load profile data.");
   }
 
   return (
@@ -76,28 +80,44 @@ export default async function ProfileLayout({
       <header className="sticky top-0 z-30 w-full border-b border-primary/20 bg-background/70 dark:bg-card/40 backdrop-blur-xl">
         <div className="w-full max-w-360 mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
 
-          <Link href="https://clouburstlab.com"  className="flex items-center">
-            {/* Dark Mode Logo */}
-            <Image
-              src={iconDark}
-              alt="clouburstlab"
-              width={144}
-              height={40}
-              priority
-              className="hidden dark:block object-contain"
-            />
-            {/* Light Mode Logo */}
-            <Image
-              src={iconLight}
-              alt="clouburstlab"
-              width={144}
-              height={40}
-              priority
-              className="block dark:hidden object-contain"
-            />
+          {/* Left: ClouAuth Brand matching Global Navbar */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="bg-primary/10 p-1.5 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-bold tracking-tight text-lg">ClouAuth</span>
           </Link>
 
+          {/* Right: clouburstlab logo before SignOutButton */}
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Link
+              href="https://clouburstlab.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center hover:opacity-85 transition-opacity"
+            >
+              {/* Dark Mode Logo */}
+              <Image
+                src={iconDark}
+                alt="clouburstlab"
+                width={130}
+                height={36}
+                priority
+                className="hidden dark:block object-contain"
+              />
+              {/* Light Mode Logo */}
+              <Image
+                src={iconLight}
+                alt="clouburstlab"
+                width={130}
+                height={36}
+                priority
+                className="block dark:hidden object-contain"
+              />
+            </Link>
+
             <SignOutButton />
+          </div>
 
         </div>
       </header>

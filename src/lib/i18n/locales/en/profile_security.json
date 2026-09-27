@@ -61,7 +61,29 @@
     "modalWarning": "Warning",
     "modalDesc": "This action will instantly sign you out of all devices and disable your account.",
     "modalConfirm": "Yes, disable my account",
-    "modalCancel": "Cancel"
+    "modalCancel": "Cancel",
+    "disableFinalConfirm": "This is your final confirmation. Your account will be disabled immediately.",
+    "deleteModalTitle": "Permanently Delete Account",
+    "deleteModalDesc": "This action is permanent and cannot be reversed. Once confirmed, all your active sessions, passkeys, and account settings will be erased.",
+    "whatWillHappen": "What will happen:",
+    "happenSessions": "All active logins and sessions will be instantly terminated.",
+    "happenCredentials": "Passwords, passkeys, TOTP, and recovery codes will be destroyed.",
+    "happenOAuth": "OAuth integrations and registered applications will be unlinked.",
+    "happenCompliance": "Essential compliance info will be archived in our graveyard record.",
+    "reasonLabel": "Reason for leaving (optional)",
+    "reasonPlaceholder": "Please specify...",
+    "reasonNoLongerNeed": "I no longer need this account",
+    "reasonPrivacyConcerns": "Privacy or security concerns",
+    "reasonSwitchingAccount": "Switching to another account",
+    "reasonTooComplex": "Too complex or hard to use",
+    "reasonOther": "Other reason",
+    "continue": "Continue",
+    "confirmDelete": "Permanently Delete",
+    "deleting": "Deleting...",
+    "disableSuccess": "Account disabled successfully",
+    "disableError": "Failed to disable account",
+    "deleteSuccess": "Your account has been permanently deleted.",
+    "deleteError": "Failed to delete account"
   },
   "signInSecurity": {
     "title": "Sign-in & Security",
@@ -75,6 +97,7 @@
     "method": "method",
     "methods": "methods",
     "disabled": "Disabled",
+    "enabled": "Enabled",
     "passkeys": "Passkeys",
     "passkeysDesc": "Passwordless login with biometrics or security key",
     "device": "device",
@@ -95,7 +118,12 @@
   "recentActivity": {
     "title": "Recent Security Activity",
     "desc": "Review recent security events on your account.",
-    "reviewAll": "Review all security events"
+    "reviewAll": "Review all security events",
+    "noActivity": "No recent security activity found.",
+    "dialogTitle": "Recent Security Activity",
+    "dialogDesc": "Full audit log of recent sign-ins, credentials modifications, and security actions.",
+    "refresh": "Refresh",
+    "close": "Close"
   },
   "activeSessions": {
     "title": "Active Sessions",
@@ -126,7 +154,8 @@
   },
   "cloudDrives": {
     "title": "Cloud Drives",
-    "desc": "Link your cloud storage to sync files and backups seamlessly."
+    "desc": "Link your cloud storage to sync files and backups seamlessly.",
+    "privacyNote": "Drive access is only required if you need cloud sync access through clouburstlab apps. This access will never be granted to or accessed by third-party applications."
   },
   "authenticator": {
     "setupTitle": "Set up Authenticator App",

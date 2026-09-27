@@ -9,6 +9,7 @@ import { handleError } from "@/utils/error";
 
 declare global {
   interface Window {
+    __gsi_console_filter_installed?: boolean;
     google?: {
       accounts?: {
         id?: {
@@ -28,6 +29,50 @@ declare global {
   }
 }
 
+// Global FedCM state across component lifecycles & Next.js route transitions
+let isFedCMPromptActive = false;
+let lastFedCMActionTime = 0;
+
+// Smart console filter: Google Identity Services (GSI) internally logs benign FedCM
+// AbortError (e.g. user dismisses or navigates) and cooldown NotAllowedError to console.error
+// with prefix [GSI_LOGGER]. In Next.js Turbopack, any console.error triggers an intrusive
+// developer error overlay. We demote these third-party benign logs to console.debug.
+if (typeof window !== "undefined" && !window.__gsi_console_filter_installed) {
+  window.__gsi_console_filter_installed = true;
+
+  const originalConsoleError = console.error;
+  console.error = function (...args: unknown[]) {
+    const firstArg = typeof args[0] === "string" ? args[0] : "";
+    if (
+      firstArg.includes("[GSI_LOGGER]") &&
+      (firstArg.includes("FedCM get() rejects") ||
+        firstArg.includes("AbortError") ||
+        firstArg.includes("NotAllowedError") ||
+        firstArg.includes("signal is aborted") ||
+        firstArg.includes("Only one navigator.credentials.get"))
+    ) {
+      console.debug(...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+
+  const originalConsoleWarn = console.warn;
+  console.warn = function (...args: unknown[]) {
+    const firstArg = typeof args[0] === "string" ? args[0] : "";
+    if (
+      firstArg.includes("[GSI_LOGGER]") &&
+      (firstArg.includes("FedCM") ||
+        firstArg.includes("AbortError") ||
+        firstArg.includes("NotAllowedError"))
+    ) {
+      console.debug(...args);
+      return;
+    }
+    originalConsoleWarn.apply(console, args);
+  };
+}
+
 interface GoogleOneTapProps {
   gClientId?: string;
   isLoggedIn?: boolean;
@@ -43,31 +88,32 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
   }, [searchParams]);
 
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false);
-  const isPromptingRef = useRef<boolean>(false);
+  const promptTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Component is only eligible to show One Tap when configured, logged out,
   // and not already on the profile page.
   const isEligible = !!gClientId && !isLoggedIn && !pathname.startsWith("/profile");
 
-  // Swallow benign FedCM AbortError and GSI_LOGGER logs so Next.js does not treat it as an unhandled error
+  // Secondary safety net for unhandled promise rejections
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
-      const isAbortError =
+      const isAbortOrConflict =
         reason?.name === "AbortError" ||
+        reason?.name === "NotAllowedError" ||
         (typeof reason?.message === "string" &&
           (reason.message.includes("signal is aborted") ||
-            reason.message.includes("AbortError")));
+            reason.message.includes("AbortError") ||
+            reason.message.includes("navigator.credentials.get")));
 
-      if (isAbortError) {
+      if (isAbortOrConflict) {
         event.preventDefault();
       }
     };
 
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
-
     return () => {
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
@@ -148,10 +194,7 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
             });
           }
         } else if (result.action === "METHOD_SELECTION") {
-          toast.info("Two-Factor Authentication Required", {
-            id: toastId,
-            description: "Please complete two-factor verification to continue.",
-          });
+          toast.dismiss(toastId);
           redirectToTempAuth(result.tempSessionId);
         } else if (result.action === "ERROR") {
           toast.error("Authentication Error", {
@@ -176,47 +219,109 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
     [router, pathname, redirectToTempAuth]
   );
 
+  const cleanupPromptTimer = useCallback(() => {
+    if (promptTimerRef.current) {
+      clearTimeout(promptTimerRef.current);
+      promptTimerRef.current = null;
+    }
+  }, []);
+
   const initializeGoogleOneTap = useCallback(() => {
     if (typeof window === "undefined") return;
     if (!isEligible || !window.google?.accounts?.id) return;
 
+    // Do not prompt if a temporary verification session is active
     const currentParams = searchParamsRef.current;
     if (currentParams.get("tid")) return;
 
-    if (isPromptingRef.current) return;
-    isPromptingRef.current = true;
+    // Clear any pending timer
+    cleanupPromptTimer();
 
-    const context = pathname === "/signup" ? "signup" : pathname === "/signin" ? "signin" : "use";
+    // Prevent prompt collisions by calculating needed settlement delay
+    const now = Date.now();
+    const timeSinceLastAction = now - lastFedCMActionTime;
+    const cooldownDelay = timeSinceLastAction < 1000 ? 1000 - timeSinceLastAction : 0;
+    // Always provide at least 450ms debounce to absorb React StrictMode mount/unmount cycles
+    const totalDelay = Math.max(450, cooldownDelay);
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: gClientId,
-        callback: handleCredentialResponse,
-        auto_select: false,
-        itp_support: true,
-        use_fedcm_for_prompt: true,
-        context,
-        prompt_parent_id: "google-one-tap-container",
-      });
+    promptTimerRef.current = setTimeout(() => {
+      if (!isEligible || typeof window === "undefined" || !window.google?.accounts?.id) return;
+      if (searchParamsRef.current.get("tid")) return;
 
-      window.google.accounts.id.prompt();
-    } catch (e) {
-      console.debug("Google One Tap prompt initialization failed:", e);
-    }
-  }, [isEligible, gClientId, pathname, handleCredentialResponse]);
+      // Ensure no concurrent prompt is already active
+      if (isFedCMPromptActive) return;
 
-  // Trigger One Tap on route change or when script becomes ready.
+      const context = pathname === "/signup" ? "signup" : pathname === "/signin" ? "signin" : "use";
+
+      try {
+        window.google.accounts.id.initialize({
+          client_id: gClientId,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          itp_support: true,
+          use_fedcm_for_prompt: true,
+          context,
+          prompt_parent_id: "google-one-tap-container",
+        });
+
+        isFedCMPromptActive = true;
+        lastFedCMActionTime = Date.now();
+
+        window.google.accounts.id.prompt((notification) => {
+          if (
+            notification.isNotDisplayed() ||
+            notification.isSkippedMoment() ||
+            notification.isDismissedMoment()
+          ) {
+            isFedCMPromptActive = false;
+            lastFedCMActionTime = Date.now();
+            if (notification.isDismissedMoment()) {
+              // Add a cooldown if user closed the prompt
+              lastFedCMActionTime = Date.now() + 4000;
+            }
+          }
+        });
+      } catch (e) {
+        isFedCMPromptActive = false;
+        console.debug("Google One Tap prompt initialization failed:", e);
+      }
+    }, totalDelay);
+  }, [isEligible, gClientId, pathname, handleCredentialResponse, cleanupPromptTimer]);
+
+  // Cancel One Tap if another authentication method begins
   useEffect(() => {
-    isPromptingRef.current = false;
+    const handleAuthStart = () => {
+      cleanupPromptTimer();
+      if (isFedCMPromptActive) {
+        try {
+          window.google?.accounts?.id?.cancel();
+        } catch {}
+        isFedCMPromptActive = false;
+        lastFedCMActionTime = Date.now();
+      }
+    };
+
+    window.addEventListener("clou_auth_start", handleAuthStart);
+    return () => {
+      window.removeEventListener("clou_auth_start", handleAuthStart);
+    };
+  }, [cleanupPromptTimer]);
+
+  // Trigger One Tap on route change or when script becomes ready
+  useEffect(() => {
     initializeGoogleOneTap();
 
     return () => {
-      try {
-        window.google?.accounts?.id?.cancel();
-      } catch { }
-      isPromptingRef.current = false;
+      cleanupPromptTimer();
+      if (isFedCMPromptActive) {
+        try {
+          window.google?.accounts?.id?.cancel();
+        } catch {}
+        isFedCMPromptActive = false;
+        lastFedCMActionTime = Date.now();
+      }
     };
-  }, [pathname, scriptLoaded, initializeGoogleOneTap]);
+  }, [pathname, scriptLoaded, initializeGoogleOneTap, cleanupPromptTimer]);
 
   if (!isEligible) {
     return null;

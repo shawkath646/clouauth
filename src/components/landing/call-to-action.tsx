@@ -11,47 +11,47 @@ export function CallToAction({ isLoggedIn }: { isLoggedIn?: boolean }) {
   const { t } = useTranslations("landing");
 
   return (
-    <section className="py-24 md:py-32 relative">
+    <section className="py-10 sm:py-14 md:py-18 relative">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1, transitionEnd: { transform: "none" } }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="bg-primary/5 border rounded-3xl p-10 md:p-16 text-center max-w-4xl mx-auto"
+          transition={{ duration: 0.4 }}
+          className="bg-primary/5 border rounded-2xl p-6 sm:p-8 md:p-10 text-center max-w-3xl mx-auto shadow-xs"
         >
           {isLoggedIn ? (
             <>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">
                 {t('callToAction.loggedIn.title')} <BrandName /> {t('callToAction.loggedIn.titleSuffix')}
               </h2>
-              <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
                 {t('callToAction.loggedIn.description')}
               </p>
               <div className="flex justify-center">
-                <Button render={<Link href="/profile" />} nativeButton={false} size="lg" className="h-12 px-8 text-base shadow-sm">
+                <Button render={<Link href="/profile" />} nativeButton={false} size="default" className="h-10 px-6 text-sm shadow-xs">
                   {t('callToAction.loggedIn.button')}
-                  <ArrowRight className="ml-2 w-4 h-4" />
+                  <ArrowRight className="ml-1.5 w-4 h-4" />
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">
                 {t('callToAction.loggedOut.title')}
               </h2>
-              <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
                 {t('callToAction.loggedOut.descriptionPart1')} <BrandName /> {t('callToAction.loggedOut.descriptionPart2')}
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button render={<Link href="/signup" />} nativeButton={false} size="lg" className="h-12 px-8 text-base shadow-sm">
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button render={<Link href="/signup" />} nativeButton={false} size="default" className="h-10 px-5 text-sm shadow-xs">
                   {t('callToAction.loggedOut.createAccount')}
-                  <ArrowRight className="ml-2 w-4 h-4" />
+                  <ArrowRight className="ml-1.5 w-4 h-4" />
                 </Button>
-                <Button render={<Link href="/signin" />} nativeButton={false} size="lg" variant="outline" className="h-12 px-8 text-base bg-background">
+                <Button render={<Link href="/signin" />} nativeButton={false} size="default" variant="outline" className="h-10 px-5 text-sm bg-background">
                   {t('callToAction.loggedOut.signIn')}
                 </Button>
-                <Button render={<Link href="/docs" />} nativeButton={false} size="lg" variant="ghost" className="h-12 px-8 text-base">
+                <Button render={<Link href="/docs" />} nativeButton={false} size="default" variant="ghost" className="h-10 px-4 text-sm">
                   {t('callToAction.loggedOut.documentation')}
                 </Button>
               </div>

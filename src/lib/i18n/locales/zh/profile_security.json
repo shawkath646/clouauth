@@ -61,7 +61,29 @@
     "modalWarning": "警告",
     "modalDesc": "此操作将立即注销您在所有设备上的登录，并停用您的帐户。",
     "modalConfirm": "是的，停用我的帐户",
-    "modalCancel": "取消"
+    "modalCancel": "取消",
+    "disableFinalConfirm": "这是您的最终确认。您的帐户将被立即停用。",
+    "deleteModalTitle": "永久删除帐户",
+    "deleteModalDesc": "此操作是永久性的，无法撤销。确认后，您的所有活动会话、通行密钥和帐户设置都将被删除。",
+    "whatWillHappen": "将会发生：",
+    "happenSessions": "所有活动的登录和会话将立即终止。",
+    "happenCredentials": "密码、通行密钥、TOTP 和恢复代码将被销毁。",
+    "happenOAuth": "OAuth 集成和已注册的应用程序将被解除关联。",
+    "happenCompliance": "必要的合规性信息将归档在注销记录中。",
+    "reasonLabel": "注销原因（可选）",
+    "reasonPlaceholder": "请说明具体原因...",
+    "reasonNoLongerNeed": "我不再需要此帐户",
+    "reasonPrivacyConcerns": "隐私或安全方面的担忧",
+    "reasonSwitchingAccount": "更换到其他帐户",
+    "reasonTooComplex": "太复杂或难以使用",
+    "reasonOther": "其他原因",
+    "continue": "继续",
+    "confirmDelete": "永久删除",
+    "deleting": "正在删除...",
+    "disableSuccess": "帐户已成功停用",
+    "disableError": "停用帐户失败",
+    "deleteSuccess": "您的帐户已被永久删除。",
+    "deleteError": "删除帐户失败"
   },
   "signInSecurity": {
     "title": "登录与安全",
@@ -75,6 +97,7 @@
     "method": "种方法",
     "methods": "种方法",
     "disabled": "已禁用",
+    "enabled": "已启用",
     "passkeys": "通行密钥",
     "passkeysDesc": "使用生物识别技术或安全密钥进行无密码登录",
     "device": "台设备",
@@ -95,7 +118,12 @@
   "recentActivity": {
     "title": "近期安全活动",
     "desc": "查看您帐户近期的安全事件。",
-    "reviewAll": "查看所有安全事件"
+    "reviewAll": "查看所有安全事件",
+    "noActivity": "未发现近期安全活动。",
+    "dialogTitle": "近期安全活动",
+    "dialogDesc": "近期登录、凭据修改和安全操作的完整审核日志。",
+    "refresh": "刷新",
+    "close": "关闭"
   },
   "activeSessions": {
     "title": "活跃会话",
@@ -126,7 +154,8 @@
   },
   "cloudDrives": {
     "title": "云盘",
-    "desc": "关联您的云存储以无缝同步文件和备份。"
+    "desc": "关联您的云存储以无缝同步文件和备份。",
+    "privacyNote": "仅当您需要通过 clouburstlab 应用程序进行云同步访问时才需要云端硬盘访问权限。此访问权限绝不会授予第三方应用程序。"
   },
   "authenticator": {
     "setupTitle": "Set up Authenticator App",

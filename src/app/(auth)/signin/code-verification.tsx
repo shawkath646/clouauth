@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { useTranslations } from "@/lib/i18n/hooks";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, ShieldCheck, AlertCircle } from "lucide-react";
 
 import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
 import { handleError } from "@/utils/error";
@@ -19,8 +19,13 @@ interface CodeVerificationProps {
   methodType?: "code" | "totp" | string;
 }
 
-export default function CodeVerification({ onComplete, tempSessionId, methodType = "code" }: CodeVerificationProps) {
-  const codeLength = methodType === "totp" ? 6 : 8;
+export default function CodeVerification({
+  onComplete,
+  tempSessionId,
+  methodType = "code",
+}: CodeVerificationProps) {
+  const isTotp = methodType === "totp";
+  const codeLength = isTotp ? 6 : 8;
   const { t } = useTranslations("signin");
   const { executeRecaptcha } = useReCaptcha();
   const [code, setCode] = useState<string[]>(Array(codeLength).fill(""));
@@ -82,15 +87,14 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
       setErrorMsg(null);
 
       try {
-        const actionName = methodType === "totp" ? "verify_totp" : "verify_code";
+        const actionName = isTotp ? "verify_totp" : "verify_code";
         const recaptchaToken = await executeRecaptcha(actionName);
-        const response =
-          methodType === "totp"
-            ? await resolveTotpVerification(tempSessionId, targetCode, recaptchaToken ?? undefined)
-            : await resolveCodeVerification(tempSessionId, targetCode, recaptchaToken ?? undefined);
+        const response = isTotp
+          ? await resolveTotpVerification(tempSessionId, targetCode, recaptchaToken ?? undefined)
+          : await resolveCodeVerification(tempSessionId, targetCode, recaptchaToken ?? undefined);
 
         if (response && response.action === "ERROR") {
-          setErrorMsg(response.error || "Invalid code");
+          setErrorMsg(response.error || "Invalid verification code");
         } else {
           onComplete(response);
         }
@@ -101,7 +105,7 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
         setIsLoading(false);
       }
     },
-    [code, codeLength, isLoading, tempSessionId, methodType, executeRecaptcha, onComplete]
+    [code, codeLength, isLoading, tempSessionId, isTotp, executeRecaptcha, onComplete]
   );
 
   // Auto-submit when all digits are filled
@@ -198,61 +202,123 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
   return (
     <motion.div
       key="verification-code"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="w-full max-w-xl p-4 sm:p-6 md:p-8 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col mx-auto"
+      initial={{ opacity: 0, y: 15, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -15, scale: 0.98 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="w-full max-w-[420px] p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/[0.08] shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
     >
-      <div className="flex items-center justify-center mb-5 relative">
-        <div className="text-center w-full">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            {t("enterCode")}
-          </h1>
+      {/* Header */}
+      <div className="flex flex-col items-center text-center mb-5">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-xs">
+          {isTotp ? <ShieldCheck className="h-6 w-6 stroke-[2.2]" /> : <Mail className="h-6 w-6 stroke-[2]" />}
         </div>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+          {isTotp
+            ? t("authenticatorApp")
+            : t("enterCode")}
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-[320px] leading-relaxed">
+          {isTotp
+            ? t("authenticatorAppDesc")
+            : t("emailCodeDesc")}
+        </p>
       </div>
 
+      {/* Error Notice */}
       {errorMsg && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-          {errorMsg}
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium text-left">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{errorMsg}</span>
         </div>
       )}
 
-      <div className="flex flex-col gap-12">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            {t("verificationCodeDesc")}
-          </p>
-        </div>
-
+      {/* Code Input Form */}
+      <div className="flex flex-col gap-5">
         <fieldset className="border-0 p-0 m-0">
           <legend className="sr-only">{t("codePlaceholder")}</legend>
-          <div className="flex gap-1.5 sm:gap-3 justify-center">
-            {code.map((digit, index) => (
-              <Input
-                key={`slot-${index}`}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
-                type="text"
-                inputMode="numeric"
-                pattern="\d*"
-                autoComplete={index === 0 ? "one-time-code" : "off"}
-                maxLength={2}
-                value={digit}
-                onChange={(e) => handleChange(e, index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                onPaste={handlePaste}
-                aria-label={`Digit ${index + 1} of ${codeLength}`}
-                className="w-9 h-11 sm:w-12 sm:h-14 px-1 text-center text-lg sm:text-xl font-semibold shadow-sm focus-visible:ring-primary focus-visible:ring-offset-2"
-              />
-            ))}
-          </div>
+
+          {isTotp ? (
+            /* 6-digit layout for TOTP */
+            <div className="flex gap-2 sm:gap-2.5 justify-center">
+              {code.map((digit, index) => (
+                <Input
+                  key={`slot-${index}`}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d*"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
+                  maxLength={2}
+                  value={digit}
+                  onChange={(e) => handleChange(e, index)}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  onPaste={handlePaste}
+                  aria-label={`Digit ${index + 1} of ${codeLength}`}
+                  className="w-10 sm:w-11 h-12 px-0 text-center font-mono text-lg sm:text-xl font-bold rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                />
+              ))}
+            </div>
+          ) : (
+            /* 8-digit split layout (4 + 4) for Email OTP */
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+              {code.slice(0, 4).map((digit, idx) => {
+                const index = idx;
+                return (
+                  <Input
+                    key={`slot-${index}`}
+                    ref={(el) => {
+                      inputRefs.current[index] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d*"
+                    autoComplete={index === 0 ? "one-time-code" : "off"}
+                    maxLength={2}
+                    value={digit}
+                    onChange={(e) => handleChange(e, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={handlePaste}
+                    aria-label={`Digit ${index + 1} of ${codeLength}`}
+                    className="w-8 sm:w-9.5 h-11 sm:h-12 px-0 text-center font-mono text-base sm:text-lg font-bold rounded-lg sm:rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                  />
+                );
+              })}
+
+              <span className="text-muted-foreground/40 font-bold px-0.5 select-none text-sm">—</span>
+
+              {code.slice(4, 8).map((digit, idx) => {
+                const index = idx + 4;
+                return (
+                  <Input
+                    key={`slot-${index}`}
+                    ref={(el) => {
+                      inputRefs.current[index] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d*"
+                    autoComplete="off"
+                    maxLength={2}
+                    value={digit}
+                    onChange={(e) => handleChange(e, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={handlePaste}
+                    aria-label={`Digit ${index + 1} of ${codeLength}`}
+                    className="w-8 sm:w-9.5 h-11 sm:h-12 px-0 text-center font-mono text-base sm:text-lg font-bold rounded-lg sm:rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                  />
+                );
+              })}
+            </div>
+          )}
         </fieldset>
 
-        <div className="flex flex-col gap-4">
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3">
           <Button
-            className="w-full h-12 text-base cursor-pointer"
+            className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold rounded-xl cursor-pointer"
             onClick={() => triggerVerification(code)}
             disabled={isLoading || !isComplete}
           >
@@ -260,9 +326,9 @@ export default function CodeVerification({ onComplete, tempSessionId, methodType
             {t("verify")}
           </Button>
 
-          {methodType !== "totp" && (
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
+          {!isTotp && (
+            <div className="text-center pt-0.5">
+              <p className="text-xs text-muted-foreground">
                 {t("didntReceiveCode")}{" "}
                 <button
                   type="button"

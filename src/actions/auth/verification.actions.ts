@@ -119,7 +119,7 @@ export async function triggerVerificationMethod(
       where: { id: tempSession.user_id },
       select: {
         id: true,
-        emails: { where: { is_primary: true }, select: { address: true } },
+        emails: { select: { address: true, is_primary: true } },
         two_factor: {
           select: {
             passkeys: { select: { id: true } },
@@ -136,8 +136,10 @@ export async function triggerVerificationMethod(
 
     switch (methodType) {
       case "email": {
-        const destination = user.emails[0]?.address;
-        if (!destination) return { success: false, error: "No primary email found." };
+        const destination =
+          user.emails.find((e) => e.is_primary)?.address ||
+          user.emails[0]?.address;
+        if (!destination) return { success: false, error: "No email address found for your account." };
         return await sendVerificationCode(user.id, tempSessionId, destination);
       }
       case "passkey":
@@ -188,7 +190,11 @@ export async function resolveCodeVerification(
     }
 
     await markTempSessionVerified(tempSession.id, true);
-    return await finalizeSignIn(tempSession.user_id, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId, {
+      event: "LOGIN_2FA",
+      title: "Signed in with email verification",
+      description: "Two-step verification completed via email code",
+    });
   } catch (e: unknown) {
     const em = handleError(e, true);
     return { action: "ERROR", error: em };
@@ -277,7 +283,11 @@ export async function resolvePasskeyVerification(
     });
 
     await markTempSessionVerified(tempSession.id);
-    return await finalizeSignIn(tempSession.user_id, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId, {
+      event: "LOGIN_2FA",
+      title: "Signed in with passkey",
+      description: "Two-step verification completed via passkey / biometric",
+    });
   } catch (e: unknown) {
     const em = handleError(e, true);
     return { action: "ERROR", error: em };
@@ -326,7 +336,11 @@ export async function resolveTotpVerification(
     }
 
     await markTempSessionVerified(tempSession.id);
-    return await finalizeSignIn(tempSession.user_id, tempSessionId);
+    return await finalizeSignIn(tempSession.user_id, tempSessionId, {
+      event: "LOGIN_2FA",
+      title: "Signed in with authenticator app",
+      description: "Two-step verification completed via TOTP authenticator code",
+    });
   } catch (e: unknown) {
     const em = handleError(e, true);
     return { action: "ERROR", error: em };

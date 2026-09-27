@@ -53,6 +53,9 @@ export async function resolveTempSessionStep(
                 self_enable: true,
               },
             },
+            emails: {
+              select: { id: true, address: true, is_primary: true },
+            },
             two_factor: {
               select: {
                 passkeys: { select: { id: true, rp_id: true } },
@@ -160,6 +163,16 @@ export async function resolveTempSessionStep(
       }
       if (tf.email_id) {
         methods.push(verificationMethodMap.email);
+      }
+
+      // Supplementary Email 2FA Method:
+      // When 2FA is active (passkeys or TOTP), always provide email code verification
+      // as a supplementary fallback method so the user is never locked out.
+      if (methods.length > 0 && !methods.some(m => m.id === "email")) {
+        const hasEmail = Boolean(user.emails && user.emails.length > 0);
+        if (hasEmail) {
+          methods.push(verificationMethodMap.email);
+        }
       }
     }
 

@@ -1,17 +1,15 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { handleError } from "@/utils/error";
 import { cookies, headers } from "next/headers";
 import { signOutAll } from "@/actions/auth/auth";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME } from "@/constants/session.constants";
 import { requireUserSession } from "@/actions/auth/helpers";
 import { checkSudoAction } from "@/actions/auth/sudo";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 export interface DeleteAccountInput {
-  password?: string;
-  confirmUsername?: string;
   reason?: string;
 }
 
@@ -41,6 +39,13 @@ export async function disableAccount() {
       },
     });
 
+    await recordSecurityActivity({
+      userId,
+      event: "ACCOUNT_DISABLED",
+      title: "Account temporarily disabled",
+      description: "Account was deactivated by the user via security settings",
+    });
+
     // Delete all sessions for the user
     await signOutAll(userId);
 
@@ -68,7 +73,6 @@ export async function deleteAccount(input: DeleteAccountInput = {}) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        password: true,
         emails: { where: { is_primary: true } },
         phones: { where: { is_primary: true } },
       },
@@ -76,23 +80,6 @@ export async function deleteAccount(input: DeleteAccountInput = {}) {
 
     if (!user) {
       return { success: false, error: "User not found." };
-    }
-
-    // Security Verification:
-    // If the account has a password credential, require password confirmation
-    if (user.password) {
-      if (!input.password) {
-        return { success: false, error: "Password is required to confirm account deletion." };
-      }
-      const isPasswordValid = await bcrypt.compare(input.password, user.password.password_hash);
-      if (!isPasswordValid) {
-        return { success: false, error: "Incorrect password. Account deletion aborted." };
-      }
-    } else {
-      // Passwordless / OAuth-only account: require exact username typing to confirm
-      if (!input.confirmUsername || input.confirmUsername.trim() !== user.username) {
-        return { success: false, error: "Please type your exact username to confirm deletion." };
-      }
     }
 
     // Capture request audit metadata

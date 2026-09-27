@@ -10,6 +10,7 @@ import { getServerTranslations } from "@/lib/i18n/server";
 import { sendEmail } from "@/lib/email";
 import { checkSudoAction } from "@/actions/auth/sudo";
 import { checkLockout, handleFailedAttempt } from "@/actions/auth/helpers";
+import { recordSecurityActivity } from "@/lib/security-activity";
 
 import {
   getPasswordSchema,
@@ -78,6 +79,15 @@ export async function updatePasswordAction(data: PasswordValues) {
         revoked_on: null,
       },
       data: { revoked_on: new Date() },
+    });
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: existing ? "PASSWORD_CHANGED" : "PASSWORD_SET",
+      title: existing ? "Password changed" : "Password created",
+      description: existing
+        ? "Account password was updated successfully"
+        : "A new password was set for this account",
     });
 
     revalidatePath("/profile");
@@ -170,6 +180,12 @@ export async function removeTwoFactorMethodAction(methodId: string) {
       await prisma.totpMethod.deleteMany({
         where: { two_factor_id: sessionData.user.id }
       });
+      await recordSecurityActivity({
+        userId: sessionData.user.id,
+        event: "TOTP_DISABLED",
+        title: "Authenticator app removed",
+        description: "TOTP two-step verification was disabled",
+      });
       revalidatePath("/profile");
       revalidatePath("/profile/authenticator");
       return { success: true };
@@ -214,6 +230,13 @@ export async function generateBackupCodesAction(): Promise<{ success: boolean; c
 
     await prisma.recoveryCode.createMany({
       data: createData,
+    });
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "RECOVERY_CODES_GENERATED",
+      title: "Backup codes regenerated",
+      description: "Generated 10 new recovery backup codes",
     });
 
     revalidatePath("/profile");
@@ -307,6 +330,12 @@ export async function verifyRecoveryEmailAction(code: string) {
       await prisma.userEmail.updateMany({
         where: { user_id: sessionData.user.id, address: tempSession.destination },
         data: { verified: true }
+      });
+      await recordSecurityActivity({
+        userId: sessionData.user.id,
+        event: "RECOVERY_EMAIL_VERIFIED",
+        title: "Recovery email verified",
+        description: `Verified recovery email address: ${tempSession.destination}`,
       });
     }
 

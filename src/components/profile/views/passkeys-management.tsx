@@ -39,8 +39,8 @@ interface PasskeyItem {
   id: string;
   credential_id: string;
   device_name: string | null;
-  created_on: Date;
-  last_used_on: Date | null;
+  created_on: Date | string;
+  last_used_on: Date | string | null;
 }
 
 import { useRouter } from "next/navigation";

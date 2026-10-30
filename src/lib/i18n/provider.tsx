@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useMemo, useCallback, useContext, useTransition, ReactNode } from 'react';
+import { createContext, useMemo, useCallback, useContext, useTransition, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Namespace, Locale } from './config';
 import { defaultLocale } from './config';
@@ -46,6 +46,13 @@ export function I18nProvider<T extends Namespace>({
       router.refresh();
     });
   }, [router]);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = mergedLocale;
+      document.documentElement.dir = mergedLocale === "ar" ? "rtl" : "ltr";
+    }
+  }, [mergedLocale]);
 
   const contextValue = useMemo(() => ({
     locale: mergedLocale,

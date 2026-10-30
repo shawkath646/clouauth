@@ -28,7 +28,7 @@ export default function NotFound() {
             width={180}
             height={24}
             priority
-            className="transition-transform duration-500 group-hover:scale-105 dark:hidden object-contain"
+            className="w-44 h-auto transition-transform duration-500 group-hover:scale-105 dark:hidden object-contain"
           />
           <Image
             src={`${getEnv("R2_PUBLIC_URL")}/branding/icon_dark.png`}
@@ -36,7 +36,7 @@ export default function NotFound() {
             width={180}
             height={24}
             priority
-            className="hidden transition-transform duration-500 group-hover:scale-105 dark:block object-contain"
+            className="w-44 h-auto hidden transition-transform duration-500 group-hover:scale-105 dark:block object-contain"
           />
         </Link>
       </div>

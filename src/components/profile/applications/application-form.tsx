@@ -102,6 +102,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
     try {
       const uris = data.redirect_uris.map(item => item.value).filter(Boolean);
       let appId = initialData?.id;
+      let newlyCreatedSecret: { clientId: string; clientSecret: string } | null = null;
 
       if (!appId) {
         // Create new app
@@ -120,10 +121,11 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
         appId = res.app.id;
 
         if (res.clientId && res.clientSecret) {
-          setCreatedSecret({
+          newlyCreatedSecret = {
             clientId: res.clientId,
             clientSecret: res.clientSecret,
-          });
+          };
+          setCreatedSecret(newlyCreatedSecret);
         }
       } else {
         // Update existing app
@@ -157,7 +159,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
         }
       }
 
-      if (!initialData && createdSecret) {
+      if (!initialData && newlyCreatedSecret) {
         setIsSecretOpen(true); // show modal for new app, redirect on close
       } else {
         toast.success(initialData ? "Application updated" : "Application created");

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getEnv } from "@/utils/env";
 import { Navigation } from "@/components/landing/navigation";
 import { Footer } from "@/components/landing/footer";
@@ -43,12 +44,7 @@ interface EndpointDoc {
   response: string;
 }
 
-export default async function DocsPage() {
-  const BASE_URL =
-    getEnv("NEXT_PUBLIC_BASE_URL", true) ||
-    getEnv("NEXT_PUBLIC_APP_URL", true) ||
-    "https://auth.clouburstlab.com";
-
+async function DocsLocalizedContent({ baseUrl }: { baseUrl: string }) {
   const { locale, t } = await getServerTranslations("docs");
   const landingDict = await import(`@/lib/i18n/locales/${locale}/landing.json`).then(m => m.default);
   const docsDict = await import(`@/lib/i18n/locales/${locale}/docs.json`).then(m => m.default);
@@ -63,14 +59,14 @@ export default async function DocsPage() {
       name: t("endpoints.oidc.name"),
       description: t("endpoints.oidc.description"),
       params: null,
-      curlExample: `curl -X GET "${BASE_URL}/.well-known/openid-configuration" \\
+      curlExample: `curl -X GET "${baseUrl}/.well-known/openid-configuration" \\
   -H "Accept: application/json"`,
       response: `{
-  "issuer": "${BASE_URL}",
-  "authorization_endpoint": "${BASE_URL}/signin",
-  "token_endpoint": "${BASE_URL}/api/sso/v1/token",
-  "userinfo_endpoint": "${BASE_URL}/api/sso/v1/userinfo",
-  "jwks_uri": "${BASE_URL}/api/sso/v1/jwks.json",
+  "issuer": "${baseUrl}",
+  "authorization_endpoint": "${baseUrl}/signin",
+  "token_endpoint": "${baseUrl}/api/sso/v1/token",
+  "userinfo_endpoint": "${baseUrl}/api/sso/v1/userinfo",
+  "jwks_uri": "${baseUrl}/api/sso/v1/jwks.json",
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
   "id_token_signing_alg_values_supported": ["RS256"],
@@ -109,18 +105,18 @@ Location: https://yourapp.com/callback?code=eyJhbGciOiJIUzI1Ni...&state=xyz123`
         { name: "client_id", type: "string", in: "body", required: true, desc: t("endpoints.token.params.client_id") },
         { name: "client_secret", type: "string", in: "body", required: false, desc: t("endpoints.token.params.client_secret") },
         { name: "code", type: "string", in: "body", required: false, desc: t("endpoints.token.params.code") },
-        { name: "redirect_uri", type: "string", in: "body", required: false, desc: t("endpoints.token.params.redirect_uri") },
+        { name: "redirect_uri", type: "string", in: "body", required: true, desc: t("endpoints.token.params.redirect_uri") },
         { name: "code_verifier", type: "string", in: "body", required: false, desc: t("endpoints.token.params.code_verifier") },
         { name: "refresh_token", type: "string", in: "body", required: false, desc: t("endpoints.token.params.refresh_token") },
         { name: "scope", type: "string", in: "body", required: false, desc: t("endpoints.token.params.scope") }
       ],
       curlExample: `# 1. Authorization Code Exchange
-curl -X POST "${BASE_URL}/api/sso/v1/token" \\
+curl -X POST "${baseUrl}/api/sso/v1/token" \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "grant_type=authorization_code&code=YOUR_CODE&redirect_uri=YOUR_URI&client_id=YOUR_ID&client_secret=YOUR_SECRET&code_verifier=YOUR_PKCE_VERIFIER"
 
 # 2. Machine-to-Machine Client Credentials
-curl -X POST "${BASE_URL}/api/sso/v1/token" \\
+curl -X POST "${baseUrl}/api/sso/v1/token" \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "grant_type=client_credentials&client_id=YOUR_ID&client_secret=YOUR_SECRET&scope=internal_service"`,
       response: `{
@@ -142,7 +138,7 @@ curl -X POST "${BASE_URL}/api/sso/v1/token" \\
       params: [
         { name: "Authorization", type: "header", in: "header", required: true, desc: t("endpoints.userinfo.params.authorization") }
       ],
-      curlExample: `curl -X GET "${BASE_URL}/api/sso/v1/userinfo" \\
+      curlExample: `curl -X GET "${baseUrl}/api/sso/v1/userinfo" \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`,
       response: `{
   "sub": "cm0a1b2c3d4e5f6g7h8i9j0k",
@@ -164,7 +160,7 @@ curl -X POST "${BASE_URL}/api/sso/v1/token" \\
       name: t("endpoints.jwks.name"),
       description: t("endpoints.jwks.description"),
       params: null,
-      curlExample: `curl -X GET "${BASE_URL}/api/sso/v1/jwks.json"`,
+      curlExample: `curl -X GET "${baseUrl}/api/sso/v1/jwks.json"`,
       response: `{
   "keys": [
     {
@@ -191,7 +187,7 @@ curl -X POST "${BASE_URL}/api/sso/v1/token" \\
         { name: "client_secret", type: "string", in: "body", required: false, desc: t("endpoints.revoke.params.client_secret") },
         { name: "token_type_hint", type: "string", in: "body", required: false, desc: t("endpoints.revoke.params.token_type_hint") }
       ],
-      curlExample: `curl -X POST "${BASE_URL}/api/sso/v1/revoke" \\
+      curlExample: `curl -X POST "${baseUrl}/api/sso/v1/revoke" \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "token=YOUR_ACCESS_OR_REFRESH_TOKEN"`,
       response: `HTTP/1.1 200 OK`
@@ -210,13 +206,13 @@ curl -X POST "${BASE_URL}/api/sso/v1/token" \\
         { name: "user_id", type: "string", in: "query", required: false, desc: t("endpoints.user_session.params.user_id") }
       ],
       curlExample: `# 1. Browser Cross-Subdomain Call (*.clouburstlab.com)
-fetch("${BASE_URL}/api/inter-services/v1/user-session?scope=id,firstname,lastname,email,avatar", {
+fetch("${baseUrl}/api/inter-services/v1/user-session?scope=id,firstname,lastname,email,avatar", {
   credentials: "include",
   headers: { "Authorization": "Bearer " + appToken }
 });
 
 # 2. Server-to-Server cURL with User Identifier
-curl -X GET "${BASE_URL}/api/inter-services/v1/user-session?user_id=cm0a1b2c3...&scope=id,firstname,lastname,email" \\
+curl -X GET "${baseUrl}/api/inter-services/v1/user-session?user_id=cm0a1b2c3...&scope=id,firstname,lastname,email" \\
   -H "Authorization: Bearer YOUR_APP_TOKEN"`,
       response: `{
   "authenticated": true,
@@ -246,7 +242,7 @@ curl -X GET "${BASE_URL}/api/inter-services/v1/user-session?user_id=cm0a1b2c3...
         { name: "refresh", type: "boolean", in: "query", required: false, desc: t("endpoints.connected_drives.params.refresh") }
       ],
       curlExample: `# Retrieve decrypted Google Drive, OneDrive, or Dropbox credentials
-curl -X GET "${BASE_URL}/api/inter-services/v1/connected-drives?provider=google_drive&refresh=true" \\
+curl -X GET "${baseUrl}/api/inter-services/v1/connected-drives?provider=google_drive&refresh=true" \\
   -H "Authorization: Bearer YOUR_APP_TOKEN" \\
   -H "Cookie: session_token=YOUR_SESSION_TOKEN"`,
       response: `{
@@ -276,7 +272,7 @@ curl -X GET "${BASE_URL}/api/inter-services/v1/connected-drives?provider=google_
       name: t("endpoints.bridge_docs.name"),
       description: t("endpoints.bridge_docs.description"),
       params: null,
-      curlExample: `curl -X GET "${BASE_URL}/api/inter-services/v1/docs" \\
+      curlExample: `curl -X GET "${baseUrl}/api/inter-services/v1/docs" \\
   -H "Accept: text/markdown"`,
       response: `# ClouAuth Inter-Service Bridge API Reference (v1)
 > Complete raw markdown document optimized for AI agents & LLMs...`
@@ -285,218 +281,241 @@ curl -X GET "${BASE_URL}/api/inter-services/v1/connected-drives?provider=google_
 
   return (
     <I18nProvider locale={locale} messages={allMessages}>
-      <div className="min-h-screen flex flex-col bg-background text-foreground relative selection:bg-primary/20 selection:text-primary overflow-x-hidden">
-        <JsonLd
-          schema={{
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            headline: "API Documentation | ClouAuth",
-            description: "Official API reference, OIDC discovery, and inter-service bridge documentation for the ClouAuth identity provider.",
-            url: `${BASE_URL}/docs`,
-            publisher: {
-              "@type": "Organization",
-              name: "clouburstlab",
-              url: BASE_URL
-            }
-          }}
-        />
-        <Navigation />
+      <Navigation />
 
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
-          {/* Header */}
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-3">
-              <Badge variant="outline" className="text-primary border-primary/30">OIDC 2.0 / OAuth 2.0</Badge>
-              <Badge variant="outline" className="border-border">Inter-Service Bridge v1</Badge>
-              <Badge variant="outline" className="border-border">Universal CORS</Badge>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">{t('title')}</h1>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              {t('descriptionPart1')} <BrandName /> {t('descriptionPart2')}
-            </p>
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        {/* Header */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-3">
+            <Badge variant="outline" className="text-primary border-primary/30">OIDC 2.0 / OAuth 2.0</Badge>
+            <Badge variant="outline" className="border-border">Inter-Service Bridge v1</Badge>
+            <Badge variant="outline" className="border-border">Universal CORS</Badge>
           </div>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">{t('title')}</h1>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            {t('descriptionPart1')} <BrandName /> {t('descriptionPart2')}
+          </p>
+        </div>
 
-          {/* AI Callout Banner */}
-          <div className="mb-12 p-6 bg-primary/5 border border-primary/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0 mt-0.5 sm:mt-0">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  Building with AI Agents or LLMs?
-                  <Sparkles className="w-4 h-4 text-primary" />
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ingest raw markdown docs directly via our machine endpoint or reference our standardized LLM profile.
-                </p>
-              </div>
+        {/* AI Callout Banner */}
+        <div className="mb-12 p-6 bg-primary/5 border border-primary/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0 mt-0.5 sm:mt-0">
+              <Bot className="w-5 h-5" />
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div>
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                Building with AI Agents or LLMs?
+                <Sparkles className="w-4 h-4 text-primary" />
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Ingest raw markdown docs directly via our machine endpoint or reference our standardized LLM profile.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              href="/api/inter-services/v1/docs"
+              target="_blank"
+              className="text-xs bg-primary text-primary-foreground font-semibold px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+            >
+              /api/inter-services/v1/docs <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href="/llms.txt"
+              target="_blank"
+              className="text-xs bg-muted text-foreground font-semibold px-3 py-2 rounded-lg hover:bg-muted/80 transition-colors inline-flex items-center gap-1.5"
+            >
+              /llms.txt <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick Links Navigation */}
+        <div className="mb-12 p-6 bg-card/60 backdrop-blur-xl border rounded-2xl">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            {t('quickLinks')}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {endpoints.map((ep, i) => (
               <Link
-                href="/api/inter-services/v1/docs"
-                target="_blank"
-                className="text-xs bg-primary text-primary-foreground font-semibold px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+                key={i}
+                href={`#${ep.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                className="flex items-center gap-2.5 p-2.5 hover:bg-muted/60 rounded-xl transition-colors border border-transparent hover:border-border text-left"
               >
-                /api/inter-services/v1/docs <ExternalLink className="w-3.5 h-3.5" />
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                    ep.method === "GET"
+                      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                      : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  }`}
+                >
+                  {ep.method}
+                </span>
+                <span className="text-sm font-medium truncate">{ep.name}</span>
               </Link>
-              <Link
-                href="/llms.txt"
-                target="_blank"
-                className="text-xs bg-muted text-foreground font-semibold px-3 py-2 rounded-lg hover:bg-muted/80 transition-colors inline-flex items-center gap-1.5"
+            ))}
+          </div>
+        </div>
+
+        {/* Endpoints Documentation */}
+        <div className="space-y-12">
+          {endpoints.map((endpoint, i) => {
+            const anchorId = endpoint.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            return (
+              <Card
+                key={i}
+                id={anchorId}
+                className="bg-card/50 backdrop-blur-xl border-primary/10 shadow-sm overflow-hidden scroll-mt-28 hover:border-primary/20 transition-colors"
               >
-                /llms.txt <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Quick Links Navigation */}
-          <div className="mb-12 p-6 bg-card/60 backdrop-blur-xl border rounded-2xl">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-              {t('quickLinks')}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {endpoints.map((ep, i) => (
-                <Link
-                  key={i}
-                  href={`#${ep.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                  className="flex items-center gap-2.5 p-2.5 hover:bg-muted/60 rounded-xl transition-colors border border-transparent hover:border-border text-left"
-                >
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-                      ep.method === "GET"
-                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    }`}
-                  >
-                    {ep.method}
-                  </span>
-                  <span className="text-sm font-medium truncate">{ep.name}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Endpoints Documentation */}
-          <div className="space-y-12">
-            {endpoints.map((endpoint, i) => {
-              const anchorId = endpoint.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-              return (
-                <Card
-                  key={i}
-                  id={anchorId}
-                  className="bg-card/50 backdrop-blur-xl border-primary/10 shadow-sm overflow-hidden scroll-mt-28 hover:border-primary/20 transition-colors"
-                >
-                  <CardHeader className="bg-muted/30 border-b border-border/50 pb-5">
-                    <div className="flex items-start justify-between flex-wrap gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge
-                            className={
-                              endpoint.method === "GET"
-                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            }
-                          >
-                            {endpoint.method}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            {endpoint.category === "oidc" ? "OAuth / OIDC" : "Inter-Service Bridge"}
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-2xl font-bold tracking-tight mb-1.5">{endpoint.name}</CardTitle>
-                        <CardDescription className="text-sm text-foreground/80">{endpoint.description}</CardDescription>
+                <CardHeader className="bg-muted/30 border-b border-border/50 pb-5">
+                  <div className="flex items-start justify-between flex-wrap gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge
+                          className={
+                            endpoint.method === "GET"
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                              : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          }
+                        >
+                          {endpoint.method}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          {endpoint.category === "oidc" ? t("oidcCategory") : t("bridgeCategory")}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-2 bg-background/80 px-3 py-1.5 rounded-lg border text-xs font-mono text-muted-foreground">
-                        <span>{endpoint.path}</span>
-                        <CopyButton text={`${BASE_URL}${endpoint.path}`} />
-                      </div>
+                      <CardTitle className="text-2xl font-bold tracking-tight mb-1.5">{endpoint.name}</CardTitle>
+                      <CardDescription className="text-sm text-foreground/80">{endpoint.description}</CardDescription>
                     </div>
-                  </CardHeader>
+                    <div className="flex items-center gap-2 bg-background/80 px-3 py-1.5 rounded-lg border text-xs font-mono text-muted-foreground">
+                      <span>{endpoint.path}</span>
+                      <CopyButton text={`${baseUrl}${endpoint.path}`} />
+                    </div>
+                  </div>
+                </CardHeader>
 
-                  <CardContent className="p-6 space-y-6">
-                    {/* Parameters Table */}
-                    {endpoint.params && endpoint.params.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {t('parameters')}
-                        </h4>
-                        <div className="border border-border/60 rounded-xl overflow-x-auto bg-background/50">
-                          <table className="w-full text-left text-xs sm:text-sm">
-                            <thead className="bg-muted/40 text-muted-foreground font-semibold border-b border-border/60">
-                              <tr>
-                                <th className="p-3">Parameter</th>
-                                <th className="p-3">Type</th>
-                                <th className="p-3">In</th>
-                                <th className="p-3">Requirement</th>
-                                <th className="p-3">Description</th>
+                <CardContent className="p-6 space-y-6">
+                  {/* Parameters Table */}
+                  {endpoint.params && endpoint.params.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t('parameters')}
+                      </h4>
+                      <div className="border border-border/60 rounded-xl overflow-x-auto bg-background/50">
+                        <table className="w-full text-left text-xs sm:text-sm">
+                          <thead className="bg-muted/40 text-muted-foreground font-semibold border-b border-border/60">
+                            <tr>
+                              <th className="p-3">{t("table.name")}</th>
+                              <th className="p-3">{t("table.type")}</th>
+                              <th className="p-3">In</th>
+                              <th className="p-3">{t("table.required")}</th>
+                              <th className="p-3">{t("table.description")}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/40">
+                            {endpoint.params.map((param, pIdx) => (
+                              <tr key={pIdx} className="hover:bg-muted/20 transition-colors">
+                                <td className="p-3 font-mono font-medium text-foreground">{param.name}</td>
+                                <td className="p-3 text-muted-foreground">{param.type}</td>
+                                <td className="p-3">
+                                  <span className="bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono uppercase text-muted-foreground">
+                                    {param.in}
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  {param.required ? (
+                                    <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                                      {t("table.requiredBadge")}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground border-border">
+                                      {t("table.optionalBadge")}
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td className="p-3 text-foreground/80 leading-relaxed">{param.desc}</td>
                               </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/40">
-                              {endpoint.params.map((param, pIdx) => (
-                                <tr key={pIdx} className="hover:bg-muted/20 transition-colors">
-                                  <td className="p-3 font-mono font-medium text-foreground">{param.name}</td>
-                                  <td className="p-3 text-muted-foreground">{param.type}</td>
-                                  <td className="p-3">
-                                    <span className="bg-muted px-1.5 py-0.5 rounded text-[11px] font-mono uppercase text-muted-foreground">
-                                      {param.in}
-                                    </span>
-                                  </td>
-                                  <td className="p-3">
-                                    {param.required ? (
-                                      <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
-                                        Required
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground border-border">
-                                        Optional
-                                      </Badge>
-                                    )}
-                                  </td>
-                                  <td className="p-3 text-foreground/80 leading-relaxed">{param.desc}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Example Request */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {t('example')}
-                        </h4>
-                        <CopyButton text={endpoint.curlExample} />
-                      </div>
-                      <div className="bg-muted/70 p-4 rounded-xl overflow-x-auto text-xs font-mono border border-border/50 text-foreground/90 leading-relaxed whitespace-pre">
-                        {endpoint.curlExample}
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
+                  )}
 
-                    {/* Example Response */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {t('response')}
-                        </h4>
-                        <CopyButton text={endpoint.response} />
-                      </div>
-                      <div className="bg-muted/70 p-4 rounded-xl overflow-x-auto text-xs font-mono border border-border/50 text-foreground/90 leading-relaxed whitespace-pre">
-                        {endpoint.response}
-                      </div>
+                  {/* Example Request */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t('example')}
+                      </h4>
+                      <CopyButton text={endpoint.curlExample} />
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </main>
+                    <div className="bg-muted/70 p-4 rounded-xl overflow-x-auto text-xs font-mono border border-border/50 text-foreground/90 leading-relaxed whitespace-pre">
+                      {endpoint.curlExample}
+                    </div>
+                  </div>
 
-        <Footer />
-      </div>
+                  {/* Example Response */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t('response')}
+                      </h4>
+                      <CopyButton text={endpoint.response} />
+                    </div>
+                    <div className="bg-muted/70 p-4 rounded-xl overflow-x-auto text-xs font-mono border border-border/50 text-foreground/90 leading-relaxed whitespace-pre">
+                      {endpoint.response}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </main>
+
+      <Footer />
     </I18nProvider>
+  );
+}
+
+export default function DocsPage() {
+  const BASE_URL =
+    getEnv("NEXT_PUBLIC_BASE_URL", true) ||
+    getEnv("NEXT_PUBLIC_APP_URL", true) ||
+    "https://auth.clouburstlab.com";
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-foreground relative selection:bg-primary/20 selection:text-primary overflow-x-hidden">
+      <JsonLd
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "TechArticle",
+          headline: "API Documentation | ClouAuth",
+          description: "Official API reference, OIDC discovery, and inter-service bridge documentation for the ClouAuth identity provider.",
+          url: `${BASE_URL}/docs`,
+          publisher: {
+            "@type": "Organization",
+            name: "clouburstlab",
+            url: BASE_URL
+          }
+        }}
+      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex flex-col bg-background">
+            <div className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md" />
+            <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 animate-pulse">
+              <div className="h-10 w-80 bg-muted/40 rounded-xl mb-4" />
+              <div className="h-5 w-2/3 bg-muted/30 rounded-lg" />
+            </div>
+          </div>
+        }
+      >
+        <DocsLocalizedContent baseUrl={BASE_URL} />
+      </Suspense>
+    </div>
   );
 }

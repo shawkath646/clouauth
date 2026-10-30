@@ -40,7 +40,6 @@
     "noEmailDesc": "添加备用电子邮件地址，以便在无法访问主邮箱时恢复您的帐户。",
     "addBtn": "添加辅助邮箱",
     "activeDesc": "已验证的辅助邮箱",
-    "updateBtn": "更新",
     "editTitleChange": "更改辅助邮箱",
     "editTitleAdd": "添加辅助邮箱",
     "editDesc": "输入备用电子邮件地址，以便在您失去帐户访问权限时我们可以与您联系。",
@@ -94,8 +93,6 @@
     "notSet": "未设置",
     "twoStep": "身份验证器",
     "twoStepDesc": "登录时需要安全代码",
-    "method": "种方法",
-    "methods": "种方法",
     "disabled": "已禁用",
     "enabled": "已启用",
     "passkeys": "通行密钥",
@@ -137,12 +134,7 @@
     "unknownIP": "未知 IP",
     "activeNow": "当前活跃",
     "lastActive": "最后活跃：{date}",
-    "signOut": "注销",
-    "signedOutSuccess": "会话已注销",
-    "signedOutError": "注销会话失败",
-    "signedOutAllSuccess": "所有会话已注销",
-    "signedOutAllError": "注销所有会话失败",
-    "unexpectedError": "发生意外错误"
+    "signOut": "注销"
   },
   "sso": {
     "title": "身份验证 (SSO)",

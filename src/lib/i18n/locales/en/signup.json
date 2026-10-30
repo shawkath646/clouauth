@@ -5,8 +5,6 @@
   "firstNamePlaceholder": "John",
   "lastNameLabel": "Last Name",
   "lastNamePlaceholder": "Doe",
-  "usernameLabel": "Username",
-  "usernamePlaceholder": "johndoe",
   "emailLabel": "Email",
   "emailPlaceholder": "name@example.com",
   "passwordLabel": "Password",
@@ -16,7 +14,5 @@
   "signIn": "Sign in",
   "pitchTitle1": "One account.",
   "pitchTitle2": "All seamless access.",
-  "pitchSubtitle": "Join the clouburstlab ecosystem and unlock a suite of powerful tools designed for modern professionals.",
-  "usernameAvailable": "Username is available!",
-  "usernameTaken": "Username is already taken."
+  "pitchSubtitle": "Join the clouburstlab ecosystem and unlock a suite of powerful tools designed for modern professionals."
 }

@@ -42,7 +42,9 @@
         "redirect_uri": "يجب أن يتطابق مع URI التوجيه الأصلي.",
         "client_id": "معرف العميل لتطبيقك.",
         "client_secret": "السر الخاص بالعميل (Client Secret) لتطبيقك.",
-        "code_verifier": "مدقق رمز PKCE."
+        "code_verifier": "مدقق رمز PKCE.",
+        "refresh_token": "رمز التحديث الصادر للعميل أثناء تبادل الرمز.",
+        "scope": "النطاقات المطلوبة (لمنح client_credentials)."
       },
       "response": "كائن JSON يحتوي على access_token، id_token، و refresh_token."
     },
@@ -70,15 +72,35 @@
       },
       "response": "استجابة 200 OK فارغة عند النجاح."
     },
-    "logout": {
-      "name": "النقطة الطرفية لتسجيل الخروج",
-      "description": "ينهي جلسة المستخدم عند مزود الهوية.",
+    "user_session": {
+      "name": "جسر جلسات المستخدم بين الخدمات",
+      "description": "يتحقق من جلسة المستخدم النشطة من ملفات تعريف الارتباط عبر النطاقات الفرعية (*.clouburstlab.com) ويعيد بيانات الملف الشخصي المحددة النطاق.",
       "params": {
-        "id_token_hint": "رمز المعرف (ID Token) الصادر سابقًا للعميل.",
-        "post_logout_redirect_uri": "مكان توجيه المستخدم بعد تسجيل الخروج.",
-        "state": "قيمة مبهمة يتم إرجاعها إلى URI التوجيه."
+        "authorization": "رمز Bearer للتطبيق (يتم الحصول عليه عبر client_credentials).",
+        "cookie": "ملف تعريف ارتباط جلسة المستخدم ('session_token') المرسل تلقائيًا مع credentials: 'include'.",
+        "scope": "فلتر الحقول المفصول بفواصل (مثل 'id,firstname,lastname,email,avatar').",
+        "user_id": "معرف مستخدم اختياري لمكالمات الخادم إلى الخادم بدون ملفات تعريف الارتباط."
       },
-      "response": "يعيد التوجيه إلى post_logout_redirect_uri."
+      "response": "JSON object with { authenticated: true, user: { ...filteredFields }, scopes }."
+    },
+    "connected_drives": {
+      "name": "محركات الأقراص السحابية المتصلة وبيانات الاعتماد",
+      "description": "يعيد بيانات اعتماد OAuth المفكوكة التشفير لمحركات الأقراص المتصلة بالمستخدم (Google Drive وOneDrive وDropbox).",
+      "params": {
+        "authorization": "رمز Bearer للتطبيق (يتم الحصول عليه عبر client_credentials).",
+        "cookie": "ملف تعريف ارتباط جلسة المستخدم ('session_token').",
+        "provider": "فلتر اختياري: 'google_drive' أو 'onedrive' أو 'dropbox'.",
+        "refresh": "قيمة منطقية اختيارية ('true') لتحديث رموز الوصول منتهية الصلاحية استباقيًا."
+      },
+      "response": "JSON object with decrypted access_token, refresh_token, and expiration TTL."
+    },
+    "bridge_docs": {
+      "name": "توثيق الآلات للذكاء الاصطناعي والوكلاء",
+      "description": "يعيد وثائق واجهة برمجة التطبيقات الشاملة المتوافقة مع الذكاء الاصطناعي بتنسيق Markdown خالص للوكلاء المؤتمتين.",
+      "response": "Raw Markdown document (Content-Type: text/markdown; charset=utf-8)."
     }
-  }
+  },
+  "oidcCategory": "OAuth / OIDC",
+  "bridgeCategory": "جسر ما بين الخدمات",
+  "example": "مثال على الطلب"
 }

@@ -5,8 +5,6 @@
   "firstNamePlaceholder": "John",
   "lastNameLabel": "姓氏",
   "lastNamePlaceholder": "Doe",
-  "usernameLabel": "用户名",
-  "usernamePlaceholder": "johndoe",
   "emailLabel": "电子邮件",
   "emailPlaceholder": "name@example.com",
   "passwordLabel": "密码",
@@ -16,7 +14,5 @@
   "signIn": "登录",
   "pitchTitle1": "一个账户。",
   "pitchTitle2": "所有无缝访问。",
-  "pitchSubtitle": "加入 clouburstlab 生态系统，解锁专为现代专业人士设计的强大工具套件。",
-  "usernameAvailable": "用户名可用！",
-  "usernameTaken": "用户名已被占用。"
+  "pitchSubtitle": "加入 clouburstlab 生态系统，解锁专为现代专业人士设计的强大工具套件。"
 }

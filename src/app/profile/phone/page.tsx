@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Manage phone numbers for your account.",
 };
 
+export const instant = false;
+
 export default async function PhonePage() {
   const phones: React.ComponentProps<typeof PhoneManagementPage>["phones"] = [];
 

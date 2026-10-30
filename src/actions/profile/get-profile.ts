@@ -11,7 +11,7 @@ import type { DBUserPreference } from "@/types/preferences.types";
 import { handleError } from "@/utils/error";
 import { getUserSecurityActivities } from "@/lib/security-activity";
 
-export async function getMinimalProfile(): Promise<{ success: boolean, data?: MinimalProfile, error?: string }> {
+export const getMinimalProfile = cache(async (): Promise<{ success: boolean, data?: MinimalProfile, error?: string }> => {
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -43,9 +43,9 @@ export async function getMinimalProfile(): Promise<{ success: boolean, data?: Mi
         const em = handleError(e, "Failed to execute getMinimalProfile");
         return { success: false, error: em };
     }
-}
+});
 
-export async function getExtendedProfile(): Promise<{ success: boolean, data?: ExtendedProfile, error?: string }> {
+export const getExtendedProfile = cache(async (): Promise<{ success: boolean, data?: ExtendedProfile, error?: string }> => {
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -75,7 +75,9 @@ export async function getExtendedProfile(): Promise<{ success: boolean, data?: E
             addresses: user.addresses,
             created_on: user.created_on.toISOString(),
             pronouns: user.pronouns,
-            username_last_changed: user.username_last_changed,
+            username_last_changed: user.username_last_changed
+                ? user.username_last_changed.toISOString()
+                : null,
             preferences: (user.preferences as unknown as DBUserPreference) || {
                 user_id: user.id,
                 theme: "system" as const,
@@ -90,9 +92,9 @@ export async function getExtendedProfile(): Promise<{ success: boolean, data?: E
         const em = handleError(e, "Failed to execute getExtendedProfile");
         return { success: false, error: em };
     }
-}
+});
 
-export async function getSecuredFullProfile(): Promise<{ success: boolean, data?: SecuredFullProfile, error?: string }> {
+export const getSecuredFullProfile = cache(async (): Promise<{ success: boolean, data?: SecuredFullProfile, error?: string }> => {
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -123,12 +125,26 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
                 bio: user.bio,
                 date_of_birth: user.date_of_birth,
                 pronouns: user.pronouns,
-                username_last_changed: user.username_last_changed,
-                account_status: user.account_status,
-                created_on: user.created_on,
-                updated_on: user.updated_on
+                username_last_changed: user.username_last_changed
+                    ? user.username_last_changed.toISOString()
+                    : null,
+                account_status: user.account_status ? {
+                    is_active: user.account_status.is_active,
+                    self_enable: user.account_status.self_enable,
+                    reason: user.account_status.reason,
+                } : null,
+                created_on: user.created_on.toISOString(),
+                updated_on: user.updated_on.toISOString()
             },
-            emails: user.emails,
+            emails: user.emails.map((email) => ({
+                id: email.id,
+                user_id: email.user_id,
+                address: email.address,
+                verified: email.verified,
+                is_primary: email.is_primary,
+                added_on: email.added_on.toISOString(),
+                verified_on: email.verified_on ? email.verified_on.toISOString() : null,
+            })),
             addresses: user.addresses,
             preferences: (user.preferences as unknown as DBUserPreference) || {
                 user_id: user.id,
@@ -149,7 +165,7 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
                 user_id: acc.user_id,
                 provider: acc.provider,
                 provider_user_id: acc.provider_user_id,
-                created_on: acc.created_on,
+                created_on: acc.created_on.toISOString(),
                 // Do not expose raw tokens
                 access_token: undefined,
                 refresh_token: undefined,
@@ -162,7 +178,7 @@ export async function getSecuredFullProfile(): Promise<{ success: boolean, data?
         const em = handleError(e, "Failed to execute getSecuredFullProfile");
         return { success: false, error: em };
     }
-}
+});
 
 export const getFullProfile = cache(async (): Promise<{ success: boolean, data?: FullProfile, error?: string }> => {
     try {
@@ -225,6 +241,13 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                         }
                     },
                     sessions: {
+                        where: {
+                            revoked_on: null,
+                            expires_on: { gt: new Date() },
+                        },
+                        orderBy: {
+                            updated_on: "desc",
+                        },
                         select: {
                             id: true,
                             user_id: true,
@@ -255,7 +278,7 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
 
         if (!user) return { success: false, error: "User not found" };
 
-        // Even in full profile, strip cryptographic hashes from being returned
+        // Even in full profile, strip cryptographic hashes and serialize Date instances to ISO strings
         const fullProfile: FullProfile = {
             user: {
                 id: user.id,
@@ -266,12 +289,26 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 bio: user.bio,
                 date_of_birth: user.date_of_birth,
                 pronouns: user.pronouns,
-                username_last_changed: user.username_last_changed,
-                account_status: user.account_status,
-                created_on: user.created_on,
-                updated_on: user.updated_on
+                username_last_changed: user.username_last_changed
+                    ? user.username_last_changed.toISOString()
+                    : null,
+                account_status: user.account_status ? {
+                    is_active: user.account_status.is_active,
+                    self_enable: user.account_status.self_enable,
+                    reason: user.account_status.reason,
+                } : null,
+                created_on: user.created_on.toISOString(),
+                updated_on: user.updated_on.toISOString()
             },
-            emails: user.emails,
+            emails: user.emails.map((email) => ({
+                id: email.id,
+                user_id: email.user_id,
+                address: email.address,
+                verified: email.verified,
+                is_primary: email.is_primary,
+                added_on: email.added_on.toISOString(),
+                verified_on: email.verified_on ? email.verified_on.toISOString() : null,
+            })),
             addresses: user.addresses,
             preferences: (user.preferences as unknown as DBUserPreference) || {
                 user_id: user.id,
@@ -290,10 +327,12 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
             password: user.password ? {
                 user_id: user.password.user_id,
                 password_hash: "[REDACTED]",
-                last_changed_on: user.password.last_changed_on,
+                last_changed_on: user.password.last_changed_on.toISOString(),
                 force_change: user.password.force_change,
                 failed_attempts: user.password.failed_attempts || 0,
-                locked_until: user.password.locked_until || null
+                locked_until: user.password.locked_until
+                    ? user.password.locked_until.toISOString()
+                    : null
             } : null,
             passkeys: user.two_factor?.passkeys?.map((p) => ({
                 ...p,
@@ -309,11 +348,11 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 user_id: s.user_id,
                 session_token_hash: "[REDACTED]",
                 refresh_token_hash: "[REDACTED]",
-                created_on: s.created_on,
-                updated_on: s.updated_on,
-                session_expires_on: s.session_expires_on,
-                expires_on: s.expires_on,
-                revoked_on: s.revoked_on,
+                created_on: s.created_on.toISOString(),
+                updated_on: s.updated_on.toISOString(),
+                session_expires_on: s.session_expires_on.toISOString(),
+                expires_on: s.expires_on.toISOString(),
+                revoked_on: s.revoked_on ? s.revoked_on.toISOString() : null,
                 ip_address: s.ip_address,
                 user_agent: s.user_agent,
                 device_name: s.device_name
@@ -323,7 +362,7 @@ export const getFullProfile = cache(async (): Promise<{ success: boolean, data?:
                 user_id: acc.user_id,
                 provider: acc.provider,
                 provider_user_id: acc.provider_user_id,
-                created_on: acc.created_on,
+                created_on: acc.created_on.toISOString(),
                 access_token: "[REDACTED]",
                 refresh_token: "[REDACTED]",
                 expires_at: acc.expires_at

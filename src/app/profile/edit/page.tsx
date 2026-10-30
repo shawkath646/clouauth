@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getExtendedProfile } from "@/actions/profile/get-profile";
 import { EditNameForm } from "@/components/profile/edit/edit-name-form";
 import { EditUsernameForm } from "@/components/profile/edit/edit-username-form";
@@ -11,45 +12,54 @@ interface ProfileEditPageProps {
   searchParams: Promise<{ field?: string | string[] }>;
 }
 
-export default async function ProfileEditPage({ searchParams }: ProfileEditPageProps) {
-  const res = await getExtendedProfile();
+export const instant = false;
+
+async function ProfileEditDynamicContent({
+  searchParams,
+}: ProfileEditPageProps) {
+  const [res, resolvedParams] = await Promise.all([
+    getExtendedProfile(),
+    searchParams,
+  ]);
 
   if (!res.success || !res.data) {
     redirect("/signin");
   }
 
-  const fieldRaw = (await searchParams).field;
+  const fieldRaw = resolvedParams.field;
   const field = Array.isArray(fieldRaw) ? fieldRaw[0] : fieldRaw;
-
-  let formContent;
 
   switch (field) {
     case "name":
-      formContent = <EditNameForm initialData={res.data} />;
-      break;
+      return <EditNameForm initialData={res.data} />;
     case "username":
-      formContent = <EditUsernameForm initialData={res.data} />;
-      break;
+      return <EditUsernameForm initialData={res.data} />;
     case "bio":
-      formContent = <EditBioForm initialData={res.data} />;
-      break;
+      return <EditBioForm initialData={res.data} />;
     case "address":
-      formContent = <EditAddressForm initialData={res.data} />;
-      break;
+      return <EditAddressForm initialData={res.data} />;
     case "avatar":
-      formContent = <EditAvatarForm />;
-      break;
+      return <EditAvatarForm />;
     case "pronouns":
-      formContent = <EditPronounsForm initialData={res.data} />;
-      break;
+      return <EditPronounsForm initialData={res.data} />;
     default:
       notFound();
   }
+}
 
+export default function ProfileEditPage({
+  searchParams,
+}: ProfileEditPageProps) {
   return (
     <div className="space-y-6 w-full">
       <main className="w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl border border-border/50 shadow-sm">
-        {formContent}
+        <Suspense
+          fallback={
+            <div className="h-72 w-full rounded-xl bg-muted/20 animate-pulse" />
+          }
+        >
+          <ProfileEditDynamicContent searchParams={searchParams} />
+        </Suspense>
       </main>
     </div>
   );

@@ -42,7 +42,9 @@
         "redirect_uri": "원래 리디렉션 URI와 일치해야 합니다.",
         "client_id": "애플리케이션의 클라이언트 ID입니다.",
         "client_secret": "애플리케이션의 클라이언트 보안 비밀입니다.",
-        "code_verifier": "PKCE 코드 검증기입니다."
+        "code_verifier": "PKCE 코드 검증기입니다.",
+        "refresh_token": "코드 교환 시 클라이언트에 발급된 리프레시 토큰입니다.",
+        "scope": "요청된 스코프 (client_credentials 권한 부여용)."
       },
       "response": "access_token, id_token 및 refresh_token이 포함된 JSON 객체입니다."
     },
@@ -70,15 +72,35 @@
       },
       "response": "성공 시 빈 200 OK 응답입니다."
     },
-    "logout": {
-      "name": "로그아웃 엔드포인트",
-      "description": "ID 공급자에서 사용자 세션을 종료합니다.",
+    "user_session": {
+      "name": "서비스 간 사용자 세션 브리지",
+      "description": "서브도메인 간 쿠키(*.clouburstlab.com)에서 활성 사용자 세션을 확인하고 범위 지정된 프로필 데이터를 반환합니다.",
       "params": {
-        "id_token_hint": "이전에 클라이언트에게 발급된 ID 토큰입니다.",
-        "post_logout_redirect_uri": "로그아웃 후 리디렉션할 위치입니다.",
-        "state": "리디렉션 URI로 다시 전달되는 불투명한 값입니다."
+        "authorization": "앱 Bearer 토큰 (client_credentials를 통해 획득).",
+        "cookie": "자격 증명과 함께 자동으로 전달되는 사용자 세션 쿠키 ('session_token').",
+        "scope": "쉼표로 구분된 프로젝션 필터 (예: 'id,firstname,lastname,email,avatar').",
+        "user_id": "쿠키 없는 서버 간 통신을 위한 선택적 사용자 ID."
       },
-      "response": "post_logout_redirect_uri로 리디렉션합니다."
+      "response": "JSON object with { authenticated: true, user: { ...filteredFields }, scopes }."
+    },
+    "connected_drives": {
+      "name": "연결된 클라우드 드라이브 및 자격 증명",
+      "description": "사용자의 연결된 드라이브(Google Drive, OneDrive, Dropbox)에 대한 복호화된 OAuth 자격 증명을 반환합니다.",
+      "params": {
+        "authorization": "앱 Bearer 토큰 (client_credentials를 통해 획득).",
+        "cookie": "사용자 세션 쿠키 ('session_token').",
+        "provider": "선택적 필터: 'google_drive', 'onedrive' 또는 'dropbox'.",
+        "refresh": "만료된 액세스 토큰을 사전에 갱신하기 위한 선택적 불리언 값 ('true')."
+      },
+      "response": "JSON object with decrypted access_token, refresh_token, and expiration TTL."
+    },
+    "bridge_docs": {
+      "name": "AI 및 에이전트 머신 문서",
+      "description": "자동화된 에이전트 및 LLM을 위한 순수 마크다운 형식의 포괄적인 AI 친화적 API 문서를 반환합니다.",
+      "response": "Raw Markdown document (Content-Type: text/markdown; charset=utf-8)."
     }
-  }
+  },
+  "oidcCategory": "OAuth / OIDC",
+  "bridgeCategory": "서비스 간 브리지",
+  "example": "요청 예시"
 }

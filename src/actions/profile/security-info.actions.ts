@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
-import bcrypt from "bcryptjs";
+import { verifyPassword, hashPassword, hashCode, verifyCode } from "@/lib/security/hash";
 import crypto from "crypto";
 import { handleError } from "@/utils/error";
 import { getServerTranslations } from "@/lib/i18n/server";
@@ -46,13 +46,13 @@ export async function updatePasswordAction(data: PasswordValues) {
       if (!parsed.data.currentPassword) {
         return { success: false, error: "Current password is required to set a new password." };
       }
-      const isMatch = await bcrypt.compare(parsed.data.currentPassword, existing.password_hash);
+      const isMatch = await verifyPassword(parsed.data.currentPassword, existing.password_hash);
       if (!isMatch) {
         return { success: false, error: "Incorrect current password." };
       }
     }
 
-    const newHash = await bcrypt.hash(parsed.data.newPassword, 12);
+    const newHash = await hashPassword(parsed.data.newPassword);
 
     await prisma.passwordCredential.upsert({
       where: { user_id: sessionData.user.id },
@@ -218,7 +218,7 @@ export async function generateBackupCodesAction(): Promise<{ success: boolean; c
       const formatted = `${code.slice(0, 4)}-${code.slice(4)}`;
       codes.push(formatted);
       hashPromises.push(
-        bcrypt.hash(formatted, 12).then((hash) => ({
+        hashCode(formatted).then((hash) => ({
           user_id: sessionData.user.id,
           code_hash: hash,
           used: false,
@@ -254,7 +254,7 @@ export async function sendRecoveryEmailVerificationCodeAction(emailAddress: stri
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
     const rawCode = Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join("");
-    const codeHash = await bcrypt.hash(rawCode, 12);
+    const codeHash = await hashCode(rawCode);
 
     const existingTempSession = await prisma.tempSession.findFirst({
       where: { user_id: sessionData.user.id, type: "change_email" },
@@ -315,7 +315,7 @@ export async function verifyRecoveryEmailAction(code: string) {
       return { success: false, error: lockoutError };
     }
 
-    const isValid = await bcrypt.compare(code, tempSession.code_hash);
+    const isValid = await verifyCode(code, tempSession.code_hash);
     if (!isValid) {
       await handleFailedAttempt("tempSession", tempSession.id);
       return { success: false, error: "Invalid code" };

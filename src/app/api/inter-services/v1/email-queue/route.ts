@@ -19,28 +19,60 @@ export function OPTIONS(request: NextRequest) {
   return handleInterServicePreflight(request);
 }
 
+async function requireInternalService(request: NextRequest) {
+  const authResult = await verifyInterServiceAuth(request);
+  if (!authResult.authorized) {
+    return {
+      authorized: false as const,
+      response: withInterServiceCors(
+        NextResponse.json(
+          {
+            success: false,
+            error: authResult.error || "Unauthorized application.",
+          },
+          { status: authResult.status || 401 }
+        ),
+        request
+      ),
+    };
+  }
+
+  if (!authResult.isInternalService) {
+    return {
+      authorized: false as const,
+      response: withInterServiceCors(
+        NextResponse.json(
+          {
+            success: false,
+            error:
+              "Forbidden: Email queue operations require internal_service privileges.",
+          },
+          { status: 403 }
+        ),
+        request
+      ),
+    };
+  }
+
+  return { authorized: true as const, authResult };
+}
+
 /**
  * GET /api/inter-services/v1/email-queue
  * Retrieves queued emails for dispatch by internal worker services.
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyInterServiceAuth(request);
-    if (!authResult.authorized) {
-      return withInterServiceCors(
-        NextResponse.json(
-          { success: false, error: authResult.error || "Unauthorized application." },
-          { status: authResult.status || 401 }
-        ),
-        request
-      );
-    }
+    const check = await requireInternalService(request);
+    if (!check.authorized) return check.response;
 
     const { searchParams } = request.nextUrl;
     const statusParam = searchParams.get("status") || "pending";
-    const status = (["pending", "completed", "all"].includes(statusParam)
-      ? statusParam
-      : "pending") as "pending" | "completed" | "all";
+    const status = (
+      ["pending", "completed", "all"].includes(statusParam)
+        ? statusParam
+        : "pending"
+    ) as "pending" | "completed" | "all";
 
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const dueOnly = searchParams.get("due_only") !== "false";
@@ -80,16 +112,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyInterServiceAuth(request);
-    if (!authResult.authorized) {
-      return withInterServiceCors(
-        NextResponse.json(
-          { success: false, error: authResult.error || "Unauthorized application." },
-          { status: authResult.status || 401 }
-        ),
-        request
-      );
-    }
+    const check = await requireInternalService(request);
+    if (!check.authorized) return check.response;
 
     let body: Record<string, unknown> = {};
     try {
@@ -111,13 +135,16 @@ export async function POST(request: NextRequest) {
       const ids: string[] = Array.isArray(body.ids)
         ? (body.ids as string[])
         : body.id
-        ? [String(body.id)]
-        : [];
+          ? [String(body.id)]
+          : [];
 
       if (ids.length === 0) {
         return withInterServiceCors(
           NextResponse.json(
-            { success: false, error: "Missing 'id' or 'ids' array to mark as complete." },
+            {
+              success: false,
+              error: "Missing 'id' or 'ids' array to mark as complete.",
+            },
             { status: 400 }
           ),
           request
@@ -141,7 +168,10 @@ export async function POST(request: NextRequest) {
       if (!id) {
         return withInterServiceCors(
           NextResponse.json(
-            { success: false, error: "Missing 'id' of failed email queue item." },
+            {
+              success: false,
+              error: "Missing 'id' of failed email queue item.",
+            },
             { status: 400 }
           ),
           request
@@ -149,12 +179,18 @@ export async function POST(request: NextRequest) {
       }
 
       const errorMsg = body.error ? String(body.error) : undefined;
-      const retryInSeconds = typeof body.retry_in_seconds === "number" ? body.retry_in_seconds : 300;
+      const retryInSeconds =
+        typeof body.retry_in_seconds === "number"
+          ? body.retry_in_seconds
+          : 300;
       const updated = await markEmailQueueFailed(id, errorMsg, retryInSeconds);
 
       if (!updated) {
         return withInterServiceCors(
-          NextResponse.json({ success: false, error: "Email queue item not found." }, { status: 404 }),
+          NextResponse.json(
+            { success: false, error: "Email queue item not found." },
+            { status: 404 }
+          ),
           request
         );
       }
@@ -173,7 +209,10 @@ export async function POST(request: NextRequest) {
 
     // 3. Action: Dispatch next batch immediately
     if (action === "dispatch") {
-      const limit = Math.min(20, Math.max(1, typeof body.limit === "number" ? body.limit : 5));
+      const limit = Math.min(
+        20,
+        Math.max(1, typeof body.limit === "number" ? body.limit : 5)
+      );
       const { items } = await getPendingEmailQueue({ limit, dueOnly: true });
 
       const results: Array<{ id: string; success: boolean }> = [];
@@ -197,14 +236,17 @@ export async function POST(request: NextRequest) {
     const userId = String(body.user_id || body.userId || "");
     const to = body.to ? String(body.to) : undefined;
     const subject = body.subject ? String(body.subject) : undefined;
-    const data = (body.data && typeof body.data === "object" ? body.data : {}) as Record<string, unknown>;
+    const data = (
+      body.data && typeof body.data === "object" ? body.data : {}
+    ) as Record<string, unknown>;
 
     if (!templateId || !userId) {
       return withInterServiceCors(
         NextResponse.json(
           {
             success: false,
-            error: "Missing required fields: 'template_id' and 'user_id' are required.",
+            error:
+              "Missing required fields: 'template_id' and 'user_id' are required.",
           },
           { status: 400 }
         ),
@@ -212,7 +254,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const nextRetryAt = body.next_retry_at ? new Date(String(body.next_retry_at)) : undefined;
+    const nextRetryAt = body.next_retry_at
+      ? new Date(String(body.next_retry_at))
+      : undefined;
 
     const queuedItem = await enqueueEmail(templateId as TemplateId, {
       to,
@@ -242,7 +286,10 @@ export async function POST(request: NextRequest) {
       request
     );
   } catch (error) {
-    const errorMsg = handleError(error, "Failed to process email queue request");
+    const errorMsg = handleError(
+      error,
+      "Failed to process email queue request"
+    );
     return withInterServiceCors(
       NextResponse.json({ success: false, error: errorMsg }, { status: 500 }),
       request
@@ -256,32 +303,28 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const authResult = await verifyInterServiceAuth(request);
-    if (!authResult.authorized) {
-      return withInterServiceCors(
-        NextResponse.json(
-          { success: false, error: authResult.error || "Unauthorized application." },
-          { status: authResult.status || 401 }
-        ),
-        request
-      );
-    }
+    const check = await requireInternalService(request);
+    if (!check.authorized) return check.response;
 
     const body = await request.json().catch(() => ({}));
     const ids: string[] = Array.isArray(body.ids)
       ? (body.ids as string[])
       : body.id
-      ? [String(body.id)]
-      : [];
+        ? [String(body.id)]
+        : [];
 
     if (ids.length === 0) {
       return withInterServiceCors(
-        NextResponse.json({ success: false, error: "Missing 'id' or 'ids' in body." }, { status: 400 }),
+        NextResponse.json(
+          { success: false, error: "Missing 'id' or 'ids' in body." },
+          { status: 400 }
+        ),
         request
       );
     }
 
-    const isComplete = typeof body.is_complete === "boolean" ? body.is_complete : true;
+    const isComplete =
+      typeof body.is_complete === "boolean" ? body.is_complete : true;
     const res = await prisma.emailQueue.updateMany({
       where: { id: { in: ids } },
       data: { isComplete },
@@ -311,16 +354,8 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await verifyInterServiceAuth(request);
-    if (!authResult.authorized) {
-      return withInterServiceCors(
-        NextResponse.json(
-          { success: false, error: authResult.error || "Unauthorized application." },
-          { status: authResult.status || 401 }
-        ),
-        request
-      );
-    }
+    const check = await requireInternalService(request);
+    if (!check.authorized) return check.response;
 
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
@@ -343,15 +378,16 @@ export async function DELETE(request: NextRequest) {
     const ids: string[] = Array.isArray(body.ids)
       ? (body.ids as string[])
       : body.id
-      ? [String(body.id)]
-      : [];
+        ? [String(body.id)]
+        : [];
 
     if (ids.length === 0) {
       return withInterServiceCors(
         NextResponse.json(
           {
             success: false,
-            error: "Provide ?status=completed or body with 'ids' to delete.",
+            error:
+              "Provide ?status=completed or body with 'ids' to delete.",
           },
           { status: 400 }
         ),

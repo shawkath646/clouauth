@@ -10,12 +10,10 @@
     "mismatch": "Passwords do not match"
   },
   "email": {
-    "required": "El correo electrónico es obligatorio",
     "invalid": "Introduzca una dirección de correo electrónico válida",
     "max": "El correo electrónico no puede exceder los 100 caracteres"
   },
   "phone": {
-    "invalid": "El teléfono debe estar en formato E.164 (ej. +1234567890)",
-    "max": "El número de teléfono es demasiado largo"
+    "invalid": "El teléfono debe estar en formato E.164 (ej. +1234567890)"
   }
 }

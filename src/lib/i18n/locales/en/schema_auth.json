@@ -1,8 +1,7 @@
 {
   "signIn": {
     "usernameRequired": "Username is required",
-    "passwordRequired": "Password is required",
-    "passwordMin": "Password must be at least 8 characters"
+    "passwordRequired": "Password is required"
   },
   "signUp": {
     "firstNameRequired": "First name is required",

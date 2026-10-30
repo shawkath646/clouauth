@@ -1,9 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Check, Info } from "lucide-react";
+import { Check, Info, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-
 import { useTranslations } from "@/lib/i18n/hooks";
 
 interface AgreementStepProps {
@@ -12,23 +11,28 @@ interface AgreementStepProps {
   isLoading?: boolean;
   requestedScopes?: string[];
   clientName?: string;
-  appData?: { name?: string; icon?: string | null } | Record<string, unknown> | null;
+  appData?: { name?: string; icon?: string | null } | null;
 }
 
-export default function AgreementStep({ 
-  onAgree, 
-  onCancel, 
+export default function AgreementStep({
+  onAgree,
+  onCancel,
   isLoading = false,
-  requestedScopes = ["openid"],
-  clientName = "clouburstlab"
+  requestedScopes = ["openid", "profile", "email"],
+  clientName,
+  appData,
 }: AgreementStepProps) {
   const { t } = useTranslations("signin");
+
+  const resolvedClientName = appData?.name || clientName || "clouburstlab";
 
   const scopeLabels: Record<string, string> = {
     openid: t("scopeOpenid"),
     profile: t("scopeProfile"),
     email: t("scopeEmail"),
-    phone: t("scopePhone")
+    phone: t("scopePhone"),
+    address: "Access your postal address",
+    offline_access: "Maintain offline access to your account",
   };
 
   return (
@@ -41,9 +45,24 @@ export default function AgreementStep({
       className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col mx-auto"
     >
       <div className="text-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{t("oauthConsentTitle")}</h1>
+        {appData?.icon && (
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 border border-border/60 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={appData.icon}
+              alt={resolvedClientName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+          {t("oauthConsentTitle")}
+        </h1>
         <p className="text-sm sm:text-base text-muted-foreground">
-          <span className="font-semibold text-primary">{clientName}</span> {t("oauthConsentSubtitle")}
+          <span className="font-semibold text-primary">
+            {resolvedClientName}
+          </span>{" "}
+          {t("oauthConsentSubtitle")}
         </p>
       </div>
 
@@ -54,7 +73,10 @@ export default function AgreementStep({
         </div>
         <ul className="space-y-3">
           {requestedScopes.map((scope, idx) => (
-            <li key={idx} className="flex items-center gap-3 text-sm text-muted-foreground">
+            <li
+              key={idx}
+              className="flex items-center gap-3 text-sm text-muted-foreground"
+            >
               <div className="shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
                 <Check className="w-3 h-3 text-primary" />
               </div>
@@ -66,13 +88,25 @@ export default function AgreementStep({
 
       <div className="flex flex-col gap-3">
         <Button onClick={onAgree} className="w-full" disabled={isLoading}>
-          {isLoading ? t("oauthConsentGranting") : t("oauthConsentAgree")}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("oauthConsentGranting")}
+            </>
+          ) : (
+            t("oauthConsentAgree")
+          )}
         </Button>
-        <Button onClick={onCancel} variant="outline" className="w-full" disabled={isLoading}>
+        <Button
+          onClick={onCancel}
+          variant="outline"
+          className="w-full"
+          disabled={isLoading}
+        >
           {t("oauthConsentCancel")}
         </Button>
       </div>
-      
+
       <p className="mt-6 text-xs text-center text-muted-foreground leading-relaxed">
         {t("oauthConsentTerms")}
       </p>

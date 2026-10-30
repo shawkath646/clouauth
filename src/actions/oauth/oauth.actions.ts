@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT } from "jose";
+import crypto from "crypto";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { handleError } from "@/utils/error";
 import { getSecret } from "@/lib/jwt-secret";
@@ -11,6 +12,7 @@ import { requireUserSession } from "@/actions/auth/helpers";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { recordSecurityActivity } from "@/lib/security-activity";
+import { parseClientScopes, parseRedirectUris } from "@/lib/oauth/scope-utils";
 
 export async function grantOAuthAccess(
   client_id: string,
@@ -25,7 +27,10 @@ export async function grantOAuthAccess(
     const session = await requireUserSession();
 
     if (!client_id || !redirect_uri) {
-      return { success: false, error: "Invalid OAuth request. Missing required parameters." };
+      return {
+        success: false,
+        error: "Invalid OAuth request. Missing required parameters.",
+      };
     }
 
     // 1. Validate Client Application and Status
@@ -35,38 +40,64 @@ export async function grantOAuthAccess(
     });
 
     if (!clientApp || !clientApp.enabled) {
-      return { success: false, error: "The requesting application could not be found or is disabled." };
+      return {
+        success: false,
+        error: "The requesting application could not be found or is disabled.",
+      };
     }
 
-    // 2. Validate Redirect URI against registered URIs
-    let registeredUris: string[] = [];
-    try {
-      registeredUris = typeof clientApp.redirect_uris === "string"
-        ? JSON.parse(clientApp.redirect_uris)
-        : clientApp.redirect_uris;
-    } catch {
-      registeredUris = [];
+    // 2. Validate Redirect URI against registered URIs using strict exact string matching (BCP 212)
+    const registeredUris = parseRedirectUris(clientApp.redirect_uris);
+    if (!registeredUris.includes(redirect_uri)) {
+      return {
+        success: false,
+        error:
+          "The provided redirect URI is not authorized for this application.",
+      };
     }
 
-    if (!Array.isArray(registeredUris) || !registeredUris.includes(redirect_uri)) {
-      return { success: false, error: "The provided redirect URI is not authorized for this application." };
+    // 3. Enforce PKCE requirement for public clients or when pkce_required is enabled (RFC 7636 / BCP 212)
+    const isPublicClient =
+      clientApp.client_type === "public" ||
+      clientApp.token_endpoint_auth_method === "none";
+
+    if ((clientApp.pkce_required || isPublicClient) && !code_challenge) {
+      return {
+        success: false,
+        error: "PKCE code_challenge (S256) is required for this application.",
+      };
     }
 
-    // 3. Enforce PKCE requirement if required by client configuration
-    if (clientApp.pkce_required && !code_challenge) {
-      return { success: false, error: "PKCE code_challenge is required for this application." };
+    if (code_challenge && code_challenge_method && code_challenge_method !== "S256") {
+      return {
+        success: false,
+        error: "Only S256 PKCE code_challenge_method is supported.",
+      };
     }
 
-    // 4. Generate the Authorization Code with single-use JTI
+    // 4. Validate requested scopes against registered client scopes
+    const allowedScopes = new Set(parseClientScopes(clientApp.scopes));
+    const requestedScopes = (scope || "openid profile email")
+      .split(/\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const grantedScopes = requestedScopes.filter((s) => allowedScopes.has(s));
+    const finalScope =
+      grantedScopes.length > 0
+        ? grantedScopes.join(" ")
+        : Array.from(allowedScopes).join(" ") || "openid profile email";
+
+    // 5. Generate the Authorization Code with single-use JTI
     const codeId = crypto.randomUUID();
     const authCode = await new SignJWT({
       client_id,
       redirect_uri,
       user_id: session.user.id,
-      code_challenge,
-      code_challenge_method: code_challenge_method || "S256",
-      scope: scope || "openid profile email",
-      nonce,
+      code_challenge: code_challenge || undefined,
+      code_challenge_method: code_challenge ? "S256" : undefined,
+      scope: finalScope,
+      nonce: nonce || undefined,
       type: "authorization_code",
     })
       .setProtectedHeader({ alg: "HS256" })
@@ -179,7 +210,9 @@ export async function disconnectOAuthAccount(provider: string) {
   try {
     const session = await requireUserSession();
     const normalizedProvider = provider.toLowerCase();
-    const isDrive = ["google_drive", "onedrive", "dropbox"].includes(normalizedProvider);
+    const isDrive = ["google_drive", "onedrive", "dropbox"].includes(
+      normalizedProvider
+    );
 
     if (!isDrive) {
       const user = await prisma.user.findUnique({
@@ -199,11 +232,14 @@ export async function disconnectOAuthAccount(provider: string) {
         user?.oauth_accounts.filter(
           (acc) =>
             acc.provider.toLowerCase() !== normalizedProvider &&
-            !["google_drive", "onedrive", "dropbox"].includes(acc.provider.toLowerCase())
+            !["google_drive", "onedrive", "dropbox"].includes(
+              acc.provider.toLowerCase()
+            )
         ).length || 0;
       const hasPassword = Boolean(user?.password);
       const hasPasskey = Boolean(
-        user?.two_factor?.passkeys?.length && user.two_factor.passkeys.length > 0
+        user?.two_factor?.passkeys?.length &&
+          user.two_factor.passkeys.length > 0
       );
 
       if (!hasPassword && !hasPasskey && otherSocialAccounts === 0) {

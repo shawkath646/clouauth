@@ -9,10 +9,10 @@ export interface VerificationMethod {
 export interface DBPasswordCredential {
     user_id: string;
     password_hash: string;
-    last_changed_on: Date;
+    last_changed_on: Date | string;
     force_change: boolean;
     failed_attempts: number;
-    locked_until?: Date | null;
+    locked_until?: Date | string | null;
 }
 
 export interface DBPasswordHistory {
@@ -62,5 +62,5 @@ export interface DBOAuthAccount {
     access_token?: string;
     refresh_token?: string;
     expires_at?: number | null;
-    created_on: Date;
+    created_on: Date | string;
 }

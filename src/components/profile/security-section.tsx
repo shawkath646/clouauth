@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
@@ -36,9 +36,13 @@ import { useTranslations } from "@/lib/i18n/hooks";
 import { getRecentSecurityActivitiesAction } from "@/actions/profile/security-activity.actions";
 import { cn } from "@/utils/utils";
 
-function formatRelativeTime(dateInput: string | Date): string {
+function formatRelativeTime(dateInput: string | Date, isMounted: boolean): string {
   const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
   if (isNaN(date.getTime())) return "Recently";
+
+  if (!isMounted) {
+    return date.toISOString().split("T")[0] || "Recently";
+  }
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -63,9 +67,12 @@ function formatRelativeTime(dateInput: string | Date): string {
   });
 }
 
-function formatFullDateTime(dateInput: string | Date): string {
+function formatFullDateTime(dateInput: string | Date, isMounted: boolean): string {
   const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
   if (isNaN(date.getTime())) return "";
+  if (!isMounted) {
+    return date.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  }
   return date.toLocaleString([], {
     month: "short",
     day: "numeric",
@@ -125,9 +132,17 @@ function getActivityIcon(event: string, device?: string | null) {
 
 export function SecuritySection({ profile }: { profile: FullProfile }) {
   const { t } = useTranslations("profile_security");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const hasPassword = !!profile.password;
   const lastChanged = profile.password?.last_changed_on 
-    ? new Date(profile.password.last_changed_on).toLocaleDateString()
+    ? (isMounted
+        ? new Date(profile.password.last_changed_on).toLocaleDateString()
+        : new Date(profile.password.last_changed_on).toISOString().split("T")[0])
     : "Never";
     
   const passkeysCount = profile.passkeys?.length || 0;
@@ -336,8 +351,8 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
         ) : (
           <div className="divide-y divide-border/50">
             {activities.slice(0, 4).map((activity) => {
-              const relativeTime = formatRelativeTime(activity.created_on);
-              const fullDateTime = formatFullDateTime(activity.created_on);
+              const relativeTime = formatRelativeTime(activity.created_on, isMounted);
+              const fullDateTime = formatFullDateTime(activity.created_on, isMounted);
               const locationParts = [activity.city, activity.country].filter(Boolean);
               const locationStr = locationParts.join(", ");
 
@@ -443,8 +458,8 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
               </div>
             ) : (
               allActivities.map((act) => {
-                const relativeTime = formatRelativeTime(act.created_on);
-                const fullDateTime = formatFullDateTime(act.created_on);
+                const relativeTime = formatRelativeTime(act.created_on, isMounted);
+                const fullDateTime = formatFullDateTime(act.created_on, isMounted);
                 const locationParts = [act.city, act.country].filter(Boolean);
                 const locationStr = locationParts.join(", ");
 

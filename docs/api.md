@@ -1,6 +1,8 @@
 # 📡 API Reference & OpenID Connect Specifications
 
-ClouAuth implements standard **OpenID Connect Core 1.0** and **OAuth 2.0 (RFC 6749 / RFC 7636)** protocols, in addition to dedicated ecosystem inter-service endpoints.
+ClouAuth implements standard **OpenID Connect Core 1.0** and **OAuth 2.0 (RFC 6749 / RFC 7636 / RFC 7009 / BCP 212)** protocols, in addition to dedicated ecosystem inter-service endpoints.
+
+For the machine-readable OpenAPI 3.1 specification, see [`docs/openapi.yaml`](openapi.yaml).
 
 ---
 
@@ -53,7 +55,7 @@ Accept: application/json
 ## 🔑 Authentication Endpoints
 
 ### 1. Authorization Endpoint
-Initiates user authentication and consent flow. Supports Proof Key for Code Exchange (PKCE).
+Initiates user authentication and consent flow. Enforces strict exact-string `redirect_uri` matching and mandatory `S256` Proof Key for Code Exchange (PKCE).
 
 ```http
 GET /signin?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=openid%20profile%20email&state={STATE}&code_challenge={CHALLENGE}&code_challenge_method=S256 HTTP/1.1
@@ -64,17 +66,17 @@ Host: auth.clouburstlab.com
 | Parameter | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
 | `client_id` | `string` | **Yes** | Client ID registered in developer settings |
-| `redirect_uri` | `string` | **Yes** | Whitelisted callback URL |
+| `redirect_uri` | `string` | **Yes** | Exact-match whitelisted callback URL (no wildcards or fragments) |
 | `response_type` | `string` | **Yes** | Must be `code` |
-| `scope` | `string` | No | Space-delimited scopes (e.g. `openid profile email offline_access`) |
+| `scope` | `string` | No | Space-delimited scopes registered to the client (e.g. `openid profile email offline_access`) |
 | `state` | `string` | **Yes** | Cryptographic CSRF state token |
-| `code_challenge` | `string` | **Yes** (for public clients) | Base64URL-encoded SHA-256 hash of `code_verifier` |
-| `code_challenge_method`| `string` | **Yes** (with challenge) | Must be `S256` |
+| `code_challenge` | `string` | **Yes** | Base64URL-encoded SHA-256 hash of `code_verifier` |
+| `code_challenge_method`| `string` | **Yes** | Strictly `S256` (`plain` is rejected per OAuth 2.0 Security BCP 212) |
 
 ---
 
 ### 2. Token Endpoint
-Exchanges authorization code, refresh token, or client credentials for access and ID tokens.
+Exchanges authorization code, refresh token, or client credentials for access and ID tokens. Client authentication and PKCE verification are strictly validated **before** atomic single-use JTI consumption.
 
 ```http
 POST /api/sso/v1/token HTTP/1.1
@@ -83,6 +85,9 @@ Content-Type: application/x-www-form-urlencoded
 ```
 
 #### Flow A: Authorization Code Exchange (with PKCE)
+> [!IMPORTANT]
+> `redirect_uri` is **mandatory** during `authorization_code` exchange and must strictly match the `redirect_uri` used at `/signin`.
+
 ```bash
 curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -94,7 +99,10 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
   -d "code_verifier=YOUR_PKCE_CODE_VERIFIER"
 ```
 
-#### Flow B: Refresh Token Grant
+#### Flow B: Refresh Token Grant (Atomic Single-Use Rotation)
+> [!NOTE]
+> If `scope` is passed during refresh, it must be an equal or narrower subset of the originally granted scopes. Escalating scopes returns `400 invalid_scope`.
+
 ```bash
 curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -111,7 +119,7 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
   -d "grant_type=client_credentials" \
   -d "client_id=your_client_id" \
   -d "client_secret=your_client_secret" \
-  -d "scope=internal_service"
+  -d "scope=openid profile email"
 ```
 
 **Token Response (`200 OK`):**
@@ -120,7 +128,7 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
   "access_token": "eyJhbGciOiJIUzI1NiIsIn...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "refresh_token": "clou_rt_7f9a2b...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "id_token": "eyJhbGciOiJSUzI1NiIs...",
   "scope": "openid profile email"
 }
@@ -155,27 +163,11 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 ---
 
 ### 4. JSON Web Key Set (JWKS)
-Returns the public RSA verification keys used by ClouAuth to sign RS256 ID tokens.
+Returns the public RSA verification keys used by ClouAuth to sign RS256 ID tokens. Private keys are encrypted at rest with AES-256-GCM.
 
 ```http
 GET /api/sso/v1/jwks.json HTTP/1.1
 Host: auth.clouburstlab.com
-```
-
-**Response (`200 OK`):**
-```json
-{
-  "keys": [
-    {
-      "kty": "RSA",
-      "use": "sig",
-      "alg": "RS256",
-      "kid": "clou_68a9b2f1",
-      "n": "u5K7w...p9L",
-      "e": "AQAB"
-    }
-  ]
-}
 ```
 
 ---
@@ -195,37 +187,42 @@ token=YOUR_TOKEN_STRING&token_type_hint=refresh_token
 
 ## 🌉 Inter-Services Bridge Endpoints
 
-Dedicated endpoints for **clouburstlab** internal microservices and apps:
+Dedicated endpoints for **clouburstlab** internal microservices and authorized ecosystem applications:
 
 ### 1. User Session Resolution
+Resolves the active user from the cross-subdomain `session_token` cookie. Passing `?user_id=` or `x-user-id` without a browser cookie is strictly restricted to internal service tokens (`isInternalService: true`).
+
 ```http
 GET /api/inter-services/v1/user-session?scope=id,firstname,lastname,email,avatar HTTP/1.1
 Host: auth.clouburstlab.com
 Authorization: Bearer YOUR_SERVICE_OR_APP_TOKEN
-Cookie: clou_session=... (optional, for browser cross-subdomain calls)
+Cookie: session_token=...
 ```
 
 ### 2. Connected Drives Bridge
-Retrieves refreshed, decrypted OAuth tokens for third-party cloud drives:
+Retrieves refreshed, decrypted OAuth tokens for third-party cloud drives. Third-party `UserApp` tokens must forward the user's `session_token` cookie or an end-user `access_token` matching `sub`; querying arbitrary `?user_id=` is restricted to internal ecosystem tokens (`isInternalService: true`).
+
 ```http
 GET /api/inter-services/v1/connected-drives?provider=google_drive&refresh=true HTTP/1.1
 Host: auth.clouburstlab.com
 Authorization: Bearer YOUR_SERVICE_TOKEN
+Cookie: session_token=...
 ```
 
-### 3. Asynchronous Email Queue
-Dispatches transactional system emails through the queued retry pipeline:
+### 3. Asynchronous Email Queue (Internal Services Only)
+Dispatches and manages transactional system emails through the queued retry pipeline. Strictly requires an internal service token (`isInternalService: true`).
+
 ```http
 POST /api/inter-services/v1/email-queue HTTP/1.1
 Host: auth.clouburstlab.com
-Authorization: Bearer YOUR_SERVICE_TOKEN
+Authorization: Bearer YOUR_INTERNAL_SERVICE_TOKEN
 Content-Type: application/json
 
 {
-  "userId": "user_cuid_123",
+  "user_id": "user_cuid_123",
   "to": "recipient@example.com",
   "subject": "Security Alert: New Sign-in",
-  "templateId": "login_alert",
-  "data": "{\"browser\":\"Edge\",\"ip\":\"192.168.1.1\"}"
+  "template_id": "login_alert",
+  "data": { "browser": "Edge", "ip": "192.168.1.1" }
 }
 ```

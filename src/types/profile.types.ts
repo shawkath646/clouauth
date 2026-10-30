@@ -55,5 +55,5 @@ export interface ExtendedProfile extends MinimalProfile {
     created_on: string;
     preferences: DBUserPreference;
     pronouns?: string | null;
-    username_last_changed?: Date | null;
+    username_last_changed?: Date | string | null;
 }

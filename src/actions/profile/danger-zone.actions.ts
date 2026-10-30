@@ -5,7 +5,6 @@ import { handleError } from "@/utils/error";
 import { cookies, headers } from "next/headers";
 import { signOutAll } from "@/actions/auth/auth";
 import { COOKIE_SESSION_TOKEN_NAME, COOKIE_REFRESH_TOKEN_NAME } from "@/constants/session.constants";
-import { requireUserSession } from "@/actions/auth/helpers";
 import { checkSudoAction } from "@/actions/auth/sudo";
 import { recordSecurityActivity } from "@/lib/security-activity";
 
@@ -20,8 +19,7 @@ export async function disableAccount() {
       return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
     }
 
-    const sessionData = await requireUserSession();
-    const userId = sessionData.user.id;
+    const userId = sudoCheck.sessionData.user.id;
 
     // Update account status
     await prisma.accountStatus.upsert({
@@ -67,8 +65,7 @@ export async function deleteAccount(input: DeleteAccountInput = {}) {
       return { success: false, error: sudoCheck.error, sudoRequired: true, redirectUrl: sudoCheck.redirectUrl };
     }
 
-    const sessionData = await requireUserSession();
-    const userId = sessionData.user.id;
+    const userId = sudoCheck.sessionData.user.id;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

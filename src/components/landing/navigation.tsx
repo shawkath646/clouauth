@@ -57,19 +57,15 @@ export function Navigation() {
           <div className="hidden sm:block">
             <Image 
               src={iconDark} 
-            alt="Logo" 
-            width={144} 
-            height={40} 
-            priority 
-            className="hidden dark:block object-contain" 
-          />
-          <Image 
-            src={iconLight} 
-            alt="Logo" 
-            width={144} 
-            height={40} 
-            priority 
-              className="block dark:hidden object-contain" 
+              alt="Logo" 
+              priority 
+              className="hidden dark:block w-36 h-auto object-contain" 
+            />
+            <Image 
+              src={iconLight} 
+              alt="Logo" 
+              priority 
+              className="block dark:hidden w-36 h-auto object-contain" 
             />
           </div>
         </div>

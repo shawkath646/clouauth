@@ -19,7 +19,7 @@ export const USER_WITH_AUTH_INCLUDE = {
   account_status: true,
   preferences: true,
   emails: {
-    select: { id: true, address: true, is_primary: true },
+    select: { id: true, address: true, is_primary: true, verified: true },
   },
   two_factor: {
     select: {
@@ -39,7 +39,9 @@ export async function requireUserSession() {
   return sessionData;
 }
 
-export async function requireValidTempSession(tempSessionId: string): Promise<DBTempSession> {
+export async function requireValidTempSession(
+  tempSessionId: string
+): Promise<DBTempSession> {
   if (!tempSessionId) {
     throw new Error("Session expired or invalid. Please sign in again.");
   }
@@ -55,7 +57,10 @@ export function checkLockout(
   messagePrefix = "Too many failed attempts"
 ): string | null {
   if (lockedUntil && lockedUntil > new Date()) {
-    const minutesLeft = Math.max(1, Math.ceil((lockedUntil.getTime() - Date.now()) / 60000));
+    const minutesLeft = Math.max(
+      1,
+      Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
+    );
     return `${messagePrefix}. Try again in ${minutesLeft} minutes.`;
   }
   return null;
@@ -65,31 +70,26 @@ export async function handleFailedAttempt(
   target: "password" | "tempSession",
   id: string
 ): Promise<number> {
-  if (target === "password") {
-    const updated = await prisma.passwordCredential.update({
-      where: { user_id: id },
-      data: { failed_attempts: { increment: 1 } },
-    });
-    if (updated.failed_attempts >= MAX_ATTEMPTS) {
-      await prisma.passwordCredential.update({
-        where: { user_id: id },
-        data: { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) },
-      });
-    }
-    return updated.failed_attempts;
+  const isPassword = target === "password";
+
+  const current = isPassword
+    ? await prisma.passwordCredential.findUnique({ where: { user_id: id }, select: { failed_attempts: true } })
+    : await prisma.tempSession.findUnique({ where: { id }, select: { failed_attempts: true } });
+
+  const nextAttempts = (current?.failed_attempts ?? 0) + 1;
+  const isLockout = nextAttempts >= MAX_ATTEMPTS;
+  const updateData = {
+    failed_attempts: nextAttempts,
+    ...(isLockout ? { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) } : {}),
+  };
+
+  if (isPassword) {
+    await prisma.passwordCredential.update({ where: { user_id: id }, data: updateData });
   } else {
-    const updated = await prisma.tempSession.update({
-      where: { id },
-      data: { failed_attempts: { increment: 1 } },
-    });
-    if (updated.failed_attempts >= MAX_ATTEMPTS) {
-      await prisma.tempSession.update({
-        where: { id },
-        data: { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) },
-      });
-    }
-    return updated.failed_attempts;
+    await prisma.tempSession.update({ where: { id }, data: updateData });
   }
+
+  return nextAttempts;
 }
 
 export async function resetFailedAttempts(
@@ -109,7 +109,10 @@ export async function resetFailedAttempts(
   }
 }
 
-export async function markTempSessionVerified(tempSessionId: string, clearCodeHash = false) {
+export async function markTempSessionVerified(
+  tempSessionId: string,
+  clearCodeHash = false
+) {
   await prisma.tempSession.update({
     where: { id: tempSessionId },
     data: {
@@ -122,7 +125,10 @@ export async function markTempSessionVerified(tempSessionId: string, clearCodeHa
   });
 }
 
-export async function upsertOAuthAccount(userId: string, profile: ExternalAuthProfile) {
+export async function upsertOAuthAccount(
+  userId: string,
+  profile: ExternalAuthProfile
+) {
   return prisma.oAuthAccount.upsert({
     where: {
       provider_provider_user_id: {
@@ -149,7 +155,8 @@ export async function upsertOAuthAccount(userId: string, profile: ExternalAuthPr
 
 export async function getWebAuthnConfig() {
   const isDev = process.env.NODE_ENV !== "production";
-  const rawBase = getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
+  const rawBase =
+    getEnv("NEXT_PUBLIC_BASE_URL", true) || "http://localhost:3000";
   let canonicalOrigin = "http://localhost:3000";
   let canonicalHost = "localhost";
   try {
@@ -161,7 +168,8 @@ export async function getWebAuthnConfig() {
   }
 
   const envRpID = getEnv("NEXT_PUBLIC_RP_ID", true).trim().toLowerCase();
-  const rpID = envRpID || (canonicalHost === "127.0.0.1" ? "localhost" : canonicalHost);
+  const rpID =
+    envRpID || (canonicalHost === "127.0.0.1" ? "localhost" : canonicalHost);
 
   const allowedOrigins = new Set<string>();
   allowedOrigins.add(canonicalOrigin);
@@ -195,12 +203,20 @@ export async function getWebAuthnConfig() {
   };
 }
 
-export async function generateUniqueUsername(baseInput?: string | null): Promise<string> {
-  const clean = (baseInput || "user").split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") || "user";
+export async function generateUniqueUsername(
+  baseInput?: string | null
+): Promise<string> {
+  const clean =
+    (baseInput || "user")
+      .split("@")[0]
+      .replace(/[^a-zA-Z0-9_]/g, "") || "user";
   let username = clean;
   let retries = 0;
   while (retries < 5) {
-    const existing = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    const existing = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
     if (!existing) return username;
     username = `${clean}_${crypto.randomBytes(3).toString("hex")}`;
     retries++;

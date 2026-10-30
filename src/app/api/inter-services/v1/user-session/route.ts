@@ -39,9 +39,7 @@ async function handleUserSession(request: NextRequest) {
     }
 
     // 2. Extract user session token from cookies
-    const sessionCookie =
-      request.cookies.get(COOKIE_SESSION_TOKEN_NAME)?.value ||
-      extractCookieFromHeader(request.headers.get("cookie"), COOKIE_SESSION_TOKEN_NAME);
+    const sessionCookie = request.cookies.get(COOKIE_SESSION_TOKEN_NAME)?.value;
 
     let userId: string | null = null;
 
@@ -58,7 +56,7 @@ async function handleUserSession(request: NextRequest) {
         request.nextUrl.searchParams.get("user_id") ||
         request.headers.get("x-user-id");
 
-      if (userIdParam && authResult.payload?.type === "internal_service") {
+      if (userIdParam && authResult.isInternalService) {
         userId = userIdParam;
       }
     }
@@ -192,13 +190,4 @@ async function handleUserSession(request: NextRequest) {
       request
     );
   }
-}
-
-function extractCookieFromHeader(cookieHeader: string | null, cookieName: string): string | null {
-  if (!cookieHeader) return null;
-  const match = cookieHeader
-    .split(";")
-    .map((c) => c.trim())
-    .find((c) => c.startsWith(`${cookieName}=`));
-  return match ? match.slice(cookieName.length + 1) : null;
 }

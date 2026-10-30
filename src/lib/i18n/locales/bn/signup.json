@@ -5,8 +5,6 @@
   "firstNamePlaceholder": "John",
   "lastNameLabel": "শেষ নাম",
   "lastNamePlaceholder": "Doe",
-  "usernameLabel": "ব্যবহারকারীর নাম",
-  "usernamePlaceholder": "johndoe",
   "emailLabel": "ইমেইল",
   "emailPlaceholder": "name@example.com",
   "passwordLabel": "পাসওয়ার্ড",
@@ -16,7 +14,5 @@
   "signIn": "সাইন ইন",
   "pitchTitle1": "একটি অ্যাকাউন্ট।",
   "pitchTitle2": "সকল নিরবচ্ছিন্ন অ্যাক্সেস।",
-  "pitchSubtitle": "clouburstlab ইকোসিস্টেমে যোগ দিন এবং আধুনিক পেশাদারদের জন্য ডিজাইন করা শক্তিশালী টুলের একটি স্যুট আনলক করুন।",
-  "usernameAvailable": "ব্যবহারকারীর নাম উপলব্ধ!",
-  "usernameTaken": "ব্যবহারকারীর নাম ইতিমধ্যে নেওয়া হয়েছে।"
+  "pitchSubtitle": "clouburstlab ইকোসিস্টেমে যোগ দিন এবং আধুনিক পেশাদারদের জন্য ডিজাইন করা শক্তিশালী টুলের একটি স্যুট আনলক করুন।"
 }

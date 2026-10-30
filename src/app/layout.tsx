@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { cn } from "@/utils/utils";
-import { getLocale } from "@/lib/i18n/server";
-import { getUserSession } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
 import { getEnv } from "@/utils/env";
 import JsonLd from "@/components/json-ld";
+import { getLocalizedAlternates } from "@/utils/seo";
 import "./globals.css";
 import GoogleOneTap from "@/components/google-one-tap";
 import { ReCaptchaProvider } from "@/lib/recaptcha/client";
@@ -34,8 +34,7 @@ export const metadata: Metadata = {
   },
 
   description:
-    "ClouAuth is a centralized authentication platform and OIDC 2.0 / OAuth 2.0 Identity Provider for clouburstlab ecosystem. " +
-    "Sign in, manage your account, passkeys, and connected applications — all in one place.",
+    "Centralized OIDC & OAuth 2.0 Identity Provider for clouburstlab. Sign in, manage passkeys, 2FA, and connected apps securely in one place.",
 
   applicationName: "ClouAuth by clouburstlab",
   authors: [
@@ -95,8 +94,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ClouAuth — Secure Authentication & Identity Provider",
     description:
-      "OIDC 2.0 and OAuth 2.0 compliant Identity Provider for clouburstlab ecosystem. " +
-      "Secure sign-in, passkeys, 2FA, and developer-friendly OAuth application management.",
+      "OIDC & OAuth 2.0 Identity Provider for clouburstlab. Secure sign-in, passkeys, 2FA, and developer OAuth app management.",
     creator: "@shawkath646",
     site: "@clouburstlab",
     images: ["/opengraph-image.png"],
@@ -114,9 +112,7 @@ export const metadata: Metadata = {
     },
   },
 
-  alternates: {
-    canonical: BASE_URL,
-  },
+  alternates: getLocalizedAlternates(),
 
   category: "Technology",
 };
@@ -132,24 +128,18 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, session] = await Promise.all([
-    getLocale(),
-    getUserSession(),
-  ]);
-  const dir = locale === "ar" ? "rtl" : "ltr";
-
   const gClientId = getEnv("GOOGLE_CLIENT_ID");
   const recaptchaSiteKey = getEnv("RECAPTCHA_SITE_KEY");
 
   return (
     <html
-      lang={locale}
-      dir={dir}
+      lang="en"
+      dir="ltr"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
       suppressHydrationWarning
     >
@@ -209,7 +199,9 @@ export default async function RootLayout({
         >
           <ReCaptchaProvider siteKey={recaptchaSiteKey}>
             {children}
-            {!session && <GoogleOneTap gClientId={gClientId} />}
+            <Suspense fallback={null}>
+              <GoogleOneTap gClientId={gClientId} />
+            </Suspense>
             <Toaster />
           </ReCaptchaProvider>
         </ThemeProvider>

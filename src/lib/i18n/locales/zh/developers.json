@@ -84,6 +84,13 @@
           "part2": "请求新的访问令牌，而无需用户重新登录。"
         }
       }
+    },
+    "step7": {
+      "title": "内部应用桥接与机器对机器 (M2M) 集成",
+      "description": "跨子域会话验证与云端硬盘集成",
+      "content": {
+        "intro": "*.clouburstlab.com 域内的内部应用程序可以利用桥接 API 无缝验证活动用户会话，并检索解密后的 Google Drive、OneDrive 和 Dropbox 凭据。"
+      }
     }
   }
 }

@@ -3,12 +3,16 @@ import { defaultLocale, locales, type Locale, type Namespace } from './config';
 import type { Dictionary, TranslationKey } from '@/types/i18n.types';
 import { cache } from 'react';
 
-export async function getLocale(): Promise<Locale> {
-  // 1. Check user session cookie FIRST (Not the DB!)
-  // e.g., const session = await getSession(); 
-  // if (session?.user?.locale) return session.user.locale;
+export const getLocale = cache(async (): Promise<Locale> => {
+  // 1. Check validated header injected by proxy.ts at the network boundary
+  const headersList = await headers();
+  const proxyLocale =
+    headersList.get('x-clouauth-locale') || headersList.get('x-locale');
+  if (proxyLocale && locales.includes(proxyLocale as Locale)) {
+    return proxyLocale as Locale;
+  }
 
-  // 2. Locale cookie (manual override)
+  // 2. Fallback to Locale cookie (manual override in Server Actions / Route Handlers)
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
   if (localeCookie && locales.includes(localeCookie as Locale)) {
@@ -16,10 +20,14 @@ export async function getLocale(): Promise<Locale> {
   }
 
   // 3. Accept-Language request header (Safely parsed)
-  const headersList = await headers();
   const acceptLanguage = headersList.get('accept-language');
   if (acceptLanguage) {
-    const preferredLocale = acceptLanguage.split(',')?.[0]?.split('-')?.[0];
+    const preferredLocale = acceptLanguage
+      .split(',')?.[0]
+      ?.split(';')?.[0]
+      ?.split('-')?.[0]
+      ?.trim()
+      ?.toLowerCase();
     if (preferredLocale && locales.includes(preferredLocale as Locale)) {
       return preferredLocale as Locale;
     }
@@ -27,7 +35,8 @@ export async function getLocale(): Promise<Locale> {
 
   // 4. Default locale
   return defaultLocale;
-}
+});
+
 const dictionaries = {
   en: {
     signin: () => import('@/lib/i18n/locales/en/signin.json').then((module) => module.default),
@@ -139,12 +148,12 @@ const dictionaries = {
   },
 };
 
-export async function getDictionary<T extends Namespace>(
+export const getDictionary = cache(async <T extends Namespace>(
   locale: Locale,
   namespace: T
-): Promise<Dictionary<T>> {
+): Promise<Dictionary<T>> => {
   return dictionaries[locale][namespace]() as Promise<Dictionary<T>>;
-}
+});
 
 function flattenDictionary(dict: Record<string, unknown>, prefix = ''): Record<string, string> {
   return Object.keys(dict).reduce((acc: Record<string, string>, key: string) => {
@@ -179,6 +188,25 @@ export const getServerTranslations = cache(async <T extends Namespace>(
   const locale = await getLocale();
   const rawDict = await getDictionary(locale, namespace);
 
+  const flatDict = flattenDictionary(rawDict);
+
+  const t = (key: TranslationKey<T> | string): string => {
+    return flatDict[key as keyof typeof flatDict] || key;
+  };
+
+  return { t, locale, dict: rawDict };
+});
+
+/**
+ * Deterministic, static-safe translation loader for SEO metadata (`generateMetadata`),
+ * JSON-LD structured data, and static Partial Prerendering (PPR) shells.
+ * Never reads `cookies()` or `headers()`, keeping routes eligible for static generation.
+ */
+export const getStaticTranslations = cache(async <T extends Namespace>(
+  namespace: T,
+  locale: Locale = defaultLocale
+) => {
+  const rawDict = await getDictionary(locale, namespace);
   const flatDict = flattenDictionary(rawDict);
 
   const t = (key: TranslationKey<T> | string): string => {

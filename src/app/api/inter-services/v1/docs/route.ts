@@ -35,7 +35,7 @@ export function GET(request: NextRequest) {
   \`\`\`typescript
   fetch(url, { credentials: "include", headers: { Authorization: "Bearer <APP_TOKEN>" } })
   \`\`\`
-- **Server-to-Server Requests:** Backend microservices without access to browser cookies may authenticate using their application Bearer token and pass \`?user_id=<USER_ID>\` or header \`x-user-id: <USER_ID>\`.
+- **Server-to-Server Requests:** Privileged internal backend microservices (\`isInternalService: true\`) without access to browser cookies may authenticate using their internal service Bearer token and pass \`?user_id=<USER_ID>\` or header \`x-user-id: <USER_ID>\`. Third-party developer applications cannot override \`user_id\`.
 
 ### App Authentication Requirements
 Every request to the bridge endpoints **MUST** include an \`Authorization\` header:
@@ -185,10 +185,10 @@ Retrieves decrypted OAuth access and refresh credentials for the user's connecte
 ---
 
 ### 2.3 \`/api/inter-services/v1/email-queue\`
-Serves queued transactional and notification emails to background dispatchers, workers, or notification microservices. Supports enqueuing new emails, pulling due items, batch acknowledgements, and retry reporting.
+Serves queued transactional and notification emails to background dispatchers, workers, or notification microservices. Supports enqueuing new emails, pulling due items, batch acknowledgements, and retry reporting. Strictly restricted to internal ecosystem tokens (\`isInternalService: true\`).
 
 - **URL:** \`${baseURL}/api/inter-services/v1/email-queue\`
-- **Authentication:** \`Authorization: Bearer <APP_TOKEN>\` *(required)*
+- **Authentication:** \`Authorization: Bearer <INTERNAL_SERVICE_TOKEN>\` *(required, must have internal_service privileges)*
 
 #### A. Pull Queued Emails (\`GET\`)
 - **Method:** \`GET\`

@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hashCode, verifyCode } from "@/lib/security/hash";
 import { handleError } from "@/utils/error";
 import {
   generateAuthenticationOptions,
@@ -24,7 +24,7 @@ import { verifyRecaptcha } from "@/lib/recaptcha/server";
 async function sendVerificationCode(userId: string, tempSessionId: string, destination: string) {
   try {
     const rawCode = Array.from({ length: 8 }, () => crypto.randomInt(0, 10)).join("");
-    const codeHash = await bcrypt.hash(rawCode, 12);
+    const codeHash = await hashCode(rawCode);
 
     await prisma.tempSession.update({
       where: { id: tempSessionId },
@@ -182,7 +182,7 @@ export async function resolveCodeVerification(
       return { action: "ERROR", error: lockoutError };
     }
 
-    const isValid = await bcrypt.compare(code, tempSession.code_hash);
+    const isValid = await verifyCode(code, tempSession.code_hash);
 
     if (!isValid) {
       await handleFailedAttempt("tempSession", tempSession.id);

@@ -1,8 +1,7 @@
 {
   "signIn": {
     "usernameRequired": "사용자 이름은 필수입니다",
-    "passwordRequired": "비밀번호는 필수입니다",
-    "passwordMin": "비밀번호는 최소 8자 이상이어야 합니다"
+    "passwordRequired": "비밀번호는 필수입니다"
   },
   "signUp": {
     "firstNameRequired": "이름은 필수입니다",

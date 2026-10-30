@@ -40,7 +40,6 @@
     "noEmailDesc": "Agrega una dirección de correo alternativa para que puedas recuperar tu cuenta si pierdes acceso a tu correo principal.",
     "addBtn": "Agregar Correo de Recuperación",
     "activeDesc": "Correo de recuperación verificado",
-    "updateBtn": "Actualizar",
     "editTitleChange": "Cambiar Correo de Recuperación",
     "editTitleAdd": "Agregar Correo de Recuperación",
     "editDesc": "Ingresa una dirección de correo alternativa donde podamos contactarte si pierdes acceso a tu cuenta.",
@@ -94,8 +93,6 @@
     "notSet": "No establecido",
     "twoStep": "Autenticador",
     "twoStepDesc": "Requiere un código de seguridad al iniciar sesión",
-    "method": "método",
-    "methods": "métodos",
     "disabled": "Desactivado",
     "enabled": "Activado",
     "passkeys": "Llaves de acceso",
@@ -137,12 +134,7 @@
     "unknownIP": "IP Desconocida",
     "activeNow": "Activo ahora",
     "lastActive": "Último activo: {date}",
-    "signOut": "Cerrar Sesión",
-    "signedOutSuccess": "Sesión cerrada",
-    "signedOutError": "Error al cerrar sesión",
-    "signedOutAllSuccess": "Todas las sesiones cerradas",
-    "signedOutAllError": "Error al cerrar sesiones",
-    "unexpectedError": "Ocurrió un error inesperado"
+    "signOut": "Cerrar Sesión"
   },
   "sso": {
     "title": "Autenticación (SSO)",

@@ -48,44 +48,33 @@ export async function revokeAllUserSessionsAction(includeCurrent: boolean = fals
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
+    await prisma.userSession.updateMany({
+      where: {
+        user_id: sessionData.user.id,
+        revoked_on: null,
+        ...(includeCurrent ? {} : { id: { not: sessionData.session.id } }),
+      },
+      data: {
+        revoked_on: new Date(),
+      },
+    });
+
+    await recordSecurityActivity({
+      userId: sessionData.user.id,
+      event: "ALL_SESSIONS_REVOKED",
+      title: includeCurrent ? "All sessions signed out" : "All other sessions signed out",
+      description: includeCurrent
+        ? "Signed out of all devices including this device"
+        : "Signed out of all other active devices and sessions",
+    });
+
     if (includeCurrent) {
-      await prisma.userSession.updateMany({
-        where: {
-          user_id: sessionData.user.id,
-          revoked_on: null,
-        },
-        data: {
-          revoked_on: new Date(),
-        },
-      });
-      await recordSecurityActivity({
-        userId: sessionData.user.id,
-        event: "ALL_SESSIONS_REVOKED",
-        title: "All sessions signed out",
-        description: "Signed out of all devices including this device",
-      });
       await signOut();
-      return { success: true, isCurrent: true };
     } else {
-      await prisma.userSession.updateMany({
-        where: {
-          user_id: sessionData.user.id,
-          revoked_on: null,
-          id: { not: sessionData.session.id },
-        },
-        data: {
-          revoked_on: new Date(),
-        },
-      });
-      await recordSecurityActivity({
-        userId: sessionData.user.id,
-        event: "ALL_SESSIONS_REVOKED",
-        title: "All other sessions signed out",
-        description: "Signed out of all other active devices and sessions",
-      });
       revalidatePath("/profile");
-      return { success: true, isCurrent: false };
     }
+
+    return { success: true, isCurrent: includeCurrent };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute revokeAllUserSessionsAction");
     return { success: false, error: em };

@@ -1,8 +1,7 @@
 {
   "signIn": {
     "usernameRequired": "ব্যবহারকারীর নাম আবশ্যক",
-    "passwordRequired": "পাসওয়ার্ড আবশ্যক",
-    "passwordMin": "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে"
+    "passwordRequired": "পাসওয়ার্ড আবশ্যক"
   },
   "signUp": {
     "firstNameRequired": "নামের প্রথমাংশ আবশ্যক",

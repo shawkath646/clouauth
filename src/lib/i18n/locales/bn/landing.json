@@ -140,15 +140,10 @@
     "links": {
       "features": "বৈশিষ্ট্য",
       "security": "নিরাপত্তা",
-      "status": "স্থিতি",
-      "pricing": "মূল্য নির্ধারণ",
       "documentation": "ডকুমেন্টেশন",
-      "oauth2": "OAuth 2.0",
-      "oidc": "OpenID Connect",
       "apiReference": "API রেফারেন্স",
       "privacyPolicy": "গোপনীয়তা নীতি",
-      "termsOfService": "পরিষেবার শর্তাবলী",
-      "support": "সমর্থন"
+      "termsOfService": "পরিষেবার শর্তাবলী"
     },
     "copyright": "© {{year}} clouburstlab। সর্বস্বত্ব সংরক্ষিত।",
     "developedBy": "ডেভেলপ করেছেন"

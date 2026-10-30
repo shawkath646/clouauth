@@ -140,15 +140,10 @@
     "links": {
       "features": "الميزات",
       "security": "الأمان",
-      "status": "الحالة",
-      "pricing": "الأسعار",
       "documentation": "التوثيق",
-      "oauth2": "OAuth 2.0",
-      "oidc": "OpenID Connect",
       "apiReference": "مرجع API",
       "privacyPolicy": "سياسة الخصوصية",
-      "termsOfService": "شروط الخدمة",
-      "support": "الدعم"
+      "termsOfService": "شروط الخدمة"
     },
     "copyright": "© {{year}} clouburstlab. جميع الحقوق محفوظة.",
     "developedBy": "تطوير بواسطة"

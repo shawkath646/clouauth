@@ -117,4 +117,6 @@ model SigningKey {
   updatedAt DateTime  @updatedAt
   expiresAt DateTime?
   revokedAt DateTime?
+
+  @@index([active, revokedAt])
 }

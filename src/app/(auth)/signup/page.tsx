@@ -6,6 +6,8 @@ import SignUpForm from "@/app/(auth)/signup/signup-form";
 import JsonLd from "@/components/json-ld";
 import { Metadata } from "next";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Create an Account",
   description:
@@ -23,10 +25,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function SignUpPage() {
+async function SignUpDynamicContent() {
   const locale = await getLocale();
-  const dict = await getDictionary(locale, 'signup');
+  const dict = await getDictionary(locale, "signup");
 
+  return (
+    <I18nProvider locale={locale} messages={dict}>
+      <SignUpForm />
+    </I18nProvider>
+  );
+}
+
+export default function SignUpPage() {
   const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
 
   return (
@@ -67,11 +77,17 @@ export default async function SignUpPage() {
           },
         }}
       />
-      <I18nProvider locale={locale} messages={dict}>
-        <Suspense fallback={null}>
-          <SignUpForm />
-        </Suspense>
-      </I18nProvider>
+      <Suspense
+        fallback={
+          <div className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col items-center justify-center min-h-[480px] mx-auto animate-pulse">
+            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
+            <div className="h-4 w-32 bg-muted rounded mb-2" />
+            <div className="h-3 w-48 bg-muted/60 rounded" />
+          </div>
+        }
+      >
+        <SignUpDynamicContent />
+      </Suspense>
     </>
   );
 }

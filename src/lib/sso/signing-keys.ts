@@ -1,6 +1,8 @@
+import "server-only";
 import prisma from "@/lib/prisma";
-import { generateKeyPair, exportJWK } from "jose";
+import { generateKeyPair, exportJWK, type JWK } from "jose";
 import crypto from "crypto";
+import { encryptSymmetric, decryptSymmetric } from "@/lib/encryption";
 
 export async function getOrCreateActiveSigningKey() {
   const existingKey = await prisma.signingKey.findFirst({
@@ -28,6 +30,8 @@ export async function getOrCreateActiveSigningKey() {
   privateJwk.alg = "RS256";
   privateJwk.use = "sig";
 
+  const encryptedPrivateJwk = encryptSymmetric(JSON.stringify(privateJwk));
+
   const newKey = await prisma.signingKey.create({
     data: {
       kid,
@@ -35,13 +39,18 @@ export async function getOrCreateActiveSigningKey() {
       alg: "RS256",
       use: "sig",
       publicKey: JSON.stringify(publicJwk),
-      privateKey: JSON.stringify(privateJwk),
+      privateKey: encryptedPrivateJwk,
       jwk: JSON.stringify(publicJwk),
       active: true,
     },
   });
 
   return newKey;
+}
+
+export function decryptSigningPrivateKey(storedPrivateKey: string): JWK {
+  const decryptedJson = decryptSymmetric(storedPrivateKey);
+  return JSON.parse(decryptedJson) as JWK;
 }
 
 export async function getActivePublicJwks() {

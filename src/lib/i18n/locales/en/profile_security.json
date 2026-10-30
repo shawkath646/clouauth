@@ -40,7 +40,6 @@
     "noEmailDesc": "Add a backup email address so you can recover your account if you lose access to your primary email.",
     "addBtn": "Add Recovery Email",
     "activeDesc": "Verified recovery email",
-    "updateBtn": "Update",
     "editTitleChange": "Change Recovery Email",
     "editTitleAdd": "Add Recovery Email",
     "editDesc": "Enter an alternative email address where we can reach you if you lose account access.",
@@ -94,8 +93,6 @@
     "notSet": "Not set",
     "twoStep": "Authenticator",
     "twoStepDesc": "Require a security code when signing in",
-    "method": "method",
-    "methods": "methods",
     "disabled": "Disabled",
     "enabled": "Enabled",
     "passkeys": "Passkeys",
@@ -137,12 +134,7 @@
     "unknownIP": "Unknown IP",
     "activeNow": "Active now",
     "lastActive": "Last active: {date}",
-    "signOut": "Sign Out",
-    "signedOutSuccess": "Session signed out",
-    "signedOutError": "Failed to sign out session",
-    "signedOutAllSuccess": "All sessions signed out",
-    "signedOutAllError": "Failed to sign out sessions",
-    "unexpectedError": "An unexpected error occurred"
+    "signOut": "Sign Out"
   },
   "sso": {
     "title": "Authentication (SSO)",

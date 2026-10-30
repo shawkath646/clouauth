@@ -7,14 +7,14 @@ export interface DBUser {
     bio?: string | null;
     date_of_birth?: string | null;
     pronouns?: string | null;
-    username_last_changed?: Date | null;
+    username_last_changed?: Date | string | null;
     account_status?: {
         is_active: boolean;
         self_enable: boolean;
         reason: string | null;
     } | null;
-    created_on: Date;
-    updated_on: Date;
+    created_on: Date | string;
+    updated_on: Date | string;
 }
 
 export interface DBUserEmail {
@@ -23,8 +23,8 @@ export interface DBUserEmail {
     address: string;
     verified: boolean;
     is_primary: boolean;
-    added_on: Date;
-    verified_on?: Date | null;
+    added_on: Date | string;
+    verified_on?: Date | string | null;
 }
 
 export interface DBAddress {

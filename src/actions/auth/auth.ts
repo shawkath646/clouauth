@@ -1,5 +1,10 @@
 import prisma from "@/lib/prisma";
-import { createSession, createTempSession, deleteTempSession, getUserSession } from "@/lib/session";
+import {
+  createSession,
+  createTempSession,
+  deleteTempSession,
+  getUserSession,
+} from "@/lib/session";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { VerificationMethod } from "@/types/auth.types";
@@ -29,7 +34,11 @@ export type SignInReturn =
   | AccountDisabledReturn<false>
   | {
       tempSessionId: string;
-      action: "METHOD_SELECTION" | "VERIFICATION_PASSKEY" | "VERIFICATION_CODE" | "VERIFICATION_PHONE";
+      action:
+        | "METHOD_SELECTION"
+        | "VERIFICATION_PASSKEY"
+        | "VERIFICATION_CODE"
+        | "VERIFICATION_PHONE";
       methods: VerificationMethod[];
     }
   | { action: "LOGIN_SUCCESS" };
@@ -50,7 +59,12 @@ export type UserWithAuthRelations = FinalSignInUser & {
   first_name?: string;
   last_name?: string;
   avatar?: string;
-  emails?: { id?: string; address: string; is_primary?: boolean }[];
+  emails?: {
+    id?: string;
+    address: string;
+    is_primary?: boolean;
+    verified?: boolean;
+  }[];
   two_factor?: {
     passkeys?: { id: string; rp_id?: string | null }[];
     totp?: { id: string; enabled?: boolean } | null;
@@ -79,7 +93,14 @@ export async function processFinalSignIn(
 ): Promise<SignInReturn> {
   if (user.account_status && !user.account_status.is_active) {
     if (user.account_status.self_enable) {
-      const sessionId = tempSessionId || (await createTempSession(user.id, rememberMe)).id;
+      const sessionId =
+        tempSessionId ||
+        (
+          await createTempSession(user.id, {
+            rememberMe,
+            flowType: "reenable",
+          })
+        ).id;
       return {
         action: "ACCOUNT_DISABLED",
         selfEnable: true,
@@ -130,46 +151,42 @@ export async function evaluateAuthStepOrSignIn(
   rememberMe: boolean,
   authMethod?: string
 ): Promise<SignInReturn> {
-  // 1. Account status check
-  if (user.account_status && !user.account_status.is_active) {
-    if (user.account_status.self_enable) {
-      const tempSession = await createTempSession(user.id, {
-        rememberMe,
-        authMethod,
-        flowType: "reenable",
-      });
-      return {
-        action: "ACCOUNT_DISABLED",
-        selfEnable: true,
-        tempSessionId: tempSession.id,
-      };
-    }
+  // 1. Hard-disabled account check (cannot self-enable)
+  if (
+    user.account_status &&
+    !user.account_status.is_active &&
+    !user.account_status.self_enable
+  ) {
     return { action: "ACCOUNT_DISABLED", selfEnable: false };
   }
 
-  // 2. 2FA check
+  // 2. 2FA check (always enforced BEFORE session creation or self-service account reactivation)
   if (user.two_factor) {
     const methods: VerificationMethod[] = [];
     const tf = user.two_factor;
     const { rpID } = await getWebAuthnConfig();
-    const validPasskeys = tf.passkeys?.filter((p) => !p.rp_id || p.rp_id === rpID);
-    if (validPasskeys && validPasskeys.length > 0) methods.push(verificationMethodMap.passkeys);
-    if (tf.totp && (tf.totp.enabled ?? true)) methods.push(verificationMethodMap.totp);
+    const validPasskeys = tf.passkeys?.filter(
+      (p) => !p.rp_id || p.rp_id === rpID
+    );
+    if (validPasskeys && validPasskeys.length > 0)
+      methods.push(verificationMethodMap.passkeys);
+    if (tf.totp && (tf.totp.enabled ?? true))
+      methods.push(verificationMethodMap.totp);
     if (tf.email || tf.email_id) methods.push(verificationMethodMap.email);
 
-    // Supplementary Email 2FA Method:
-    // When 2FA is active (passkeys or TOTP), always provide email code verification
-    // as a supplementary fallback method so the user is never locked out if their primary 2FA method is unavailable.
+    // Supplementary Email 2FA Method: only provide if the user has a verified email
     if (methods.length > 0 && !methods.some((m) => m.id === "email")) {
-      const hasEmail = Boolean(user.emails && user.emails.length > 0);
-      if (hasEmail) {
+      const hasVerifiedEmail = Boolean(
+        user.emails && user.emails.some((e) => e.verified)
+      );
+      if (hasVerifiedEmail) {
         methods.push(verificationMethodMap.email);
       } else {
-        const foundEmail = await prisma.userEmail.findFirst({
-          where: { user_id: user.id },
+        const foundVerifiedEmail = await prisma.userEmail.findFirst({
+          where: { user_id: user.id, verified: true },
           select: { id: true },
         });
-        if (foundEmail) {
+        if (foundVerifiedEmail) {
           methods.push(verificationMethodMap.email);
         }
       }
@@ -189,7 +206,25 @@ export async function evaluateAuthStepOrSignIn(
     }
   }
 
-  // 3. Complete sign in
+  // 3. Soft-disabled account check (self-enable permitted after 2FA or when no 2FA is configured)
+  if (
+    user.account_status &&
+    !user.account_status.is_active &&
+    user.account_status.self_enable
+  ) {
+    const tempSession = await createTempSession(user.id, {
+      rememberMe,
+      authMethod,
+      flowType: "reenable",
+    });
+    return {
+      action: "ACCOUNT_DISABLED",
+      selfEnable: true,
+      tempSessionId: tempSession.id,
+    };
+  }
+
+  // 4. Complete sign in
   let title = "Signed in successfully";
   let description = "Signed in with password";
   let event = "LOGIN_PASSWORD";
@@ -219,17 +254,43 @@ export async function evaluateAuthStepOrSignIn(
   });
 }
 
+async function syncOAuthAvatarIfPlaceholder(
+  user: UserWithAuthRelations,
+  avatarUrl: string | null | undefined
+) {
+  const hasOnlyPlaceholder = !user.avatar || user.avatar.endsWith(".svg");
+  if (!hasOnlyPlaceholder || !avatarUrl) return;
+
+  const resolved = await resolveUserAvatar(
+    avatarUrl,
+    user.first_name || "User",
+    user.last_name || ""
+  );
+  if (resolved && !resolved.endsWith(".svg")) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { avatar: resolved },
+    });
+    user.avatar = resolved;
+  }
+}
+
 export async function authenticateExternalUser(
   profile: ExternalAuthProfile,
   options: { rememberMe?: boolean; authMethod?: string } = {}
 ): Promise<SignInReturn> {
   const rememberMe = options.rememberMe ?? false;
-  const authMethod = options.authMethod ?? `oauth:${profile.provider.toLowerCase()}`;
-  const currentSession = await getUserSession();
+  const authMethod =
+    options.authMethod ?? `oauth:${profile.provider.toLowerCase()}`;
+  const isOneTap = authMethod === "one_tap" || authMethod === "google_one_tap";
+  // Account linking only applies when a user is explicitly performing an account-linking flow while logged in,
+  // never during an unauthenticated sign-in flow like One Tap (avoids an unnecessary blocking DB query).
+  const currentSession = isOneTap ? null : await getUserSession();
 
-  if (currentSession) {
+  if (currentSession && !isOneTap) {
     await upsertOAuthAccount(currentSession.user.id, profile);
-    const providerName = profile.provider.charAt(0).toUpperCase() + profile.provider.slice(1);
+    const providerName =
+      profile.provider.charAt(0).toUpperCase() + profile.provider.slice(1);
     await recordSecurityActivity({
       userId: currentSession.user.id,
       event: "OAUTH_CONNECTED",
@@ -253,26 +314,13 @@ export async function authenticateExternalUser(
     },
   });
 
-  let targetUser: UserWithAuthRelations | undefined = existingOAuthAccount?.user ?? undefined;
+  let targetUser: UserWithAuthRelations | undefined =
+    existingOAuthAccount?.user ?? undefined;
 
   // Refresh OAuth tokens and expiry on re-login for existing connected accounts
   if (existingOAuthAccount && targetUser) {
     await upsertOAuthAccount(targetUser.id, profile);
-    const hasOnlyPlaceholderAvatar = !targetUser.avatar || targetUser.avatar.endsWith(".svg");
-    if (hasOnlyPlaceholderAvatar && profile.avatar) {
-      const resolvedAvatar = await resolveUserAvatar(
-        profile.avatar,
-        targetUser.first_name || "User",
-        targetUser.last_name || ""
-      );
-      if (resolvedAvatar && !resolvedAvatar.endsWith(".svg")) {
-        await prisma.user.update({
-          where: { id: targetUser.id },
-          data: { avatar: resolvedAvatar },
-        });
-        targetUser.avatar = resolvedAvatar;
-      }
-    }
+    await syncOAuthAvatarIfPlaceholder(targetUser, profile.avatar);
   }
 
   // 3. Match by email if not found by provider_user_id
@@ -307,29 +355,16 @@ export async function authenticateExternalUser(
       // Link external OAuth account to existing verified user
       await upsertOAuthAccount(existingEmail.user.id, profile);
       targetUser = existingEmail.user;
-
-      const hasOnlyPlaceholderAvatar = !targetUser.avatar || targetUser.avatar.endsWith(".svg");
-      if (hasOnlyPlaceholderAvatar && profile.avatar) {
-        const resolvedAvatar = await resolveUserAvatar(
-          profile.avatar,
-          targetUser.first_name || "User",
-          targetUser.last_name || ""
-        );
-        if (resolvedAvatar && !resolvedAvatar.endsWith(".svg")) {
-          await prisma.user.update({
-            where: { id: targetUser.id },
-            data: { avatar: resolvedAvatar },
-          });
-          targetUser.avatar = resolvedAvatar;
-        }
-      }
+      await syncOAuthAvatarIfPlaceholder(targetUser, profile.avatar);
     }
   }
 
   // 4. Provision new user if not found
   if (!targetUser) {
     const emailNormalized = profile.email?.toLowerCase().trim();
-    const username = await generateUniqueUsername(emailNormalized || profile.providerUserId);
+    const username = await generateUniqueUsername(
+      emailNormalized || profile.providerUserId
+    );
 
     const nameParts = (profile.name || "").trim().split(" ");
     const firstName = nameParts[0] || "User";
@@ -390,10 +425,15 @@ export async function finalizeSignIn(
   tempSessionId: string,
   activityDetails?: { event?: string; title?: string; description?: string }
 ): Promise<SignInReturn> {
-  const ts = await prisma.tempSession.findUnique({ where: { id: tempSessionId } });
+  const ts = await prisma.tempSession.findUnique({
+    where: { id: tempSessionId },
+  });
 
   if (!ts || ts.user_id !== userId || ts.expires_on < new Date()) {
-    return { action: "ERROR", error: "Session expired or invalid. Please sign in again." };
+    return {
+      action: "ERROR",
+      error: "Session expired or invalid. Please sign in again.",
+    };
   }
 
   if (!ts.two_step_processed) {
@@ -407,12 +447,34 @@ export async function finalizeSignIn(
 
   if (!user) return { action: "ERROR", error: "User not found." };
 
+  // If account is disabled and self-enable is allowed, transition the verified tempSession to "reenable"
+  if (user.account_status && !user.account_status.is_active) {
+    if (user.account_status.self_enable) {
+      await prisma.tempSession.update({
+        where: { id: tempSessionId },
+        data: { flow_type: "reenable" },
+      });
+      return {
+        action: "ACCOUNT_DISABLED",
+        selfEnable: true,
+        tempSessionId,
+      };
+    }
+    await deleteTempSession(tempSessionId);
+    return { action: "ACCOUNT_DISABLED", selfEnable: false };
+  }
+
   await deleteTempSession(tempSessionId);
-  return processFinalSignIn(user, ts.remember_me, undefined, activityDetails || {
-    event: "LOGIN_2FA",
-    title: "Signed in with two-step verification",
-    description: "Successfully completed two-step verification",
-  });
+  return processFinalSignIn(
+    user,
+    ts.remember_me,
+    undefined,
+    activityDetails || {
+      event: "LOGIN_2FA",
+      title: "Signed in with two-step verification",
+      description: "Successfully completed two-step verification",
+    }
+  );
 }
 
 export async function signOutAll(userId: string) {

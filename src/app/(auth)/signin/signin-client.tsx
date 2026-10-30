@@ -54,25 +54,6 @@ export default function SigninClient({
   const [authMessage, setAuthMessage] = useState<string>("Signing you in...");
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Adjust state when props change without triggering cascading effects
-  const [prevInitialStep, setPrevInitialStep] = useState(initialStep);
-  if (initialStep !== prevInitialStep) {
-    setPrevInitialStep(initialStep);
-    setCurrentStep(initialStep);
-  }
-
-  const [prevTid, setPrevTid] = useState(initialTempSessionId);
-  if (initialTempSessionId !== prevTid) {
-    setPrevTid(initialTempSessionId);
-    setTempSessionId(initialTempSessionId);
-  }
-
-  const [prevMethods, setPrevMethods] = useState(initialMethods);
-  if (initialMethods !== prevMethods && initialMethods.length > 0) {
-    setPrevMethods(initialMethods);
-    setAvailableMethods(initialMethods);
-  }
-
   const processAction = useCallback(
     (result: SignInReturn) => {
       switch (result.action) {
@@ -254,8 +235,30 @@ export default function SigninClient({
             return null;
         }
 
-      case "AGREEMENT":
-        return <AgreementStep key="agreement" onAgree={handleAgreementComplete} onCancel={() => setCurrentStep("CREDENTIALS")} isLoading={isGranting} appData={appData} />;
+      case "AGREEMENT": {
+        const rawScopeParam = searchParams.get("scope");
+        const parsedScopes = rawScopeParam
+          ? rawScopeParam
+              .split(/[\s,]+/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : ["openid", "profile", "email"];
+        return (
+          <AgreementStep
+            key="agreement"
+            onAgree={handleAgreementComplete}
+            onCancel={() => setCurrentStep("CREDENTIALS")}
+            isLoading={isGranting}
+            appData={appData}
+            clientName={appData?.name}
+            requestedScopes={
+              parsedScopes.length > 0
+                ? parsedScopes
+                : ["openid", "profile", "email"]
+            }
+          />
+        );
+      }
 
       case "REENABLE_ACCOUNT":
         return <ReenableAccountStep key="reenable_account" tempSessionId={tempSessionId} onComplete={processAction} />;

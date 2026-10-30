@@ -1,0 +1,584 @@
+openapi: 3.1.0
+info:
+  title: ClouAuth Centralized OAuth 2.0 & OpenID Connect 1.0 API
+  version: 1.0.0
+  description: >
+    Official OpenAPI 3.1 specification for ClouAuth — the centralized OAuth 2.0
+    (RFC 6749, RFC 7636 PKCE, RFC 7009 Revocation, BCP 212) and OpenID Connect
+    Core 1.0 Identity Provider and Inter-Service Bridge for the clouburstlab
+    ecosystem.
+  contact:
+    name: Shawkat Hossain Maruf
+    url: https://shawkath646.dev
+servers:
+  - url: https://auth.clouburstlab.com
+    description: Production Identity Provider
+  - url: http://localhost:3000
+    description: Local Development Server
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        OAuth 2.0 Access Token, Client Credentials Token, or Internal Service
+        Token (`type: "internal_service"`).
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: OAuth 2.0 `client_secret_basic` authentication (`client_id:client_secret`).
+    CronAuth:
+      type: http
+      scheme: bearer
+      description: High-entropy `CRON_SECRET` bearer token for scheduled maintenance jobs.
+  schemas:
+    OAuthError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - invalid_client
+            - invalid_grant
+            - unauthorized_client
+            - unsupported_grant_type
+            - invalid_scope
+            - server_error
+        error_description:
+          type: string
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - scope
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 3600
+        refresh_token:
+          type: string
+        id_token:
+          type: string
+        scope:
+          type: string
+          example: openid profile email
+    UserInfoResponse:
+      type: object
+      required:
+        - sub
+      properties:
+        sub:
+          type: string
+        name:
+          type: string
+        given_name:
+          type: string
+        family_name:
+          type: string
+        preferred_username:
+          type: string
+        email:
+          type: string
+          format: email
+        email_verified:
+          type: boolean
+        picture:
+          type: string
+          format: uri
+        updated_at:
+          type: integer
+paths:
+  /.well-known/openid-configuration:
+    get:
+      summary: OpenID Connect 1.0 Discovery Metadata
+      operationId: getOpenIdConfiguration
+      tags:
+        - OIDC & OAuth 2.0
+      responses:
+        "200":
+          description: OpenID Provider Configuration Document
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issuer:
+                    type: string
+                  authorization_endpoint:
+                    type: string
+                  token_endpoint:
+                    type: string
+                  userinfo_endpoint:
+                    type: string
+                  revocation_endpoint:
+                    type: string
+                  jwks_uri:
+                    type: string
+                  response_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  grant_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  id_token_signing_alg_values_supported:
+                    type: array
+                    items:
+                      type: string
+                  code_challenge_methods_supported:
+                    type: array
+                    items:
+                      type: string
+  /signin:
+    get:
+      summary: OAuth 2.0 Authorization Endpoint
+      operationId: authorize
+      tags:
+        - OIDC & OAuth 2.0
+      parameters:
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          description: Must exactly match a pre-registered redirect URI (BCP 212).
+          schema:
+            type: string
+            format: uri
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            default: openid profile email
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: code_challenge
+          in: query
+          required: true
+          description: Base64URL-encoded SHA-256 digest of `code_verifier` (RFC 7636).
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [S256]
+        - name: nonce
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Renders interactive authentication & consent screen
+        "302":
+          description: Redirects to `redirect_uri?code=...&state=...`
+  /api/sso/v1/token:
+    post:
+      summary: OAuth 2.0 Token Endpoint
+      operationId: exchangeToken
+      tags:
+        - OIDC & OAuth 2.0
+      security:
+        - BasicAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+              properties:
+                grant_type:
+                  type: string
+                  enum:
+                    - authorization_code
+                    - refresh_token
+                    - client_credentials
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                code:
+                  type: string
+                  description: Required when `grant_type=authorization_code`.
+                redirect_uri:
+                  type: string
+                  format: uri
+                  description: >
+                    Mandatory when `grant_type=authorization_code`. Must
+                    strictly match the `redirect_uri` from the authorization
+                    request.
+                code_verifier:
+                  type: string
+                  description: Mandatory PKCE S256 verifier when `code_challenge` was issued.
+                refresh_token:
+                  type: string
+                  description: Required when `grant_type=refresh_token`.
+                scope:
+                  type: string
+                  description: >
+                    Optional space-delimited scope list. Must not exceed scopes
+                    registered to the client or granted in the original token.
+          application/json:
+            schema:
+              type: object
+              required:
+                - grant_type
+              properties:
+                grant_type:
+                  type: string
+                  enum:
+                    - authorization_code
+                    - refresh_token
+                    - client_credentials
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                code:
+                  type: string
+                redirect_uri:
+                  type: string
+                  format: uri
+                code_verifier:
+                  type: string
+                refresh_token:
+                  type: string
+                scope:
+                  type: string
+      responses:
+        "200":
+          description: Issued OAuth 2.0 / OIDC Tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Invalid request, grant, PKCE verifier, or scope escalation attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "401":
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+  /api/sso/v1/userinfo:
+    get:
+      summary: OpenID Connect UserInfo Endpoint
+      operationId: getUserInfo
+      tags:
+        - OIDC & OAuth 2.0
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Scoped OIDC user claims
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfoResponse"
+        "401":
+          description: Invalid or expired access token
+    post:
+      summary: OpenID Connect UserInfo Endpoint (POST)
+      operationId: postUserInfo
+      tags:
+        - OIDC & OAuth 2.0
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Scoped OIDC user claims
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfoResponse"
+        "401":
+          description: Invalid or expired access token
+  /api/sso/v1/jwks.json:
+    get:
+      summary: JSON Web Key Set (JWKS)
+      operationId: getJwks
+      tags:
+        - OIDC & OAuth 2.0
+      responses:
+        "200":
+          description: Public RSA signing keys (`RS256`)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - keys
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kty:
+                          type: string
+                          example: RSA
+                        use:
+                          type: string
+                          example: sig
+                        alg:
+                          type: string
+                          example: RS256
+                        kid:
+                          type: string
+                        n:
+                          type: string
+                        e:
+                          type: string
+  /api/sso/v1/revoke:
+    post:
+      summary: OAuth 2.0 Token Revocation (RFC 7009)
+      operationId: revokeToken
+      tags:
+        - OIDC & OAuth 2.0
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                token_type_hint:
+                  type: string
+                  enum: [access_token, refresh_token]
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+      responses:
+        "200":
+          description: Token revoked (or already invalid per RFC 7009)
+  /api/inter-services/v1/user-session:
+    get:
+      summary: Resolve Active User Session Across Subdomains
+      operationId: resolveInterServiceUserSession
+      tags:
+        - Inter-Services Bridge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          description: Comma-separated field projection (`id,firstname,lastname,email,avatar,username,preferences`).
+          schema:
+            type: string
+            default: id,firstname,lastname,email
+        - name: user_id
+          in: query
+          required: false
+          description: >
+            Target user ID override. Strictly restricted to internal ecosystem
+            tokens (`isInternalService: true`).
+          schema:
+            type: string
+        - name: x-user-id
+          in: header
+          required: false
+          description: >
+            Target user ID header fallback. Strictly restricted to internal
+            ecosystem tokens (`isInternalService: true`).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session resolution status and scoped user profile
+        "401":
+          description: Missing or invalid application Bearer token
+        "403":
+          description: Application disabled or unauthorized
+  /api/inter-services/v1/connected-drives:
+    get:
+      summary: Retrieve Decrypted Cloud Drive Credentials
+      operationId: getConnectedDrives
+      tags:
+        - Inter-Services Bridge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [google_drive, onedrive, dropbox, google, microsoft]
+        - name: refresh
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: user_id
+          in: query
+          required: false
+          description: >
+            Target user ID override. Strictly restricted to privileged internal
+            ecosystem services (`isInternalService: true`) or matching the
+            authenticated end-user `access_token` `sub`.
+          schema:
+            type: string
+        - name: x-user-id
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Decrypted and optionally refreshed OAuth drive credentials
+        "401":
+          description: Unauthorized application or missing user session
+        "403":
+          description: Forbidden attempt to query arbitrary `user_id` without `internal_service` privileges
+  /api/inter-services/v1/email-queue:
+    get:
+      summary: Pull Queued Transactional Emails (Internal Service Only)
+      operationId: getEmailQueue
+      tags:
+        - Inter-Services Bridge
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, completed, all]
+            default: pending
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: due_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: template_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of queued emails
+        "401":
+          description: Missing or invalid Bearer token
+        "403":
+          description: Caller lacks `internal_service` privileges
+    post:
+      summary: Enqueue, Dispatch, or Acknowledge Queued Emails (Internal Service Only)
+      operationId: postEmailQueue
+      tags:
+        - Inter-Services Bridge
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [mark_complete, mark_failed, retry, dispatch]
+                user_id:
+                  type: string
+                template_id:
+                  type: string
+                to:
+                  type: string
+                  format: email
+                subject:
+                  type: string
+                data:
+                  type: object
+                id:
+                  type: string
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Queue action processed
+        "201":
+          description: Email queued
+        "403":
+          description: Caller lacks `internal_service` privileges
+  /api/auth/v1/cleanup-sessions:
+    get:
+      summary: Purge Expired Sessions, TempSessions, and RevokedTokens
+      operationId: cleanupExpiredSessions
+      tags:
+        - Maintenance
+      security:
+        - CronAuth: []
+      responses:
+        "200":
+          description: Cleanup summary counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  deleted:
+                    type: object
+                    properties:
+                      tempSessions:
+                        type: integer
+                      userSessions:
+                        type: integer
+                      revokedTokens:
+                        type: integer
+        "401":
+          description: Unauthorized cron invocation

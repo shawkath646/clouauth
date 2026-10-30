@@ -1,8 +1,7 @@
 {
   "signIn": {
     "usernameRequired": "اسم المستخدم مطلوب",
-    "passwordRequired": "كلمة المرور مطلوبة",
-    "passwordMin": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
+    "passwordRequired": "كلمة المرور مطلوبة"
   },
   "signUp": {
     "firstNameRequired": "الاسم الأول مطلوب",

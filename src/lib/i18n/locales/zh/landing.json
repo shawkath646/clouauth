@@ -140,15 +140,10 @@
     "links": {
       "features": "功能",
       "security": "安全",
-      "status": "状态",
-      "pricing": "定价",
       "documentation": "文档",
-      "oauth2": "OAuth 2.0",
-      "oidc": "OpenID Connect",
       "apiReference": "API 参考",
       "privacyPolicy": "隐私政策",
-      "termsOfService": "服务条款",
-      "support": "支持"
+      "termsOfService": "服务条款"
     },
     "copyright": "© {{year}} clouburstlab。保留所有权利。",
     "developedBy": "开发由"

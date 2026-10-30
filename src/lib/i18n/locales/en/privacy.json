@@ -19,7 +19,7 @@
       "content": "We collect information necessary to deliver secure authentication and user-requested account features. The categories of information include:",
       "list": [
         "Account Profile Data: Your name, email address, username, profile picture (avatar), pronouns, bio, and address when provided.",
-        "Security & Authentication Data: Passkeys (WebAuthn public keys), hashed backup codes, TOTP secrets, and securely hashed passwords (using bcrypt).",
+        "Security & Authentication Data: Passkeys (WebAuthn public keys), hashed backup codes, TOTP secrets, and securely hashed passwords (using Argon2id & WebCrypto).",
         "Third-Party Connected Accounts: When you authenticate or connect third-party providers (Google, GitHub, Microsoft), we receive your basic profile identifier, email, and OAuth authentication tokens.",
         "Cloud Storage & Google Drive Data: If you explicitly connect Google Drive, OneDrive, or Dropbox, we receive authorization tokens and metadata required to perform the file operations you specifically request.",
         "Device & Session Logs: IP addresses, user agents, browser types, and session timestamps to protect against unauthorized access and maintain security."

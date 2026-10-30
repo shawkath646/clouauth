@@ -10,12 +10,10 @@
     "mismatch": "Passwords do not match"
   },
   "email": {
-    "required": "电子邮件是必填项",
     "invalid": "请输入有效的电子邮件地址",
     "max": "电子邮件不能超过 100 个字符"
   },
   "phone": {
-    "invalid": "电话必须为 E.164 格式 (例如 +1234567890)",
-    "max": "电话号码太长"
+    "invalid": "电话必须为 E.164 格式 (例如 +1234567890)"
   }
 }

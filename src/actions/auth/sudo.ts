@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -22,7 +23,7 @@ export async function isSudoActive(): Promise<boolean> {
 }
 
 /**
- * Creates or refreshes a Sudo TempSession for step-up verification.
+ * Creates or refreshes a Sudo TempSession for step-up verification using a 256-bit random token ID.
  */
 export async function createSudoTempSession(
   userId: string,
@@ -36,8 +37,11 @@ export async function createSudoTempSession(
     },
   });
 
+  const highEntropyId = crypto.randomBytes(32).toString("hex");
+
   const tempSession = await prisma.tempSession.create({
     data: {
+      id: highEntropyId,
       user_id: userId,
       flow_type: "sudo",
       expires_on: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes TTL
@@ -52,7 +56,9 @@ export async function createSudoTempSession(
  * Updates the active UserSession's last_authenticated_on timestamp,
  * granting a fresh Sudo window.
  */
-export async function markSessionSudoAuthenticated(sessionId: string): Promise<void> {
+export async function markSessionSudoAuthenticated(
+  sessionId: string
+): Promise<void> {
   await prisma.userSession.update({
     where: { id: sessionId },
     data: { last_authenticated_on: new Date() },
@@ -98,7 +104,9 @@ export type CheckSudoResult =
  * Action Guard for sensitive Server Action mutations (e.g. updatePasswordAction, deleteAccount).
  * Returns { authorized: false, sudoRequired: true, redirectUrl } if expired.
  */
-export async function checkSudoAction(returnTo: string): Promise<CheckSudoResult> {
+export async function checkSudoAction(
+  returnTo: string
+): Promise<CheckSudoResult> {
   const sessionData = await getUserSession();
   if (!sessionData?.session) {
     return { authorized: false, error: "Unauthorized" };

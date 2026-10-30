@@ -1,8 +1,7 @@
 {
   "signIn": {
     "usernameRequired": "用户名是必填项",
-    "passwordRequired": "密码是必填项",
-    "passwordMin": "密码必须至少 8 个字符"
+    "passwordRequired": "密码是必填项"
   },
   "signUp": {
     "firstNameRequired": "名字是必填项",

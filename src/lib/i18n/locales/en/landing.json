@@ -140,15 +140,10 @@
     "links": {
       "features": "Features",
       "security": "Security",
-      "status": "Status",
-      "pricing": "Pricing",
       "documentation": "Documentation",
-      "oauth2": "OAuth 2.0",
-      "oidc": "OpenID Connect",
       "apiReference": "API Reference",
       "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service",
-      "support": "Support"
+      "termsOfService": "Terms of Service"
     },
     "copyright": "© {{year}} clouburstlab. All rights reserved.",
     "developedBy": "Developed by"

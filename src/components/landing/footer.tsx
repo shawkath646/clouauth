@@ -7,7 +7,7 @@ import { useTranslations } from "@/lib/i18n/hooks";
 import { FooterLinks } from "@/components/landing/footer-links";
 
 export function Footer() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
   const { t } = useTranslations("landing");
 
   return (

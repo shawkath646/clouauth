@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
 interface EditUsernameFormProps {
   initialData: {
     username: string;
-    username_last_changed?: Date | null;
+    username_last_changed?: Date | string | null;
   };
 }
 
@@ -31,11 +32,20 @@ export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
   const router = useRouter();
   const { t } = useTranslations("schema_profile");
   const { t: tUI } = useTranslations("profile_personal");
+  const [daysSinceChange, setDaysSinceChange] = useState<number>(60);
 
-  const daysSinceChange = initialData.username_last_changed 
-    ? Math.floor((new Date().getTime() - new Date(initialData.username_last_changed).getTime()) / (1000 * 60 * 60 * 24))
-    : 60;
-  
+  useEffect(() => {
+    if (!initialData.username_last_changed) {
+      setDaysSinceChange(60);
+      return;
+    }
+    const elapsedDays = Math.floor(
+      (Date.now() - new Date(initialData.username_last_changed).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    setDaysSinceChange(elapsedDays);
+  }, [initialData.username_last_changed]);
+
   const isLocked = daysSinceChange < 60;
   const daysRemaining = 60 - daysSinceChange;
 

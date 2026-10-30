@@ -145,17 +145,19 @@ export async function updateProfileAddress(data: AddressValues) {
       orderBy: { is_default: "desc" }
     });
 
+    const addressPayload = {
+      address_1: parsed.data.address_1,
+      address_2: parsed.data.address_2 || "",
+      city: parsed.data.city,
+      state: parsed.data.state || "",
+      zip_code: parsed.data.zip_code,
+      country: parsed.data.country,
+    };
+
     if (defaultAddress) {
       await prisma.address.update({
         where: { id: defaultAddress.id },
-        data: {
-          address_1: parsed.data.address_1,
-          address_2: parsed.data.address_2 || "",
-          city: parsed.data.city,
-          state: parsed.data.state || "",
-          zip_code: parsed.data.zip_code,
-          country: parsed.data.country,
-        },
+        data: addressPayload,
       });
     } else {
       await prisma.address.create({
@@ -163,12 +165,7 @@ export async function updateProfileAddress(data: AddressValues) {
           user_id: sessionData.user.id,
           type: "home",
           is_default: true,
-          address_1: parsed.data.address_1,
-          address_2: parsed.data.address_2 || "",
-          city: parsed.data.city,
-          state: parsed.data.state || "",
-          zip_code: parsed.data.zip_code,
-          country: parsed.data.country,
+          ...addressPayload,
         },
       });
     }

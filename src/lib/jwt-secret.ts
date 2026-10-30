@@ -1,3 +1,5 @@
+import "server-only";
+
 const secret = process.env.JWT_SECRET;
 
 if (!secret) {

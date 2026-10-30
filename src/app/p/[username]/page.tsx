@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicProfile } from "@/actions/profile/public-profile";
@@ -17,13 +18,17 @@ interface PublicProfilePageProps {
   }>;
 }
 
-const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL", true) || "https://clouburstlab.com";
+const BASE_URL =
+  getEnv("NEXT_PUBLIC_BASE_URL", true) || "https://clouburstlab.com";
+
+export const instant = false;
 
 export async function generateMetadata({
   params,
 }: PublicProfilePageProps): Promise<Metadata> {
   const { username } = await params;
-  const result = await getPublicProfile(username);
+  // Pass checkOwnerSession: false so metadata generation never reads cookies() / headers()
+  const result = await getPublicProfile(username, { checkOwnerSession: false });
 
   if (result.status === "not_found") {
     return {
@@ -102,12 +107,11 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublicProfilePage({
+async function PublicProfileDynamicContent({
   params,
 }: PublicProfilePageProps) {
   const { username } = await params;
 
-  // Concurrent Server-Side Data Fetching
   const [result, session, { locale }] = await Promise.all([
     getPublicProfile(username),
     getUserSession(),
@@ -122,35 +126,23 @@ export default async function PublicProfilePage({
   const hasSession = !!session;
   const profileUrl = `${BASE_URL}/p/${username}`;
 
-  // Process data for private profile view
   if (result.status === "private") {
     return (
       <I18nProvider locale={locale} messages={landingDict}>
-        <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-primary/5 dark:bg-primary/10 text-foreground selection:bg-primary/20 selection:text-primary">
-          {/* Decorative Background Elements (matching signin/signup/profile) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-            <BackgroundStars />
-            <div className="absolute inset-0 bg-linear-to-tr from-primary/10 via-primary/5 to-transparent dark:from-primary/20" />
-            <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50 animate-pulse" />
-            <div className="absolute top-32 right-32 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl opacity-50 animate-pulse" style={{ animationDelay: "2s" }} />
-          </div>
-
-          <Navigation />
-          <main className="flex-1 flex flex-col justify-center relative z-10">
-            <PublicProfileView
-              isPrivate={true}
-              userMeta={result.userMeta}
-              hasSession={hasSession}
-              profileUrl={profileUrl}
-            />
-          </main>
-          <Footer />
-        </div>
+        <Navigation />
+        <main className="flex-1 flex flex-col justify-center relative z-10">
+          <PublicProfileView
+            isPrivate={true}
+            userMeta={result.userMeta}
+            hasSession={hasSession}
+            profileUrl={profileUrl}
+          />
+        </main>
+        <Footer />
       </I18nProvider>
     );
   }
 
-  // Pre-process and serialize all data on the server
   const { profile } = result;
   const displayName = `${profile.first_name} ${profile.last_name}`.trim();
   const initials = `${profile.first_name[0] || ""}${profile.last_name[0] || ""}`.toUpperCase();
@@ -176,54 +168,76 @@ export default async function PublicProfilePage({
 
   return (
     <I18nProvider locale={locale} messages={landingDict}>
-      <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-primary/5 dark:bg-primary/10 text-foreground selection:bg-primary/20 selection:text-primary">
-        {/* Decorative Background Elements (matching signin/signup/profile) */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <BackgroundStars />
-          <div className="absolute inset-0 bg-linear-to-tr from-primary/10 via-primary/5 to-transparent dark:from-primary/20" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50 animate-pulse" />
-          <div className="absolute top-32 right-32 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl opacity-50 animate-pulse" style={{ animationDelay: "2s" }} />
-        </div>
-
-        {/* Schema.org ProfilePage & Person Structured Data */}
-        <JsonLd
-          schema={{
-            "@context": "https://schema.org",
-            "@type": "ProfilePage",
-            dateCreated: profile.created_on.toISOString(),
-            mainEntity: {
-              "@type": "Person",
-              name: displayName,
-              alternateName: `@${profile.username}`,
-              identifier: profile.username,
-              image: profile.avatar,
-              description: profile.bio || undefined,
-              url: profileUrl,
-              worksFor: {
-                "@type": "Organization",
-                name: "clouburstlab",
-                url: "https://clouburstlab.com",
-              },
+      {/* Schema.org ProfilePage & Person Structured Data */}
+      <JsonLd
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          dateCreated:
+            profile.created_on instanceof Date
+              ? profile.created_on.toISOString()
+              : String(profile.created_on),
+          mainEntity: {
+            "@type": "Person",
+            name: displayName,
+            alternateName: `@${profile.username}`,
+            identifier: profile.username,
+            image: profile.avatar,
+            description: profile.bio || undefined,
+            url: profileUrl,
+            worksFor: {
+              "@type": "Organization",
+              name: "clouburstlab",
+              url: "https://clouburstlab.com",
             },
-          }}
+          },
+        }}
+      />
+
+      {/* Global Navigation */}
+      <Navigation />
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col justify-center relative z-10">
+        <PublicProfileView
+          isPrivate={false}
+          profile={serializedProfile}
+          hasSession={hasSession}
+          profileUrl={profileUrl}
         />
+      </main>
 
-        {/* Global Navigation */}
-        <Navigation />
-
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col justify-center relative z-10">
-          <PublicProfileView
-            isPrivate={false}
-            profile={serializedProfile}
-            hasSession={hasSession}
-            profileUrl={profileUrl}
-          />
-        </main>
-
-        {/* Global Footer */}
-        <Footer />
-      </div>
+      {/* Global Footer */}
+      <Footer />
     </I18nProvider>
+  );
+}
+
+export default function PublicProfilePage({ params }: PublicProfilePageProps) {
+  return (
+    <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-primary/5 dark:bg-primary/10 text-foreground selection:bg-primary/20 selection:text-primary">
+      {/* Decorative Background Elements (matching signin/signup/profile) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <BackgroundStars />
+        <div className="absolute inset-0 bg-linear-to-tr from-primary/10 via-primary/5 to-transparent dark:from-primary/20" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50 animate-pulse" />
+        <div
+          className="absolute top-32 right-32 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl opacity-50 animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4 py-24 animate-pulse">
+            <div className="w-28 h-28 rounded-full bg-muted/40 mb-6" />
+            <div className="h-8 w-56 bg-muted/40 rounded-xl mb-3" />
+            <div className="h-4 w-36 bg-muted/30 rounded-lg" />
+          </div>
+        }
+      >
+        <PublicProfileDynamicContent params={params} />
+      </Suspense>
+    </div>
   );
 }

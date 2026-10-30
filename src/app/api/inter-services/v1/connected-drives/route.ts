@@ -43,7 +43,10 @@ async function handleConnectedDrives(request: NextRequest) {
     // 2. Extract user session token from cookies
     const sessionCookie =
       request.cookies.get(COOKIE_SESSION_TOKEN_NAME)?.value ||
-      extractCookieFromHeader(request.headers.get("cookie"), COOKIE_SESSION_TOKEN_NAME);
+      extractCookieFromHeader(
+        request.headers.get("cookie"),
+        COOKIE_SESSION_TOKEN_NAME
+      );
 
     let userId: string | null = null;
 
@@ -54,14 +57,39 @@ async function handleConnectedDrives(request: NextRequest) {
       }
     }
 
-    // Fallback: If no cookie is present, allow authorized internal services to pass ?user_id or x-user-id
+    // 3. Fallback: If no session cookie is present, ONLY allow privileged internal services
+    // to query by arbitrary ?user_id or x-user-id, or allow an end-user access_token to query its own sub.
     if (!userId) {
       const userIdParam =
         request.nextUrl.searchParams.get("user_id") ||
         request.headers.get("x-user-id");
 
-      if (userIdParam && (authResult.payload?.type === "internal_service" || authResult.payload?.role === "internal" || authResult.clientId)) {
-        userId = userIdParam;
+      if (userIdParam) {
+        if (authResult.isInternalService) {
+          userId = userIdParam;
+        } else if (
+          authResult.payload?.type === "access_token" &&
+          authResult.payload?.sub === userIdParam
+        ) {
+          userId = String(authResult.payload.sub);
+        } else {
+          return withInterServiceCors(
+            NextResponse.json(
+              {
+                success: false,
+                error:
+                  "Forbidden: Only internal ecosystem services may query connected drives by arbitrary user_id.",
+              },
+              { status: 403 }
+            ),
+            request
+          );
+        }
+      } else if (
+        authResult.payload?.type === "access_token" &&
+        typeof authResult.payload?.sub === "string"
+      ) {
+        userId = authResult.payload.sub;
       }
     }
 
@@ -70,7 +98,8 @@ async function handleConnectedDrives(request: NextRequest) {
         NextResponse.json(
           {
             success: false,
-            error: "No active user session found. Ensure credentials: 'include' or provide user_id.",
+            error:
+              "No active user session found. Ensure credentials: 'include' or provide an authorized internal service token.",
           },
           { status: 401 }
         ),
@@ -78,15 +107,24 @@ async function handleConnectedDrives(request: NextRequest) {
       );
     }
 
-    // 3. Query connected accounts for this user
-    const requestedProvider = request.nextUrl.searchParams.get("provider")?.toLowerCase();
-    const shouldForceRefresh = request.nextUrl.searchParams.get("refresh") === "true";
+    // 4. Query connected accounts for this user
+    const requestedProvider = request.nextUrl.searchParams
+      .get("provider")
+      ?.toLowerCase();
+    const shouldForceRefresh =
+      request.nextUrl.searchParams.get("refresh") === "true";
 
     const allAccounts = await prisma.oAuthAccount.findMany({
       where: { user_id: userId },
     });
 
-    const driveProviders = new Set(["google_drive", "onedrive", "dropbox", "google", "microsoft"]);
+    const driveProviders = new Set([
+      "google_drive",
+      "onedrive",
+      "dropbox",
+      "google",
+      "microsoft",
+    ]);
 
     // Filter by specific provider if requested, otherwise match known drive providers
     const targetAccounts = allAccounts.filter((acc) => {
@@ -99,7 +137,7 @@ async function handleConnectedDrives(request: NextRequest) {
 
     const nowSeconds = Math.floor(Date.now() / 1000);
 
-    // 4. Decrypt tokens and optionally refresh expired credentials
+    // 5. Decrypt tokens and optionally refresh expired credentials
     const driveCredentials = await Promise.all(
       targetAccounts.map(async (acc) => {
         let rawAccessToken: string | null = null;
@@ -134,7 +172,8 @@ async function handleConnectedDrives(request: NextRequest) {
 
           if (refreshed) {
             rawAccessToken = refreshed.accessToken;
-            if (refreshed.refreshToken) rawRefreshToken = refreshed.refreshToken;
+            if (refreshed.refreshToken)
+              rawRefreshToken = refreshed.refreshToken;
             if (refreshed.expiresAt) {
               expiresAt = refreshed.expiresAt;
               isExpired = false;
@@ -142,7 +181,9 @@ async function handleConnectedDrives(request: NextRequest) {
           }
         }
 
-        const expiresIn = expiresAt ? Math.max(0, expiresAt - nowSeconds) : null;
+        const expiresIn = expiresAt
+          ? Math.max(0, expiresAt - nowSeconds)
+          : null;
 
         return {
           id: acc.id,
@@ -176,7 +217,10 @@ async function handleConnectedDrives(request: NextRequest) {
   }
 }
 
-function extractCookieFromHeader(cookieHeader: string | null, cookieName: string): string | null {
+function extractCookieFromHeader(
+  cookieHeader: string | null,
+  cookieName: string
+): string | null {
   if (!cookieHeader) return null;
   const match = cookieHeader
     .split(";")

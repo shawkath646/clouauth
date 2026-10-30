@@ -8,12 +8,19 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/signin", "/signup", "/docs", "/developers", "/privacy", "/terms", "/p/"],
-        disallow: [
-          "/profile/",
-          "/api/",
+        allow: [
+          "/",
+          "/signin",
+          "/signup",
+          "/docs",
+          "/developers",
+          "/privacy",
+          "/terms",
+          "/forgot-password",
+          "/p/",
           "/.well-known/",
         ],
+        disallow: ["/profile/", "/api/"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

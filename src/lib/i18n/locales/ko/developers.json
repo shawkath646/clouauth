@@ -84,6 +84,13 @@
           "part2": "을(를) 사용하여 새 액세스 토큰을 요청합니다."
         }
       }
+    },
+    "step7": {
+      "title": "내부 앱 브리지 및 M2M 머신 간 통합",
+      "description": "서브도메인 간 세션 검증 및 클라우드 드라이브 연동",
+      "content": {
+        "intro": "*.clouburstlab.com 도메인 내의 내부 애플리케이션은 브리지 API를 활용하여 활성 사용자 세션을 원활하게 검증하고 복호화된 Google Drive, OneDrive 및 Dropbox 자격 증명을 검색할 수 있습니다."
+      }
     }
   }
 }

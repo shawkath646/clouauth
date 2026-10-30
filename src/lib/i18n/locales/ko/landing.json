@@ -140,15 +140,10 @@
     "links": {
       "features": "기능",
       "security": "보안",
-      "status": "상태",
-      "pricing": "가격",
       "documentation": "문서",
-      "oauth2": "OAuth 2.0",
-      "oidc": "OpenID Connect",
       "apiReference": "API 참조",
       "privacyPolicy": "개인정보처리방침",
-      "termsOfService": "서비스 약관",
-      "support": "지원"
+      "termsOfService": "서비스 약관"
     },
     "copyright": "© {{year}} clouburstlab. 판권 소유.",
     "developedBy": "개발자:"

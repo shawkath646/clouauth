@@ -43,7 +43,9 @@
         "redirect_uri": "Debe coincidir con la URI de redirección original.",
         "client_id": "El Client ID de su aplicación.",
         "client_secret": "El Client Secret de su aplicación.",
-        "code_verifier": "Verificador de código PKCE."
+        "code_verifier": "Verificador de código PKCE.",
+        "refresh_token": "El token de actualización emitido al cliente durante el intercambio de código.",
+        "scope": "Alcances solicitados (para la concesión client_credentials)."
       },
       "response": "Objeto JSON que contiene access_token, id_token y refresh_token."
     },
@@ -98,5 +100,7 @@
       "description": "Devuelve la documentación completa en formato Markdown puro para agentes automatizados y LLMs.",
       "response": "Documento Markdown sin formato (Content-Type: text/markdown)."
     }
-  }
+  },
+  "oidcCategory": "OAuth / OIDC",
+  "bridgeCategory": "Puente Inter-Servicios"
 }

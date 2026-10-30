@@ -22,6 +22,7 @@ import { useTranslations } from "@/lib/i18n/hooks";
 import SignUpPromotion from "./signup-promotion";
 import { signUp } from "@/actions/auth/signup.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
+import { PROVIDERS } from "@/constants/providers.constant";
 import SocialProviders from "@/components/social-providers";
 import { handleError } from "@/utils/error";
 import { useReCaptcha } from "@/lib/recaptcha/client";

@@ -2,8 +2,8 @@ model UserSession {
   id      String @id @default(cuid())
   user_id String
 
-  session_token_hash          String  @unique
-  refresh_token_hash          String  @unique
+  session_token_hash          String
+  refresh_token_hash          String
   previous_refresh_token_hash String?
 
   created_on            DateTime  @default(now())
@@ -21,6 +21,7 @@ model UserSession {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([user_id, revoked_on, expires_on])
   @@index([expires_on])
   @@index([session_expires_on])
   @@index([user_id, device_fingerprint])
@@ -47,7 +48,7 @@ model TempSession {
   code_hash       String?
   failed_attempts Int       @default(0)
   locked_until    DateTime?
-  type            String?   // legacy type alias for compatibility e.g. "2fa", "change_email"
+  type            String?   // e.g. "2fa", "change_email"
   destination     String?   // The email/phone the code was sent to
 
   // Track if a two-step verification was successfully processed
@@ -59,6 +60,8 @@ model TempSession {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([user_id, flow_type])
+  @@index([user_id, type, created_on])
   @@index([expires_on])
   @@index([flow_type])
 }

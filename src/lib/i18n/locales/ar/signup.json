@@ -5,8 +5,6 @@
   "firstNamePlaceholder": "John",
   "lastNameLabel": "اسم العائلة",
   "lastNamePlaceholder": "Doe",
-  "usernameLabel": "اسم المستخدم",
-  "usernamePlaceholder": "johndoe",
   "emailLabel": "البريد الإلكتروني",
   "emailPlaceholder": "name@example.com",
   "passwordLabel": "كلمة المرور",
@@ -16,7 +14,5 @@
   "signIn": "تسجيل الدخول",
   "pitchTitle1": "حساب واحد.",
   "pitchTitle2": "وصول سلس للجميع.",
-  "pitchSubtitle": "انضم إلى نظام clouburstlab البيئي وافتح مجموعة من الأدوات القوية المصممة للمحترفين العصريين.",
-  "usernameAvailable": "اسم المستخدم متاح!",
-  "usernameTaken": "اسم المستخدم مستخدم بالفعل."
+  "pitchSubtitle": "انضم إلى نظام clouburstlab البيئي وافتح مجموعة من الأدوات القوية المصممة للمحترفين العصريين."
 }

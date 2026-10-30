@@ -143,7 +143,18 @@ export async function resolvePasskeyRegistration(
 
     await deleteTempSession(tempSessionId).catch(() => {});
 
-    return { success: true, passkey };
+    return {
+      success: true,
+      passkey: {
+        id: passkey.id,
+        credential_id: passkey.credential_id,
+        device_name: passkey.device_name,
+        created_on: passkey.created_on.toISOString(),
+        last_used_on: passkey.last_used_on
+          ? passkey.last_used_on.toISOString()
+          : null,
+      },
+    };
   } catch (e: unknown) {
     await deleteTempSession(tempSessionId).catch(() => {});
     const em = handleError(e, true);
@@ -171,7 +182,18 @@ export async function updatePasskeyName(passkeyId: string, deviceName: string) {
       data: { device_name: deviceName },
     });
 
-    return { success: true, passkey: updated };
+    return {
+      success: true,
+      passkey: {
+        id: updated.id,
+        credential_id: updated.credential_id,
+        device_name: updated.device_name,
+        created_on: updated.created_on.toISOString(),
+        last_used_on: updated.last_used_on
+          ? updated.last_used_on.toISOString()
+          : null,
+      },
+    };
   } catch (e: unknown) {
     const em = handleError(e, true);
     return { success: false, error: em };
@@ -219,6 +241,38 @@ export async function deletePasskey(passkeyId: string) {
     }
 
     return { success: true };
+  } catch (e: unknown) {
+    const em = handleError(e, true);
+    return { success: false, error: em };
+  }
+}
+
+export async function getUserPasskeys() {
+  try {
+    const sessionData = await requireUserSession();
+
+    const passkeys = await prisma.passkeyCredential.findMany({
+      where: {
+        two_factor_id: sessionData.user.id,
+      },
+      orderBy: { created_on: "desc" },
+      select: {
+        id: true,
+        credential_id: true,
+        device_name: true,
+        created_on: true,
+        last_used_on: true,
+      },
+    });
+
+    return {
+      success: true,
+      passkeys: passkeys.map((p) => ({
+        ...p,
+        created_on: p.created_on.toISOString(),
+        last_used_on: p.last_used_on ? p.last_used_on.toISOString() : null,
+      })),
+    };
   } catch (e: unknown) {
     const em = handleError(e, true);
     return { success: false, error: em };

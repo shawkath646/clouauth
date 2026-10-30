@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getFullProfile } from "@/actions/profile/get-profile";
 import { RecoveryEmailManagementPage } from "@/components/profile/views/recovery-email-management-page";
 import type { Metadata } from "next";
@@ -7,7 +8,9 @@ export const metadata: Metadata = {
   description: "Manage your recovery email address.",
 };
 
-export default async function RecoveryEmailPage() {
+export const instant = false;
+
+async function RecoveryEmailContent() {
   const profileRes = await getFullProfile();
   const profile = profileRes.success ? profileRes.data : null;
   const recoveryEmailObj = profile?.emails?.find((e) => !e.is_primary);
@@ -15,8 +18,20 @@ export default async function RecoveryEmailPage() {
   const isVerified = recoveryEmailObj ? recoveryEmailObj.verified : false;
 
   return (
+    <RecoveryEmailManagementPage email={recoveryEmail} isVerified={isVerified} />
+  );
+}
+
+export default function RecoveryEmailPage() {
+  return (
     <div className="space-y-6 w-full">
-      <RecoveryEmailManagementPage email={recoveryEmail} isVerified={isVerified} />
+      <Suspense
+        fallback={
+          <div className="h-64 w-full rounded-2xl bg-card/50 border border-border/40 animate-pulse" />
+        }
+      >
+        <RecoveryEmailContent />
+      </Suspense>
     </div>
   );
 }

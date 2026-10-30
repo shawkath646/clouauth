@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
+import { parseClientScopes, parseRedirectUris } from "@/lib/oauth/scope-utils";
 
 export interface DeveloperApp {
   id: string;
@@ -8,8 +9,8 @@ export interface DeveloperApp {
   description: string | null;
   icon: string | null;
   website: string | null;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string;
+  updated_at: Date | string;
   oauth: {
     app_id: string;
     enabled: boolean;
@@ -47,16 +48,16 @@ export function formatDeveloperApp(app: {
     description: app.description,
     icon: app.icon,
     website: app.website,
-    created_at: app.created_at,
-    updated_at: app.updated_at,
+    created_at: app.created_at.toISOString(),
+    updated_at: app.updated_at.toISOString(),
     oauth: app.oauth
       ? {
           app_id: app.oauth.app_id,
           enabled: app.oauth.enabled,
           client_id: app.oauth.client_id,
           client_type: app.oauth.client_type,
-          redirect_uris: JSON.parse(app.oauth.redirect_uris || "[]"),
-          scopes: JSON.parse(app.oauth.scopes || '["openid","profile","email"]'),
+          redirect_uris: parseRedirectUris(app.oauth.redirect_uris),
+          scopes: parseClientScopes(app.oauth.scopes),
           pkce_required: app.oauth.pkce_required,
           token_endpoint_auth_method: app.oauth.token_endpoint_auth_method,
         }

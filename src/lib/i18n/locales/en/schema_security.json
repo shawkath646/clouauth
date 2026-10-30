@@ -10,12 +10,10 @@
     "mismatch": "Passwords do not match"
   },
   "email": {
-    "required": "Email is required",
     "invalid": "Please enter a valid email address",
     "max": "Email cannot exceed 100 characters"
   },
   "phone": {
-    "invalid": "Phone must be in E.164 format (e.g. +1234567890)",
-    "max": "Phone number is too long"
+    "invalid": "Phone must be in E.164 format (e.g. +1234567890)"
   }
 }

@@ -5,24 +5,46 @@ import { getUserSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
-import bcrypt from "bcryptjs";
+import { hashClientSecret } from "@/lib/security/hash";
 import { type DeveloperApp, formatDeveloperApp } from "./apps";
 import { checkSudoAction } from "@/actions/auth/sudo";
 import { z } from "zod";
 
 export type { DeveloperApp };
 
+const DISALLOWED_REDIRECT_SCHEMES = new Set([
+  "javascript:",
+  "data:",
+  "vbscript:",
+  "file:",
+  "blob:",
+  "about:",
+]);
+
 const redirectUriSchema = z.string().refine((val) => {
+  if (!val || val.includes("*") || val.includes("#")) return false;
   try {
     const u = new URL(val);
-    if (u.protocol === "http:") {
-      return u.hostname === "localhost" || u.hostname === "127.0.0.1";
+    const protocol = u.protocol.toLowerCase();
+    if (DISALLOWED_REDIRECT_SCHEMES.has(protocol)) {
+      return false;
     }
-    return u.protocol === "https:" || (u.protocol.endsWith(":") && u.protocol !== "javascript:" && u.protocol !== "data:");
+    if (protocol === "http:") {
+      return (
+        u.hostname === "localhost" ||
+        u.hostname === "127.0.0.1" ||
+        u.hostname === "[::1]"
+      );
+    }
+    if (protocol === "https:") {
+      return Boolean(u.hostname);
+    }
+    // RFC 8252 Section 7.1 private-use URI scheme for native apps (must contain a dot or valid reverse-domain/app identifier)
+    return /^[a-z][a-z0-9+.-]*:$/.test(protocol);
   } catch {
     return false;
   }
-}, "Each redirect URI must be a valid absolute URI (HTTPS, HTTP on localhost, or private-use scheme)");
+}, "Each redirect URI must be a valid exact URI without wildcards or fragments (HTTPS, HTTP on localhost, or RFC 8252 native app scheme)");
 
 const createAppSchema = z.object({
   name: z.string().trim().min(2, "Application name must be at least 2 characters").max(50, "Application name must be at most 50 characters"),
@@ -40,6 +62,18 @@ const updateAppSchema = z.object({
   scopes: z.array(z.string()).optional(),
   enabled: z.boolean().optional(),
 });
+
+/** Ensures the user owns the specified app, throwing or returning not found otherwise */
+async function requireUserApp(appId: string, userId: string) {
+  const app = await prisma.userApp.findUnique({
+    where: { id: appId },
+    include: { oauth: true },
+  });
+  if (!app || app.author_id !== userId) {
+    return null;
+  }
+  return app;
+}
 
 export async function createAppAction(data: {
   name: string;
@@ -67,7 +101,7 @@ export async function createAppAction(data: {
 
     const clientId = `cbl_${crypto.randomBytes(12).toString("hex")}`;
     const clientSecret = `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
-    const clientSecretHash = await bcrypt.hash(clientSecret, 12);
+    const clientSecretHash = await hashClientSecret(clientSecret);
 
     const newApp = await prisma.userApp.create({
       data: {
@@ -128,11 +162,8 @@ export async function updateAppAction(
       return { success: false, error: parsed.error.issues[0]?.message || "Validation failed" };
     }
 
-    const app = await prisma.userApp.findUnique({
-      where: { id: appId },
-    });
-
-    if (!app || app.author_id !== sessionData.user.id) {
+    const app = await requireUserApp(appId, sessionData.user.id);
+    if (!app) {
       return { success: false, error: "Application not found or unauthorized." };
     }
 
@@ -167,11 +198,8 @@ export async function deleteAppAction(appId: string): Promise<{ success: boolean
       return { success: false, error: "Unauthorized" };
     }
 
-    const app = await prisma.userApp.findUnique({
-      where: { id: appId },
-    });
-
-    if (!app || app.author_id !== sessionData.user.id) {
+    const app = await requireUserApp(appId, sessionData.user.id);
+    if (!app) {
       return { success: false, error: "Application not found or unauthorized." };
     }
 
@@ -207,16 +235,13 @@ export async function rotateAppSecretAction(appId: string): Promise<{
 
     const sessionData = sudoCheck.sessionData;
 
-    const app = await prisma.userApp.findUnique({
-      where: { id: appId },
-    });
-
-    if (!app || app.author_id !== sessionData.user.id) {
+    const app = await requireUserApp(appId, sessionData.user.id);
+    if (!app) {
       return { success: false, error: "Application not found or unauthorized." };
     }
 
     const newSecret = `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
-    const clientSecretHash = await bcrypt.hash(newSecret, 12);
+    const clientSecretHash = await hashClientSecret(newSecret);
 
     await prisma.oAuthClientConfig.update({
       where: { app_id: appId },

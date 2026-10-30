@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/hooks";
 import { signIn, SignInReturn } from "@/actions/auth/auth.actions";
 import { continueWithProvider } from "@/actions/oauth/oauth.actions";
+import { PROVIDERS } from "@/constants/providers.constant";
 import { handleError } from "@/utils/error";
 import { BrandName } from "@/components/ui/brand-name";
 import { useReCaptcha } from "@/lib/recaptcha/client";
@@ -34,7 +35,11 @@ interface CredentialsStepProps {
 
 export default function CredentialsStep({ onNext }: CredentialsStepProps) {
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("return_to");
+  const returnTo =
+    searchParams.get("return_to") ||
+    (searchParams.get("client_id") && searchParams.get("redirect_uri")
+      ? `/signin?${searchParams.toString()}`
+      : null);
   const { t } = useTranslations("signin");
   const { t: tCommon } = useTranslations("common");
   const { t: tSchema } = useTranslations("schema_auth");

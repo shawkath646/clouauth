@@ -10,7 +10,7 @@ export const localeNames: Record<Locale, string> = {
   zh: '中文',
 };
 
-export const defaultLocale: Locale = 'en';
+export const defaultLocale: Locale = locales[0];
 
 export const namespaces = [
   'common',

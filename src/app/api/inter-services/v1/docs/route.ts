@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 
 export function OPTIONS() {
   return new NextResponse(null, {
@@ -43,7 +43,7 @@ Every request to the bridge endpoints **MUST** include an \`Authorization\` head
 Authorization: Bearer <APP_JWT_TOKEN>
 \`\`\`
 The Bearer token can be:
-1. **OAuth2 Client Credentials Token:** Obtained from \`POST /api/sso/v1/token\` using your app's \`client_id\` and \`client_secret\`.
+1. **OAuth2 Client Credentials Token:** Obtained from \`POST /api/oauth/token\` using your app's \`client_id\` and \`client_secret\`.
 2. **Internal Service Token:** Signed with the cluster's \`JWT_SECRET\` or \`INTERNAL_SERVICE_SECRET\` with \`type: "internal_service"\` or \`role: "internal"\`.
 3. **User Access Token:** Issued by ClouAuth for a client app via authorization code flow.
 
@@ -276,12 +276,12 @@ Serves queued transactional and notification emails to background dispatchers, w
 
 ---
 
-### 2.4 \`POST /api/sso/v1/token\`
+### 2.4 \`POST /api/oauth/token\`
 OAuth2 / OIDC token endpoint supporting client credentials, authorization code exchange, and token refresh.
 
 #### Client Credentials Flow (M2M Bridge Authentication)
 \`\`\`http
-POST ${baseURL}/api/sso/v1/token
+POST ${baseURL}/api/oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&client_id=cbl_your_client_id&client_secret=cbl_sec_your_secret&scope=internal_service
@@ -326,7 +326,7 @@ export class ClouAuthBridge {
       return this.cachedToken;
     }
 
-    const res = await fetch(\`\${this.authBaseUrl}/api/sso/v1/token\`, {
+    const res = await fetch(\`\${this.authBaseUrl}/api/oauth/token\`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -409,7 +409,7 @@ class ClouAuthBridge:
             return self.cached_token
 
         res = requests.post(
-            f"{self.auth_base_url}/api/sso/v1/token",
+            f"{self.auth_base_url}/api/oauth/token",
             data={
                 "grant_type": "client_credentials",
                 "client_id": self.client_id,
@@ -466,7 +466,7 @@ class ClouAuthBridge:
 | \`GET\` | \`/api/inter-services/v1/user-session\` | Check user session & return scoped profile | \`?scope=id,firstname,lastname,email,avatar\` |
 | \`GET\` | \`/api/inter-services/v1/connected-drives\` | Return decrypted Google/MS/Dropbox drive tokens | \`?provider=google_drive&refresh=true\` |
 | \`GET, POST\` | \`/api/inter-services/v1/email-queue\` | Pull, enqueue, or acknowledge queued emails | \`?status=pending&due_only=true&limit=20\` |
-| \`POST\` | \`/api/sso/v1/token\` | M2M client token or refresh token | \`grant_type=client_credentials\` |
+| \`POST\` | \`/api/oauth/token\` | M2M client token or refresh token | \`grant_type=client_credentials\` |
 | \`GET\` | \`/api/inter-services/v1/docs\` | This AI-friendly bridge documentation | \`Accept: text/markdown\` |
 `;
 

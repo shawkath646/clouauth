@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { verifyPassword, hashPassword, hashCode, verifyCode } from "@/lib/security/hash";
 import crypto from "crypto";
 import { handleError } from "@/utils/error";
-import { getServerTranslations } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/server";
+import { defaultLocale } from "@/lib/i18n/config";
 import { sendEmail } from "@/lib/email";
 import { checkSudoAction } from "@/actions/auth/sudo";
 import { checkLockout, handleFailedAttempt } from "@/actions/auth/helpers";
@@ -30,8 +31,8 @@ export async function updatePasswordAction(data: PasswordValues) {
 
     const sessionData = sudoCheck.sessionData;
 
-    const { t } = await getServerTranslations("schema_security");
-    const passwordSchema = getPasswordSchema(t);
+    const dict = await getDictionary("schema_security", defaultLocale);
+    const passwordSchema = getPasswordSchema(dict);
 
     const parsed = passwordSchema.safeParse(data);
     if (!parsed.success) {
@@ -104,8 +105,8 @@ export async function updateRecoveryEmailAction(data: EmailValues) {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_security");
-    const emailSchema = getEmailSchema(t);
+    const dict = await getDictionary("schema_security", defaultLocale);
+    const emailSchema = getEmailSchema(dict);
 
     const parsed = emailSchema.safeParse(data);
     if (!parsed.success) {
@@ -152,8 +153,8 @@ export async function addPhoneMethodAction(data: PhoneValues) {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_security");
-    const phoneSchema = getPhoneSchema(t);
+    const dict = await getDictionary("schema_security", defaultLocale);
+    const phoneSchema = getPhoneSchema(dict);
 
     const parsed = phoneSchema.safeParse(data);
     if (!parsed.success) {

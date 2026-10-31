@@ -7,10 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import type { FullProfile } from "@/types/profile.types";
 import { BrandName } from "@/components/ui/brand-name";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function NotificationsSection({ profile }: { profile: FullProfile }) {
-  const { t } = useTranslations("profile_personal");
+export interface NotificationsSectionProps {
+  profile: FullProfile;
+  dict: Dictionary<"profile_personal">["notificationsSection"];
+}
+
+export function NotificationsSection({
+  profile,
+  dict,
+}: NotificationsSectionProps) {
   const [securityAlerts, setSecurityAlerts] = useState(profile.notifications?.email_security ?? true);
   const [loginNotifications, setLoginNotifications] = useState(profile.notifications?.login_alerts ?? true);
   const [productUpdates, setProductUpdates] = useState(profile.notifications?.product_updates ?? false);
@@ -20,14 +27,14 @@ export function NotificationsSection({ profile }: { profile: FullProfile }) {
   return (
     <div className="space-y-6">
       <SectionCard 
-        title={t("notificationsSection.title")} 
-        description={t("notificationsSection.desc")}
+        title={dict.title} 
+        description={dict.desc}
         noPadding
       >
         <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{t("notificationsSection.securityAlerts")}</Label>
-            <p className="text-sm text-muted-foreground">{t("notificationsSection.securityAlertsDesc")}</p>
+            <Label className="text-base font-semibold">{dict.securityAlerts}</Label>
+            <p className="text-sm text-muted-foreground">{dict.securityAlertsDesc}</p>
           </div>
           <Switch checked={securityAlerts} onCheckedChange={setSecurityAlerts} />
         </div>
@@ -35,8 +42,8 @@ export function NotificationsSection({ profile }: { profile: FullProfile }) {
         
         <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{t("notificationsSection.loginAlerts")}</Label>
-            <p className="text-sm text-muted-foreground">{t("notificationsSection.loginAlertsDesc")}</p>
+            <Label className="text-base font-semibold">{dict.loginAlerts}</Label>
+            <p className="text-sm text-muted-foreground">{dict.loginAlertsDesc}</p>
           </div>
           <Switch checked={loginNotifications} onCheckedChange={setLoginNotifications} />
         </div>
@@ -44,8 +51,8 @@ export function NotificationsSection({ profile }: { profile: FullProfile }) {
 
         <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{t("notificationsSection.productUpdates")}</Label>
-            <p className="text-sm text-muted-foreground">{t("notificationsSection.productUpdatesDesc")} <BrandName />.</p>
+            <Label className="text-base font-semibold">{dict.productUpdates}</Label>
+            <p className="text-sm text-muted-foreground">{dict.productUpdatesDesc} <BrandName />.</p>
           </div>
           <Switch checked={productUpdates} onCheckedChange={setProductUpdates} />
         </div>
@@ -53,8 +60,8 @@ export function NotificationsSection({ profile }: { profile: FullProfile }) {
 
         <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{t("notificationsSection.marketing")}</Label>
-            <p className="text-sm text-muted-foreground">{t("notificationsSection.marketingDesc")}</p>
+            <Label className="text-base font-semibold">{dict.marketing}</Label>
+            <p className="text-sm text-muted-foreground">{dict.marketingDesc}</p>
           </div>
           <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
         </div>
@@ -62,8 +69,8 @@ export function NotificationsSection({ profile }: { profile: FullProfile }) {
 
         <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{t("notificationsSection.newsletter")}</Label>
-            <p className="text-sm text-muted-foreground">{t("notificationsSection.newsletterDesc")}</p>
+            <Label className="text-base font-semibold">{dict.newsletter}</Label>
+            <p className="text-sm text-muted-foreground">{dict.newsletterDesc}</p>
           </div>
           <Switch checked={newsletter} onCheckedChange={setNewsletter} />
         </div>

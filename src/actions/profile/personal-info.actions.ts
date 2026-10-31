@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getErrorCode, handleError } from "@/utils/error";
-import { getServerTranslations } from "@/lib/i18n/server";
+import { getDictionary, resolveLocale } from "@/lib/i18n/server";
 import { z } from "zod";
 
 import {
@@ -23,13 +23,13 @@ import {
 } from "@/schema/profile.schema";
 import { DBUserPreference } from "@/types/preferences.types";
 
-export async function updateProfileName(data: NameValues) {
+export async function updateProfileName(data: NameValues, locale?: string) {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_profile");
-    const nameSchema = getNameSchema(t);
+    const dict = await getDictionary("schema_profile", resolveLocale(locale));
+    const nameSchema = getNameSchema(dict);
 
     const parsed = nameSchema.safeParse(data);
     if (!parsed.success) {
@@ -49,16 +49,16 @@ export async function updateProfileName(data: NameValues) {
     const em = handleError(e, "Failed to execute updateProfileName");
     return { success: false, error: em };
   }
-  redirect("/profile");
+  redirect(locale ? `/${locale}/profile` : "/profile");
 }
 
-export async function updateProfileUsername(data: UsernameValues) {
+export async function updateProfileUsername(data: UsernameValues, locale?: string) {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_profile");
-    const usernameSchema = getUsernameSchema(t);
+    const dict = await getDictionary("schema_profile", resolveLocale(locale));
+    const usernameSchema = getUsernameSchema(dict);
 
     const parsed = usernameSchema.safeParse(data);
     if (!parsed.success) {
@@ -96,16 +96,16 @@ export async function updateProfileUsername(data: UsernameValues) {
   } catch (e: unknown) {
     return { success: false, error: handleError(e, "Failed to execute updateProfileUsername") };
   }
-  redirect("/profile");
+  redirect(locale ? `/${locale}/profile` : "/profile");
 }
 
-export async function updateProfileBio(data: BioValues) {
+export async function updateProfileBio(data: BioValues, locale?: string) {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_profile");
-    const bioSchema = getBioSchema(t);
+    const dict = await getDictionary("schema_profile", resolveLocale(locale));
+    const bioSchema = getBioSchema(dict);
 
     const parsed = bioSchema.safeParse(data);
     if (!parsed.success) {
@@ -124,16 +124,16 @@ export async function updateProfileBio(data: BioValues) {
     const em = handleError(e, "Failed to execute updateProfileBio");
     return { success: false, error: em };
   }
-  redirect("/profile");
+  redirect(locale ? `/${locale}/profile` : "/profile");
 }
 
-export async function updateProfileAddress(data: AddressValues) {
+export async function updateProfileAddress(data: AddressValues, locale?: string) {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_profile");
-    const addressSchema = getAddressSchema(t);
+    const dict = await getDictionary("schema_profile", resolveLocale(locale));
+    const addressSchema = getAddressSchema(dict);
 
     const parsed = addressSchema.safeParse(data);
     if (!parsed.success) {
@@ -174,16 +174,16 @@ export async function updateProfileAddress(data: AddressValues) {
   } catch (e: unknown) {
     return { success: false, error: handleError(e, "Failed to execute updateProfileAddress") };
   }
-  redirect("/profile");
+  redirect(locale ? `/${locale}/profile` : "/profile");
 }
 
-export async function updateProfilePronouns(data: PronounsValues) {
+export async function updateProfilePronouns(data: PronounsValues, locale?: string) {
   try {
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const { t } = await getServerTranslations("schema_profile");
-    const pronounsSchema = getPronounsSchema(t);
+    const dict = await getDictionary("schema_profile", resolveLocale(locale));
+    const pronounsSchema = getPronounsSchema(dict);
 
     const parsed = pronounsSchema.safeParse(data);
     if (!parsed.success) {
@@ -202,7 +202,7 @@ export async function updateProfilePronouns(data: PronounsValues) {
     const em = handleError(e, "Failed to execute updateProfilePronouns");
     return { success: false, error: em };
   }
-  redirect("/profile");
+  redirect(locale ? `/${locale}/profile` : "/profile");
 }
 
 const preferencesSchema = z.object({
@@ -229,7 +229,6 @@ export async function updateProfilePreferences(data: z.infer<typeof preferencesS
     }
     if (validatedData.language) {
       updateData.language = validatedData.language;
-      (await cookies()).set('NEXT_LOCALE', validatedData.language, { maxAge: 60 * 60 * 24 * 365, path: '/' });
     }
     if (validatedData.timezone) updateData.timezone = validatedData.timezone;
 

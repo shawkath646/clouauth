@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { cn } from "@/utils/utils";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   UserCircle,
   Shield,
@@ -45,17 +46,19 @@ const NAV_ITEMS: NavItem[] = [
   { id: "danger", label: "Danger Zone", icon: AlertTriangle, group: "Data" },
 ];
 
-interface ProfileSidebarProps {
+export interface ProfileSidebarProps {
   activeSection: ProfileSection;
   className?: string;
+  locale?: Locale;
+  navDict: Dictionary<"profile_nav">;
 }
 
 export function ProfileSidebar({
   activeSection,
   className,
+  locale = defaultLocale,
+  navDict,
 }: ProfileSidebarProps) {
-  const { t } = useTranslations();
-
   return (
     <div className={cn("h-full", className)}>
       <nav className="flex flex-col gap-1.5 p-2" role="navigation" aria-label="Profile settings">
@@ -63,11 +66,12 @@ export function ProfileSidebar({
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           const isDanger = item.id === "danger";
+          const label = navDict.nav[item.id as keyof typeof navDict.nav];
 
           return (
             <Link
               key={item.id}
-              href={item.id === "profile" ? "/profile" : `/profile/${item.id}`}
+              href={item.id === "profile" ? `/${locale}/profile` : `/${locale}/profile/${item.id}`}
               className={cn(
                 "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all outline-none relative",
                 "hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -83,7 +87,7 @@ export function ProfileSidebar({
               aria-current={isActive ? "page" : undefined}
             >
               <Icon className="h-4.5 w-4.5 shrink-0" />
-              <span className="truncate">{t(`nav.${item.id}`)}</span>
+              <span className="truncate">{label}</span>
             </Link>
           );
         })}
@@ -95,20 +99,21 @@ export function ProfileSidebar({
 /** Horizontal mobile tabs variant */
 export function ProfileMobileTabs({
   activeSection,
+  locale = defaultLocale,
+  navDict,
 }: ProfileSidebarProps) {
-  const { t } = useTranslations();
-
   return (
     <nav className="flex gap-1 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-8 sm:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" role="tablist" aria-label="Profile sections">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const isActive = activeSection === item.id;
         const isDanger = item.id === "danger";
+        const label = navDict.nav[item.id as keyof typeof navDict.nav];
 
         return (
           <Link
             key={item.id}
-            href={item.id === "profile" ? "/profile" : `/profile/${item.id}`}
+            href={item.id === "profile" ? `/${locale}/profile` : `/${locale}/profile/${item.id}`}
             role="tab"
             aria-selected={isActive}
             className={cn(
@@ -123,7 +128,7 @@ export function ProfileMobileTabs({
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span>{t(`nav.${item.id}`)}</span>
+            <span>{label}</span>
           </Link>
         );
       })}

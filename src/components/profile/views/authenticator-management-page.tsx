@@ -9,7 +9,7 @@ import { generateTotpSecretAction, verifyAndEnableTotpAction } from "@/actions/a
 import { removeTwoFactorMethodAction } from "@/actions/profile/security-info.actions";
 import { toast } from "sonner";
 import Image from "next/image";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 
 interface AuthenticatorMethod {
   id: string;
@@ -17,11 +17,15 @@ interface AuthenticatorMethod {
   added_on: Date | string;
 }
 
-interface AuthenticatorManagementPageProps {
+export interface AuthenticatorManagementPageProps {
   authenticator: AuthenticatorMethod | null;
+  dict: Dictionary<"profile_security">["authenticator"];
 }
 
-export function AuthenticatorManagementPage({ authenticator }: AuthenticatorManagementPageProps) {
+export function AuthenticatorManagementPage({
+  authenticator,
+  dict,
+}: AuthenticatorManagementPageProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -29,7 +33,6 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const { t: tUI } = useTranslations("profile_security");
   const lastSubmittedCodeRef = useRef("");
 
   const handleStartSetup = async () => {
@@ -45,51 +48,51 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
         setIsAdding(false);
       }
     } catch {
-      toast.error(tUI("authenticator.error"));
+      toast.error(dict.error);
       setIsAdding(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerify = async (codeVal?: string) => {
-    const targetCode = (codeVal !== undefined ? codeVal : code).trim();
-    if (!secret || targetCode.length < 6 || isVerifying) return;
-
-    if (lastSubmittedCodeRef.current === targetCode) return;
+  const handleVerify = async (valToVerify?: string) => {
+    const targetCode = valToVerify || code;
+    if (targetCode.length !== 6 || isVerifying || lastSubmittedCodeRef.current === targetCode || !secret) return;
+    
     lastSubmittedCodeRef.current = targetCode;
-
     setIsVerifying(true);
     try {
       const res = await verifyAndEnableTotpAction(secret, targetCode);
       if (res.success) {
-        toast.success(tUI("authenticator.verifySuccess"));
+        toast.success(dict.verifySuccess);
         setIsAdding(false);
         setQrCodeUrl(null);
         setSecret(null);
         setCode("");
-        lastSubmittedCodeRef.current = "";
+        window.location.reload();
       } else {
-        toast.error(tUI("authenticator.verifyFailed"), { description: res.error });
+        toast.error(dict.verifyFailed, { description: res.error });
       }
     } catch {
-      toast.error(tUI("authenticator.error"));
+      toast.error(dict.error);
     } finally {
       setIsVerifying(false);
+      lastSubmittedCodeRef.current = "";
     }
   };
 
-  const handleRemove = async (id: string) => {
-    setRemovingId(id);
+  const handleRemove = async (methodId: string) => {
+    setRemovingId(methodId);
     try {
-      const res = await removeTwoFactorMethodAction(id);
+      const res = await removeTwoFactorMethodAction(methodId);
       if (res.success) {
-        toast.success(tUI("authenticator.removed"));
+        toast.success(dict.removed);
+        window.location.reload();
       } else {
         toast.error("Error", { description: res.error });
       }
     } catch {
-      toast.error(tUI("authenticator.error"));
+      toast.error(dict.error);
     } finally {
       setRemovingId(null);
     }
@@ -98,64 +101,70 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
   if (isAdding) {
     return (
       <SectionCard
-        title={tUI("authenticator.setupTitle")}
-        description={tUI("authenticator.setupDesc")}
+        title={dict.setupTitle}
+        description={dict.setupDesc}
       >
-        <div className="flex flex-col items-center justify-center space-y-6 max-w-sm mx-auto py-4">
+        <div className="flex flex-col items-center justify-center p-6 border rounded-2xl bg-muted/20">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
+            <div className="py-12 flex flex-col items-center">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="mt-4 text-sm text-muted-foreground">{tUI("authenticator.generating")}</p>
+              <p className="mt-4 text-sm text-muted-foreground">{dict.generating}</p>
             </div>
           ) : qrCodeUrl ? (
-            <>
-              <div className="bg-white p-4 rounded-xl">
-                <Image src={qrCodeUrl} alt="QR Code" width={200} height={200} />
+            <div className="space-y-6 w-full max-w-sm flex flex-col items-center">
+              <div className="p-4 bg-white rounded-xl shadow-xs">
+                <Image src={qrCodeUrl} alt="QR Code" width={200} height={200} priority />
               </div>
-              <div className="text-center">
-                <p className="text-sm font-medium mb-1">{tUI("authenticator.manualCode")}</p>
-                <code className="text-sm bg-muted/50 px-2 py-1 rounded tracking-widest">{secret}</code>
+              {secret && (
+                <div className="text-center w-full">
+                  <p className="text-sm font-medium mb-1">{dict.manualCode}</p>
+                  <code className="px-3 py-1.5 bg-muted rounded-md text-xs font-mono select-all block break-all">{secret}</code>
+                </div>
+              )}
+              <div className="space-y-3 w-full">
+                <p className="text-sm font-medium text-center">{dict.enterCode}</p>
+                <div className="flex justify-center">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={code}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setCode(val);
+                      if (val.length === 6) {
+                        handleVerify(val);
+                      }
+                    }}
+                    placeholder="000000"
+                    className="text-center font-mono tracking-widest text-lg h-12 w-48"
+                    autoFocus
+                  />
+                </div>
               </div>
-              <div className="w-full space-y-2">
-                <p className="text-sm font-medium text-center">{tUI("authenticator.enterCode")}</p>
-                <Input
-                  type="text"
-                  placeholder="000000"
-                  value={code}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setCode(val);
-                    if (val.length === 6) {
-                      handleVerify(val);
-                    }
-                  }}
-                  className="text-center text-lg tracking-[0.5em] font-mono h-12"
-                />
-              </div>
-              <div className="flex w-full gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-1/2"
+              <div className="flex gap-3 w-full">
+                <Button 
+                  variant="outline" 
+                  className="flex-1" 
                   onClick={() => {
                     setIsAdding(false);
                     setQrCodeUrl(null);
                     setSecret(null);
-                    setCode("");
                   }}
                 >
-                  {tUI("authenticator.cancel")}
+                  {dict.cancel}
                 </Button>
                 <Button 
-                  className="w-1/2" 
-                  onClick={() => handleVerify()} 
-                  disabled={isVerifying || code.length < 6}
+                  className="flex-1" 
+                  disabled={code.length !== 6 || isVerifying}
+                  onClick={() => handleVerify()}
                 >
                   {isVerifying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {tUI("authenticator.verify")}
+                  {dict.verify}
                 </Button>
               </div>
-            </>
+            </div>
           ) : null}
         </div>
       </SectionCard>
@@ -164,54 +173,49 @@ export function AuthenticatorManagementPage({ authenticator }: AuthenticatorMana
 
   return (
     <SectionCard
-      title={tUI("authenticator.title")}
-      description={tUI("authenticator.desc")}
+      title={dict.title}
+      description={dict.desc}
       noPadding
     >
       {!authenticator ? (
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <QrCode className="w-7 h-7 text-primary" />
+        <div className="p-8 text-center flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+            <QrCode className="w-6 h-6" />
           </div>
-          <h4 className="text-base font-semibold mb-1">{tUI("authenticator.noAppTitle")}</h4>
+          <h4 className="text-base font-semibold mb-1">{dict.noAppTitle}</h4>
           <p className="text-sm text-muted-foreground max-w-sm mb-6">
-            {tUI("authenticator.noAppDesc")}
+            {dict.noAppDesc}
           </p>
-          <Button
-            onClick={handleStartSetup}
-            variant="outline"
-            size="sm"
-            className="gap-2"
+          <Button 
+            onClick={handleStartSetup} 
+            className="rounded-full gap-2 shadow-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>{tUI("authenticator.setupBtn")}</span>
+            <span>{dict.setupBtn}</span>
           </Button>
         </div>
       ) : (
         <div className="divide-y divide-border/50">
-          <div
-            key={authenticator.id}
-            className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
-          >
+          <div className="p-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-base font-semibold">{tUI("authenticator.connectedTitle")}</h4>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {tUI("authenticator.addedOn").replace("{date}", new Date(authenticator.added_on).toLocaleDateString())}
+                <h4 className="text-base font-semibold">{dict.connectedTitle}</h4>
+                <p className="text-xs text-muted-foreground">
+                  {dict.addedOn.replace("{date}", new Date(authenticator.added_on).toLocaleDateString())}
                 </p>
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => handleRemove(authenticator.id)}
+            <Button
+              variant="ghost"
+              size="sm"
               disabled={removingId === authenticator.id}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => handleRemove(authenticator.id)}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
-              {removingId === authenticator.id ? <Loader2 className="w-4 h-4 animate-spin" /> : tUI("authenticator.removeBtn")}
+              {removingId === authenticator.id ? <Loader2 className="w-4 h-4 animate-spin" /> : dict.removeBtn}
             </Button>
           </div>
         </div>

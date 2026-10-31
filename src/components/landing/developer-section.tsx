@@ -4,11 +4,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Terminal, Code, Blocks, ArrowRight } from "lucide-react";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function DeveloperSection() {
-  const { t } = useTranslations("landing");
+export interface DeveloperSectionProps {
+  locale?: Locale;
+  dict: Dictionary<"landing">["developerSection"];
+}
 
+export function DeveloperSection({ locale = defaultLocale, dict }: DeveloperSectionProps) {
   return (
     <section className="py-20 md:py-32 bg-zinc-950 text-zinc-50 dark:bg-muted/20 relative overflow-hidden" id="developers">
       {/* Decorative gradient for developer section */}
@@ -25,15 +29,15 @@ export function DeveloperSection() {
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/50 dark:bg-muted border border-zinc-700/50 dark:border-border text-sm font-medium text-zinc-300 dark:text-muted-foreground mb-6">
               <Terminal className="w-4 h-4" />
-              <span>{t('developerSection.badge')}</span>
+              <span>{dict.badge}</span>
             </div>
             
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-white dark:text-foreground">
-              {t('developerSection.title')}
+              {dict.title}
             </h2>
             
             <p className="text-lg text-zinc-400 dark:text-muted-foreground mb-8 leading-relaxed">
-              {t('developerSection.description')}
+              {dict.description}
             </p>
 
             <ul className="space-y-4 mb-10">
@@ -42,8 +46,12 @@ export function DeveloperSection() {
                   <Code className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 dark:text-foreground block">{t('developerSection.features.oauthOidc.title')}</strong>
-                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">{t('developerSection.features.oauthOidc.description')}</span>
+                  <strong className="text-zinc-200 dark:text-foreground block">
+                    {dict.features.oauthOidc.title}
+                  </strong>
+                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">
+                    {dict.features.oauthOidc.description}
+                  </span>
                 </div>
               </li>
               <li className="flex items-start gap-3">
@@ -51,18 +59,22 @@ export function DeveloperSection() {
                   <Blocks className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <strong className="text-zinc-200 dark:text-foreground block">{t('developerSection.features.apiSupport.title')}</strong>
-                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">{t('developerSection.features.apiSupport.description')}</span>
+                  <strong className="text-zinc-200 dark:text-foreground block">
+                    {dict.features.apiSupport.title}
+                  </strong>
+                  <span className="text-zinc-400 dark:text-muted-foreground text-sm">
+                    {dict.features.apiSupport.description}
+                  </span>
                 </div>
               </li>
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button render={<Link href="/developers" />} nativeButton={false} size="lg" className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                {t('developerSection.developerGuide')}
+              <Button render={<Link href={`/${locale}/developers`} />} nativeButton={false} size="lg" className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                {dict.developerGuide}
               </Button>
-              <Button render={<Link href="/docs" />} nativeButton={false} size="lg" variant="outline" className="h-12 border-zinc-700 hover:bg-zinc-800 text-zinc-300 dark:border-border dark:hover:bg-muted dark:text-foreground">
-                {t('developerSection.apiReference')}
+              <Button render={<Link href={`/${locale}/docs`} />} nativeButton={false} size="lg" variant="outline" className="h-12 border-zinc-700 hover:bg-zinc-800 text-zinc-300 dark:border-border dark:hover:bg-muted dark:text-foreground">
+                {dict.apiReference}
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </div>

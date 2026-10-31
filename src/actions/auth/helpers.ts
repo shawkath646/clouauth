@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getUserSession, getTempSession } from "@/lib/session";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import { VerificationMethod } from "@/types/auth.types";
 import type { ExternalAuthProfile } from "./auth";
 import type { DBTempSession } from "@/types/session.types";

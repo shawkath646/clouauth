@@ -1,24 +1,27 @@
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { handleSsoPreflight, withSsoCors } from "@/lib/sso/cors";
+import { defaultLocale } from "@/lib/i18n/config";
 
 export function OPTIONS() {
   return handleSsoPreflight();
 }
 
 export function GET(request: NextRequest) {
-  const baseURL =
+  const baseURL = (
     getEnv("NEXT_PUBLIC_BASE_URL", true) ||
     getEnv("NEXT_PUBLIC_APP_URL", true) ||
-    request.nextUrl.origin;
+    request.nextUrl.origin
+  ).replace(/\/$/, "");
 
   const oidc_config = {
     issuer: baseURL,
-    authorization_endpoint: new URL("/signin", baseURL).toString(),
-    token_endpoint: new URL("/api/sso/v1/token", baseURL).toString(),
-    userinfo_endpoint: new URL("/api/sso/v1/userinfo", baseURL).toString(),
-    revocation_endpoint: new URL("/api/sso/v1/revoke", baseURL).toString(),
-    jwks_uri: new URL("/api/sso/v1/jwks.json", baseURL).toString(),
+    authorization_endpoint: `${baseURL}/${defaultLocale}/authorize`,
+    token_endpoint: `${baseURL}/api/oauth/token`,
+    userinfo_endpoint: `${baseURL}/api/oauth/userinfo`,
+    revocation_endpoint: `${baseURL}/api/oauth/revoke`,
+    introspection_endpoint: `${baseURL}/api/oauth/introspect`,
+    jwks_uri: `${baseURL}/api/oauth/jwks`,
     response_types_supported: ["code"],
     response_modes_supported: ["query", "form_post"],
     subject_types_supported: ["public"],

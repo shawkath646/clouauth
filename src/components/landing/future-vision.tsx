@@ -3,11 +3,13 @@
 import { motion } from "framer-motion";
 import { Globe2 } from "lucide-react";
 import { BrandName } from "@/components/ui/brand-name";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function FutureVision() {
-  const { t } = useTranslations("landing");
+export interface FutureVisionProps {
+  dict: Dictionary<"landing">["futureVision"];
+}
 
+export function FutureVision({ dict }: FutureVisionProps) {
   return (
     <section className="py-24 bg-zinc-950 text-white dark:bg-background relative overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
@@ -23,11 +25,12 @@ export function FutureVision() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">
-              {t('futureVision.titleLine1')}<br />{t('futureVision.titleLine2')}
+              {dict.titleLine1}<br />
+              {dict.titleLine2}
             </h2>
             
             <p className="text-xl text-zinc-400 dark:text-muted-foreground leading-relaxed">
-              <BrandName /> {t('futureVision.descriptionPart1')} <BrandName /> {t('futureVision.descriptionPart2')}
+              <BrandName /> {dict.descriptionPart1} <BrandName /> {dict.descriptionPart2}
             </p>
           </motion.div>
         </div>

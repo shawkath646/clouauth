@@ -6,18 +6,23 @@ import { ProfileSidebar, ProfileMobileTabs, type ProfileSection } from "./profil
 import { motion } from "framer-motion";
 import type { FullProfile } from "@/types/profile.types";
 import { ReactNode, useEffect } from "react";
-import { useTranslations } from "@/lib/i18n/hooks";
 import { useTheme } from "next-themes";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
+
+export interface ProfileLayoutClientProps {
+  profile: FullProfile;
+  children: ReactNode;
+  locale?: Locale;
+  navDict: Dictionary<"profile_nav">;
+}
 
 export function ProfileLayoutClient({ 
   profile, 
-  children 
-}: { 
-  profile: FullProfile, 
-  children: ReactNode 
-}) {
-  const { t } = useTranslations();
-
+  children,
+  locale = defaultLocale,
+  navDict,
+}: ProfileLayoutClientProps) {
   const { setTheme } = useTheme();
 
   useEffect(() => {
@@ -26,14 +31,16 @@ export function ProfileLayoutClient({
       setTheme(profile.preferences.theme);
     }
   }, [profile.preferences?.theme, setTheme]);
+
   const pathname = usePathname();
   let activeSection = "profile";
-  const parts = pathname.split("/");
   
-  if (parts.length >= 3) {
-    activeSection = parts[2];
-  } else if (parts.length === 2 && parts[1] === "profile") {
-    activeSection = "profile";
+  if (pathname) {
+    const segments = pathname.split("/").filter(Boolean);
+    const profileIndex = segments.indexOf("profile");
+    if (profileIndex !== -1 && segments.length > profileIndex + 1) {
+      activeSection = segments[profileIndex + 1];
+    }
   }
 
   const validSections = [
@@ -48,8 +55,8 @@ export function ProfileLayoutClient({
     activeSection = "profile";
   }
 
-  // Cast to specific type for components
   const typedSection = activeSection as ProfileSection;
+  const layoutTitle = navDict.layout.title;
 
   return (
     <main className="max-w-7xl mx-auto py-4 sm:py-8">
@@ -57,9 +64,11 @@ export function ProfileLayoutClient({
         {/* Sidebar for Desktop */}
         <aside className="hidden lg:block w-64 shrink-0">
           <div className="sticky top-28">
-            <h2 className="text-xl font-bold mb-6 px-3">{t("layout.title")}</h2>
+            <h2 className="text-xl font-bold mb-6 px-3">{layoutTitle}</h2>
             <ProfileSidebar 
               activeSection={typedSection} 
+              locale={locale}
+              navDict={navDict}
             />
           </div>
         </aside>
@@ -68,9 +77,11 @@ export function ProfileLayoutClient({
         <section className="flex-1 min-w-0">
           {/* Mobile Header & Tabs */}
           <div className="lg:hidden mb-8">
-            <h2 className="text-2xl font-bold mb-6">{t("layout.title")}</h2>
+            <h2 className="text-2xl font-bold mb-6">{layoutTitle}</h2>
             <ProfileMobileTabs 
               activeSection={typedSection} 
+              locale={locale}
+              navDict={navDict}
             />
           </div>
 

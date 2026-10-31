@@ -1,6 +1,6 @@
 "use server";
 
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import prisma from "@/lib/prisma";
 import { createTempSession, deleteTempSession } from "@/lib/session";
 import { handleError } from "@/utils/error";

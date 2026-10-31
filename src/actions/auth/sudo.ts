@@ -69,16 +69,20 @@ export async function markSessionSudoAuthenticated(
  * Page Guard for sensitive Server Component routes (e.g. /profile/password).
  * If the user's re-authentication is expired, redirects directly to /signin?tid=...&return_to=...
  */
-export async function requireSudoPage(returnTo: string) {
+export async function requireSudoPage(returnTo: string, locale?: string) {
   const sessionData = await getUserSession();
+  const segments = returnTo.split("/").filter(Boolean);
+  const langPrefix = locale ? `/${locale}` : (segments[0] && ['en', 'bn', 'ko', 'es', 'ar', 'zh'].includes(segments[0])) ? `/${segments[0]}` : "";
+  const signInPath = `${langPrefix}/signin`;
+
   if (!sessionData?.session) {
-    redirect(`/signin?return_to=${encodeURIComponent(returnTo)}`);
+    redirect(`${signInPath}?return_to=${encodeURIComponent(returnTo)}`);
   }
 
   const active = await isSudoActive();
   if (!active) {
     const tid = await createSudoTempSession(sessionData.user.id, returnTo);
-    redirect(`/signin?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`);
+    redirect(`${signInPath}?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`);
   }
 
   return sessionData;
@@ -105,7 +109,8 @@ export type CheckSudoResult =
  * Returns { authorized: false, sudoRequired: true, redirectUrl } if expired.
  */
 export async function checkSudoAction(
-  returnTo: string
+  returnTo: string,
+  locale?: string
 ): Promise<CheckSudoResult> {
   const sessionData = await getUserSession();
   if (!sessionData?.session) {
@@ -115,10 +120,13 @@ export async function checkSudoAction(
   const active = await isSudoActive();
   if (!active) {
     const tid = await createSudoTempSession(sessionData.user.id, returnTo);
+    const segments = returnTo.split("/").filter(Boolean);
+    const langPrefix = locale ? `/${locale}` : (segments[0] && ['en', 'bn', 'ko', 'es', 'ar', 'zh'].includes(segments[0])) ? `/${segments[0]}` : "";
+    const signInPath = `${langPrefix}/signin`;
     return {
       authorized: false,
       sudoRequired: true,
-      redirectUrl: `/signin?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`,
+      redirectUrl: `${signInPath}?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`,
       error: "Re-authentication required. Please confirm your identity.",
     };
   }

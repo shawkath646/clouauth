@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getBioSchema, BioValues } from "@/schema/profile.schema";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   Form,
   FormControl,
@@ -19,25 +20,30 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface EditBioFormProps {
+export interface EditBioFormProps {
   initialData: {
     bio?: string | null;
   };
+  locale?: Locale;
+  schemaDict: Dictionary<"schema_profile">;
+  personalDict: Dictionary<"profile_personal">["editBio"];
 }
 
-export function EditBioForm({ initialData }: EditBioFormProps) {
-  const { t } = useTranslations("schema_profile");
-  const { t: tUI } = useTranslations("profile_personal");
-
+export function EditBioForm({
+  initialData,
+  locale = defaultLocale,
+  schemaDict,
+  personalDict,
+}: EditBioFormProps) {
   const form = useForm<BioValues>({
-    resolver: zodResolver(getBioSchema(t)),
+    resolver: zodResolver(getBioSchema(schemaDict)),
     defaultValues: {
       bio: initialData.bio || "",
     },
   });
 
   const onSubmit = async (data: BioValues) => {
-    const res = await updateProfileBio(data);
+    const res = await updateProfileBio(data, locale);
     
     if (res && !res.success) {
       toast.error("Error", { description: res.error || "Failed to update profile" });
@@ -50,8 +56,8 @@ export function EditBioForm({ initialData }: EditBioFormProps) {
   return (
     <section>
       <header className="mb-15">
-        <h2 className="text-2xl font-semibold tracking-tight mb-1">{tUI("editBio.title")}</h2>
-        <p className="text-muted-foreground text-sm">{tUI("editBio.desc")}</p>
+        <h2 className="text-2xl font-semibold tracking-tight mb-1">{personalDict.title}</h2>
+        <p className="text-muted-foreground text-sm">{personalDict.desc}</p>
       </header>
       
       <Form {...form}>
@@ -61,13 +67,13 @@ export function EditBioForm({ initialData }: EditBioFormProps) {
             name="bio"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{tUI("editBio.label")}</FormLabel>
+                <FormLabel>{personalDict.label}</FormLabel>
                 <FormControl>
                   <Textarea 
                     {...field}
                     value={field.value || ""}
                     rows={4}
-                    placeholder={tUI("editBio.placeholder")}
+                    placeholder={personalDict.placeholder}
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground text-right">{bioValue.length}/500</p>
@@ -77,12 +83,12 @@ export function EditBioForm({ initialData }: EditBioFormProps) {
           />
           
           <div className="flex items-center justify-end gap-3 mt-10">
-            <Link href="/profile" className={buttonVariants({ variant: "ghost", className: "h-9" })}>
-              {tUI("editBio.cancel")}
+            <Link href={`/${locale}/profile`} className={buttonVariants({ variant: "ghost", className: "h-9" })}>
+              {personalDict.cancel}
             </Link>
             <Button type="submit" disabled={isSaving} className={buttonVariants({ className: "h-9" })}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {tUI("editBio.save")}
+              {personalDict.save}
             </Button>
           </div>
         </form>

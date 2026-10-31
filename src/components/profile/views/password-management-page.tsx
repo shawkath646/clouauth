@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getPasswordSchema } from "@/schema/security.schema";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   Form,
   FormControl,
@@ -21,23 +21,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface PasswordManagementPageProps {
+export interface PasswordManagementPageProps {
   hasPassword: boolean;
   lastChangedOn?: string;
+  schemaDict: Dictionary<"schema_security">;
+  securityDict: Dictionary<"profile_security">["password"];
 }
 
 export function PasswordManagementPage({
   hasPassword,
   lastChangedOn,
+  schemaDict,
+  securityDict,
 }: PasswordManagementPageProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const { t } = useTranslations("schema_security");
-  const { t: tUI } = useTranslations("profile_security");
 
-  const confirmPasswordSchema = getPasswordSchema(t).extend({
-    confirmPassword: z.string().min(1, t("password.confirm")),
+  const confirmPasswordSchema = getPasswordSchema(schemaDict).extend({
+    confirmPassword: z.string().min(1, schemaDict.password.confirm),
   }).refine((data) => data.newPassword === data.confirmPassword, {
-    message: t("password.mismatch"),
+    message: schemaDict.password.mismatch,
     path: ["confirmPassword"],
   });
 
@@ -73,8 +75,8 @@ export function PasswordManagementPage({
   if (isEditing) {
     return (
       <SectionCard
-        title={hasPassword ? tUI("password.editTitleChange") : tUI("password.editTitleSet")}
-        description={tUI("password.editDesc")}
+        title={hasPassword ? securityDict.editTitleChange : securityDict.editTitleSet}
+        description={securityDict.editDesc}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-md">
@@ -84,7 +86,7 @@ export function PasswordManagementPage({
                 name="currentPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{tUI("password.currentLabel")}</FormLabel>
+                    <FormLabel>{securityDict.currentLabel}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -104,7 +106,7 @@ export function PasswordManagementPage({
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{tUI("password.newLabel")}</FormLabel>
+                  <FormLabel>{securityDict.newLabel}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -122,7 +124,7 @@ export function PasswordManagementPage({
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{tUI("password.confirmLabel")}</FormLabel>
+                  <FormLabel>{securityDict.confirmLabel}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -144,11 +146,11 @@ export function PasswordManagementPage({
                   form.reset();
                 }}
               >
-                {tUI("password.cancel")}
+                {securityDict.cancel}
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {hasPassword ? tUI("password.changeBtn") : tUI("password.setBtn")}
+                {hasPassword ? securityDict.changeBtn : securityDict.setBtn}
               </Button>
             </div>
           </form>
@@ -159,8 +161,8 @@ export function PasswordManagementPage({
 
   return (
     <SectionCard
-      title={tUI("password.title")}
-      description={tUI("password.desc")}
+      title={securityDict.title}
+      description={securityDict.desc}
       noPadding
     >
       {!hasPassword ? (
@@ -168,9 +170,9 @@ export function PasswordManagementPage({
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Key className="w-7 h-7 text-primary" />
           </div>
-          <h4 className="text-base font-semibold mb-1">{tUI("password.noPwdTitle")}</h4>
+          <h4 className="text-base font-semibold mb-1">{securityDict.noPwdTitle}</h4>
           <p className="text-sm text-muted-foreground max-w-sm mb-6">
-            {tUI("password.noPwdDesc")}
+            {securityDict.noPwdDesc}
           </p>
           <Button
             onClick={() => setIsEditing(true)}
@@ -179,7 +181,7 @@ export function PasswordManagementPage({
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>{tUI("password.setBtn")}</span>
+            <span>{securityDict.setBtn}</span>
           </Button>
         </div>
       ) : (
@@ -189,9 +191,9 @@ export function PasswordManagementPage({
               <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h4 className="text-base font-semibold">{tUI("password.activeTitle")}</h4>
+              <h4 className="text-base font-semibold">{securityDict.activeTitle}</h4>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {tUI("password.activeDesc").replace("{date}", lastChangedOn || "Unknown")}
+                {securityDict.activeDesc.replace("{date}", lastChangedOn || "Unknown")}
               </p>
             </div>
           </div>
@@ -200,7 +202,7 @@ export function PasswordManagementPage({
             variant="outline"
             size="sm"
           >
-            {tUI("password.updateBtn")}
+            {securityDict.updateBtn}
           </Button>
         </div>
       )}

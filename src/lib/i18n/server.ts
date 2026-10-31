@@ -1,41 +1,9 @@
-import { cookies, headers } from 'next/headers';
+import 'server-only';
+
+import { cache } from 'react';
 import { defaultLocale, locales, type Locale, type Namespace } from './config';
 import type { Dictionary, TranslationKey } from '@/types/i18n.types';
-import { cache } from 'react';
 
-export const getLocale = cache(async (): Promise<Locale> => {
-  // 1. Check validated header injected by proxy.ts at the network boundary
-  const headersList = await headers();
-  const proxyLocale =
-    headersList.get('x-clouauth-locale') || headersList.get('x-locale');
-  if (proxyLocale && locales.includes(proxyLocale as Locale)) {
-    return proxyLocale as Locale;
-  }
-
-  // 2. Fallback to Locale cookie (manual override in Server Actions / Route Handlers)
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
-  if (localeCookie && locales.includes(localeCookie as Locale)) {
-    return localeCookie as Locale;
-  }
-
-  // 3. Accept-Language request header (Safely parsed)
-  const acceptLanguage = headersList.get('accept-language');
-  if (acceptLanguage) {
-    const preferredLocale = acceptLanguage
-      .split(',')?.[0]
-      ?.split(';')?.[0]
-      ?.split('-')?.[0]
-      ?.trim()
-      ?.toLowerCase();
-    if (preferredLocale && locales.includes(preferredLocale as Locale)) {
-      return preferredLocale as Locale;
-    }
-  }
-
-  // 4. Default locale
-  return defaultLocale;
-});
 
 const dictionaries = {
   en: {
@@ -148,12 +116,16 @@ const dictionaries = {
   },
 };
 
-export const getDictionary = cache(async <T extends Namespace>(
-  locale: Locale,
-  namespace: T
-): Promise<Dictionary<T>> => {
+export function resolveLocale(locale?: string): Locale {
+  return locales.find((l) => l === locale) ?? defaultLocale;
+}
+
+export async function getDictionary<T extends Namespace>(
+  namespace: T,
+  locale: Locale
+): Promise<Dictionary<T>> {
   return dictionaries[locale][namespace]() as Promise<Dictionary<T>>;
-});
+}
 
 function flattenDictionary(dict: Record<string, unknown>, prefix = ''): Record<string, string> {
   return Object.keys(dict).reduce((acc: Record<string, string>, key: string) => {
@@ -182,11 +154,11 @@ function flattenDictionary(dict: Record<string, unknown>, prefix = ''): Record<s
   }, {} as Record<string, string>);
 }
 
-export const getServerTranslations = cache(async <T extends Namespace>(
-  namespace: T
-) => {
-  const locale = await getLocale();
-  const rawDict = await getDictionary(locale, namespace);
+export async function getServerTranslations<T extends Namespace>(
+  namespace: T,
+  locale: Locale = defaultLocale
+) {
+  const rawDict = await getDictionary(namespace, locale);
 
   const flatDict = flattenDictionary(rawDict);
 
@@ -195,7 +167,7 @@ export const getServerTranslations = cache(async <T extends Namespace>(
   };
 
   return { t, locale, dict: rawDict };
-});
+}
 
 /**
  * Deterministic, static-safe translation loader for SEO metadata (`generateMetadata`),
@@ -206,7 +178,7 @@ export const getStaticTranslations = cache(async <T extends Namespace>(
   namespace: T,
   locale: Locale = defaultLocale
 ) => {
-  const rawDict = await getDictionary(locale, namespace);
+  const rawDict = await getDictionary(namespace, locale);
   const flatDict = flattenDictionary(rawDict);
 
   const t = (key: TranslationKey<T> | string): string => {

@@ -131,15 +131,6 @@ export async function processFinalSignIn(
         secure: secureCookie,
       });
     }
-    if (user.preferences.language) {
-      cookieStore.set("NEXT_LOCALE", user.preferences.language, {
-        path: "/",
-        httpOnly: false,
-        sameSite: "lax",
-        maxAge: 31536000,
-        secure: secureCookie,
-      });
-    }
   }
 
   revalidatePath("/", "layout");

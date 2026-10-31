@@ -26,10 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
-interface ApplicationFormProps {
+export interface ApplicationFormProps {
   initialData?: DeveloperApp;
+  locale?: Locale;
+  schemaDict: Dictionary<"schema_app">;
+  appsDict: Dictionary<"profile_apps">["form"];
 }
 
 const AVAILABLE_SCOPES = [
@@ -41,7 +45,12 @@ const AVAILABLE_SCOPES = [
   { id: "offline_access", label: "Offline Access", description: "Request refresh tokens" },
 ];
 
-export function ApplicationForm({ initialData }: ApplicationFormProps) {
+export function ApplicationForm({
+  initialData,
+  locale = defaultLocale,
+  schemaDict,
+  appsDict,
+}: ApplicationFormProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -57,11 +66,9 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
   const [createdSecret, setCreatedSecret] = useState<{ clientId: string; clientSecret: string } | null>(null);
   const [isSecretOpen, setIsSecretOpen] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
-  const { t } = useTranslations("schema_app");
-  const { t: tUI } = useTranslations("profile_apps");
 
   const form = useForm<ApplicationValues>({
-    resolver: zodResolver(getApplicationSchema(t)),
+    resolver: zodResolver(getApplicationSchema(schemaDict)),
     defaultValues: {
       name: initialData?.name || "",
       description: initialData?.description || "",
@@ -163,7 +170,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
         setIsSecretOpen(true); // show modal for new app, redirect on close
       } else {
         toast.success(initialData ? "Application updated" : "Application created");
-        router.push("/profile");
+        router.push(`/${locale}/profile`);
       }
 
     } catch (e: unknown) {
@@ -179,12 +186,12 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
       <section>
         <header className="mb-10">
           <h2 className="text-2xl font-semibold tracking-tight mb-1">
-            {initialData ? tUI("form.titleEdit") : tUI("form.titleRegister")}
+            {initialData ? appsDict.titleEdit : appsDict.titleRegister}
           </h2>
           <p className="text-muted-foreground text-sm">
             {initialData 
-              ? tUI("form.descEdit") 
-              : tUI("form.descRegister")}
+              ? appsDict.descEdit 
+              : appsDict.descRegister}
           </p>
         </header>
         
@@ -192,10 +199,10 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
           
           {/* Basic Info */}
           <div className="space-y-4 border-b border-border/50 pb-8">
-            <h3 className="text-lg font-medium">{tUI("form.basicInfo")}</h3>
+            <h3 className="text-lg font-medium">{appsDict.basicInfo}</h3>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">{tUI("form.appName")} <span className="text-destructive">*</span></Label>
+                <Label htmlFor="name">{appsDict.appName} <span className="text-destructive">*</span></Label>
                 <Input 
                   id="name" 
                   {...form.register("name")} 
@@ -207,7 +214,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="description">{tUI("form.appDesc")}</Label>
+                <Label htmlFor="description">{appsDict.appDesc}</Label>
                 <Input 
                   id="description" 
                   {...form.register("description")} 
@@ -219,7 +226,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="website">{tUI("form.website")}</Label>
+                <Label htmlFor="website">{appsDict.website}</Label>
                 <Input 
                   id="website" 
                   {...form.register("website")} 
@@ -234,22 +241,22 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
 
           {/* App Icon */}
           <div className="space-y-4 border-b border-border/50 pb-8">
-            <h3 className="text-lg font-medium">{tUI("form.iconTitle")}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{tUI("form.iconDesc")}</p>
+            <h3 className="text-lg font-medium">{appsDict.iconTitle}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{appsDict.iconDesc}</p>
             
-            <div className="flex flex-col items-center justify-center h-[300px] w-full max-w-sm bg-muted/30 rounded-xl border border-dashed relative overflow-hidden">
+            <div className="flex flex-col items-center justify-center h-75 w-full max-w-sm bg-muted/30 rounded-xl border border-dashed relative overflow-hidden">
               {!imageSrc && !initialData?.icon ? (
                 <div className="flex flex-col items-center gap-4 p-8 text-center">
                   <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                     <ImagePlus className="w-8 h-8" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{tUI("form.dragDrop")}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{tUI("form.fileSize")}</p>
+                    <p className="text-sm font-medium">{appsDict.dragDrop}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{appsDict.fileSize}</p>
                   </div>
                   <Button type="button" onClick={() => fileInputRef.current?.click()} variant="outline" size="sm" className="mt-2 rounded-full">
                     <Upload className="w-4 h-4 mr-2" />
-                    {tUI("form.selectImg")}
+                    {appsDict.selectImg}
                   </Button>
                 </div>
               ) : !imageSrc && initialData?.icon ? (
@@ -258,7 +265,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
                   <img src={initialData.icon} alt="Current Icon" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <Button type="button" onClick={() => fileInputRef.current?.click()} variant="secondary">
-                      {tUI("form.changeIcon")}
+                      {appsDict.changeIcon}
                     </Button>
                   </div>
                 </div>
@@ -309,11 +316,11 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
 
           {/* OAuth Settings */}
           <div className="space-y-6 border-b border-border/50 pb-8">
-            <h3 className="text-lg font-medium">{tUI("form.oauthTitle")}</h3>
+            <h3 className="text-lg font-medium">{appsDict.oauthTitle}</h3>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>{tUI("form.redirectUris")} <span className="text-destructive">*</span></Label>
+                <Label>{appsDict.redirectUris} <span className="text-destructive">*</span></Label>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -321,10 +328,10 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
                   onClick={() => append({ value: "" })}
                   className="gap-1 h-8"
                 >
-                  <Plus className="w-3.5 h-3.5" /> {tUI("form.addUri")}
+                  <Plus className="w-3.5 h-3.5" /> {appsDict.addUri}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-0">{tUI("form.uriDesc")}</p>
+              <p className="text-xs text-muted-foreground mt-0">{appsDict.uriDesc}</p>
               
               {fields.map((field, index) => (
                 <div key={field.id} className="flex items-start gap-2">
@@ -358,8 +365,8 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
             </div>
 
             <div className="space-y-3 pt-2">
-              <Label>{tUI("form.scopes")} <span className="text-destructive">*</span></Label>
-              <p className="text-xs text-muted-foreground">{tUI("form.scopesDesc")}</p>
+              <Label>{appsDict.scopes} <span className="text-destructive">*</span></Label>
+              <p className="text-xs text-muted-foreground">{appsDict.scopesDesc}</p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 {(() => {
@@ -398,12 +405,12 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
           </div>
           
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Link href="/profile" className={buttonVariants({ variant: "ghost", className: "h-9" })}>
-              {tUI("form.cancel")}
+            <Link href={`/${locale}/profile`} className={buttonVariants({ variant: "ghost", className: "h-9" })}>
+              {appsDict.cancel}
             </Link>
             <Button type="submit" disabled={isSaving} className={buttonVariants({ className: "h-9" })}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {initialData ? tUI("form.saveEdit") : tUI("form.saveRegister")}
+              {initialData ? appsDict.saveEdit : appsDict.saveRegister}
             </Button>
           </div>
         </form>
@@ -413,22 +420,22 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
       <Dialog open={isSecretOpen} onOpenChange={(open) => {
         if (!open) {
           setIsSecretOpen(false);
-          router.push("/profile");
+          router.push(`/${locale}/profile`);
         }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{tUI("form.modalTitle")}</DialogTitle>
+            <DialogTitle>{appsDict.modalTitle}</DialogTitle>
             <DialogDescription className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5 mt-1">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              {tUI("form.modalWarning")}
+              {appsDict.modalWarning}
             </DialogDescription>
           </DialogHeader>
           {createdSecret && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">
-                  {tUI("form.clientId")}
+                  {appsDict.clientId}
                 </label>
                 <div className="p-2.5 rounded-lg border bg-muted/40 font-mono text-sm break-all">
                   {createdSecret.clientId}
@@ -436,7 +443,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">
-                  {tUI("form.clientSecret")}
+                  {appsDict.clientSecret}
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="p-2.5 rounded-lg border bg-muted/40 font-mono text-sm break-all flex-1">
@@ -453,7 +460,7 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
                     ) : (
                       <Copy className="w-4 h-4" />
                     )}
-                    {copiedSecret ? tUI("form.copied") : tUI("form.copy")}
+                    {copiedSecret ? appsDict.copied : appsDict.copy}
                   </Button>
                 </div>
               </div>
@@ -462,9 +469,9 @@ export function ApplicationForm({ initialData }: ApplicationFormProps) {
           <DialogFooter>
             <Button onClick={() => {
               setIsSecretOpen(false);
-              router.push("/profile");
+              router.push(`/${locale}/profile`);
             }}>
-              {tUI("form.modalClose")}
+              {appsDict.modalClose}
             </Button>
           </DialogFooter>
         </DialogContent>

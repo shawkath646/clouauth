@@ -27,7 +27,7 @@ export function ProfileFieldLink({
       
       <div className="flex items-center gap-3 min-w-0 justify-end text-right">
         {badge && <div className="shrink-0">{badge}</div>}
-        <div className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-md">
+        <div className="text-sm text-muted-foreground truncate max-w-37.5 sm:max-w-md">
           {value}
         </div>
         {href && (

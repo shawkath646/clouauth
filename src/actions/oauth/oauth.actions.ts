@@ -106,12 +106,18 @@ export async function grantOAuthAccess(
       .setExpirationTime("5m") // Code is valid for 5 minutes
       .sign(getSecret());
 
-    // Build the redirect URL
+    // Build the redirect URL (RFC 6749 & RFC 9207 Issuer Identification)
     const url = new URL(redirect_uri);
     url.searchParams.set("code", authCode);
     if (state) {
       url.searchParams.set("state", state);
     }
+    const baseURL = (
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://auth.clouburstlab.com"
+    ).replace(/\/$/, "");
+    url.searchParams.set("iss", baseURL);
 
     return { success: true, redirectUrl: url.toString() };
   } catch (e: unknown) {

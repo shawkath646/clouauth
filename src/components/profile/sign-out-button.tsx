@@ -14,13 +14,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function SignOutButton() {
+export function SignOutButton({ locale }: { locale?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
-    await signOutAction();
+    await signOutAction(locale);
   };
 
   return (

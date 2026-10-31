@@ -6,7 +6,8 @@ import { getSignInSchema, type SignInValues } from "@/schema/auth.schema";
 import { deleteTempSession, signOut } from "@/lib/session";
 import { cookies } from "next/headers";
 import { handleError } from "@/utils/error";
-import { getServerTranslations } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/server";
+import { defaultLocale } from "@/lib/i18n/config";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
@@ -23,7 +24,6 @@ import {
   USER_WITH_AUTH_INCLUDE,
 } from "./helpers";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
-import { recordSecurityActivity } from "@/lib/security-activity";
 
 export type { SignInReturn, AccountDisabledReturn };
 
@@ -44,8 +44,8 @@ export async function signIn(
       };
     }
 
-    const { t } = await getServerTranslations("schema_auth");
-    const parsed = getSignInSchema(t).safeParse(data);
+    const schemaDict = await getDictionary("schema_auth", defaultLocale);
+    const parsed = getSignInSchema(schemaDict).safeParse(data);
 
     if (!parsed.success) {
       return { action: "ERROR", error: "Invalid input data." };
@@ -176,7 +176,7 @@ export async function enableAccount(
   }
 }
 
-export async function signOutAction() {
+export async function signOutAction(locale?: string) {
   try {
     await signOut();
     const cookieStore = await cookies();
@@ -188,5 +188,5 @@ export async function signOutAction() {
       error: handleError(e, "Failed to execute signOutAction"),
     };
   }
-  redirect("/signin");
+  redirect(locale ? `/${locale}/signin` : "/signin");
 }

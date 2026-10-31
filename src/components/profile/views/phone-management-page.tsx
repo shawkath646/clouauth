@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Smartphone, Plus, Loader2, Trash2 } from "lucide-react";
 import { removeTwoFactorMethodAction } from "@/actions/profile/security-info.actions";
 import { toast } from "sonner";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 import { Label } from "@/components/ui/label";
 
-import PhoneInput from 'react-phone-number-input'
-import 'react-phone-number-input/style.css'
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface PhoneMethod {
   id: string;
@@ -19,14 +19,14 @@ interface PhoneMethod {
   added_on: Date | string;
 }
 
-interface PhoneManagementPageProps {
+export interface PhoneManagementPageProps {
   phones: PhoneMethod[];
+  dict: Dictionary<"profile_security">["phone"];
 }
 
-export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
+export function PhoneManagementPage({ phones, dict }: PhoneManagementPageProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const { t: tUI } = useTranslations("profile_security");
   const [phoneNumber, setPhoneNumber] = useState<string | undefined>(undefined);
 
   const handleRemove = async (id: string) => {
@@ -48,15 +48,15 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
   if (isAdding) {
     return (
       <SectionCard
-        title={tUI("phone.editTitle")}
-        description={tUI("phone.editDesc")}
+        title={dict.editTitle}
+        description={dict.editDesc}
       >
         <div className="space-y-6 max-w-md">
           <div className="space-y-2">
-            <Label>{tUI("phone.label")}</Label>
+            <Label>{dict.label}</Label>
             <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <PhoneInput
-                placeholder={tUI("phone.placeholder")}
+                placeholder={dict.placeholder}
                 value={phoneNumber}
                 onChange={setPhoneNumber}
                 defaultCountry="US"
@@ -83,7 +83,7 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
                   setPhoneNumber("");
                 }}
               >
-                {tUI("phone.cancel")}
+                {dict.cancel}
               </Button>
               <Button type="button" disabled className="w-1/2">
                 Save
@@ -97,8 +97,8 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
 
   return (
     <SectionCard
-      title={tUI("phone.title")}
-      description={tUI("phone.desc")}
+      title={dict.title}
+      description={dict.desc}
       noPadding
       headerAction={
         phones.length > 0 ? (
@@ -109,7 +109,7 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
             className="gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>{tUI("phone.addBtn")}</span>
+            <span>{dict.addBtn}</span>
           </Button>
         ) : undefined
       }
@@ -119,9 +119,9 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Smartphone className="w-7 h-7 text-primary" />
           </div>
-          <h4 className="text-base font-semibold mb-1">{tUI("phone.noPhoneTitle")}</h4>
+          <h4 className="text-base font-semibold mb-1">{dict.noPhoneTitle}</h4>
           <p className="text-sm text-muted-foreground max-w-sm mb-6">
-            {tUI("phone.noPhoneDesc")}
+            {dict.noPhoneDesc}
           </p>
           <Button
             onClick={() => setIsAdding(true)}
@@ -130,7 +130,7 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>{tUI("phone.editTitle")}</span>
+            <span>{dict.editTitle}</span>
           </Button>
         </div>
       ) : (
@@ -145,9 +145,9 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
                   <Smartphone className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-base font-semibold">{tUI("phone.activeTitle")}</h4>
+                  <h4 className="text-base font-semibold">{dict.activeTitle}</h4>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {tUI("phone.activeDesc").replace("{date}", new Date(phone.added_on).toLocaleDateString())}
+                    {dict.activeDesc.replace("{date}", new Date(phone.added_on).toLocaleDateString())}
                   </p>
                 </div>
               </div>
@@ -159,7 +159,7 @@ export function PhoneManagementPage({ phones }: PhoneManagementPageProps) {
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 {removingId === phone.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1.5" />}
-                <span>{tUI("phone.removeBtn")}</span>
+                <span>{dict.removeBtn}</span>
               </Button>
             </div>
           ))}

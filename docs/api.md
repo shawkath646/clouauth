@@ -1,6 +1,10 @@
 # 📡 API Reference & OpenID Connect Specifications
 
-ClouAuth implements standard **OpenID Connect Core 1.0** and **OAuth 2.0 (RFC 6749 / RFC 7636 / RFC 7009 / BCP 212)** protocols, in addition to dedicated ecosystem inter-service endpoints.
+ClouAuth implements standard **OpenID Connect Core 1.0** and **OAuth 2.0 (RFC 6749 / RFC 7636 / RFC 7009 / RFC 7662 / RFC 9207 / BCP 212)** protocols, in addition to dedicated ecosystem inter-service endpoints.
+
+The architecture enforces a strict physical bifurcation:
+- **Localized Human UI Routes (`/{lang}/...`)**: User-facing authentication, authorization, consent, and account recovery screens. Dictionaries are passed strictly from Server Components to Client Components; static shells are preserved with `generateStaticParams` and Suspense boundaries.
+- **Headless Machine APIs (`/api/...`)**: Zero locale redirects, headless JSON/form payloads, strict machine-to-machine and token exchange boundaries.
 
 For the machine-readable OpenAPI 3.1 specification, see [`docs/openapi.yaml`](openapi.yaml).
 
@@ -9,7 +13,7 @@ For the machine-readable OpenAPI 3.1 specification, see [`docs/openapi.yaml`](op
 ## 🔍 OpenID Connect Discovery
 
 ### Discovery Document
-Retrieves OpenID Provider metadata.
+Retrieves OpenID Provider metadata. Bypasses all locale redirects.
 
 ```http
 GET /.well-known/openid-configuration HTTP/1.1
@@ -21,11 +25,12 @@ Accept: application/json
 ```json
 {
   "issuer": "https://auth.clouburstlab.com",
-  "authorization_endpoint": "https://auth.clouburstlab.com/signin",
-  "token_endpoint": "https://auth.clouburstlab.com/api/sso/v1/token",
-  "userinfo_endpoint": "https://auth.clouburstlab.com/api/sso/v1/userinfo",
-  "revocation_endpoint": "https://auth.clouburstlab.com/api/sso/v1/revoke",
-  "jwks_uri": "https://auth.clouburstlab.com/api/sso/v1/jwks.json",
+  "authorization_endpoint": "https://auth.clouburstlab.com/en/authorize",
+  "token_endpoint": "https://auth.clouburstlab.com/api/oauth/token",
+  "userinfo_endpoint": "https://auth.clouburstlab.com/api/oauth/userinfo",
+  "revocation_endpoint": "https://auth.clouburstlab.com/api/oauth/revoke",
+  "introspection_endpoint": "https://auth.clouburstlab.com/api/oauth/introspect",
+  "jwks_uri": "https://auth.clouburstlab.com/api/oauth/jwks.json",
   "response_types_supported": ["code"],
   "response_modes_supported": ["query", "form_post"],
   "subject_types_supported": ["public"],
@@ -39,7 +44,7 @@ Accept: application/json
   "claims_supported": [
     "sub", "iss", "aud", "exp", "iat", "name", "given_name",
     "family_name", "preferred_username", "email", "email_verified",
-    "picture", "nonce", "auth_time"
+    "picture", "phone_number", "nonce", "auth_time"
   ],
   "code_challenge_methods_supported": ["S256"],
   "grant_types_supported": [
@@ -52,13 +57,13 @@ Accept: application/json
 
 ---
 
-## 🔑 Authentication Endpoints
+## 🔑 Human Interaction Routes (`/{lang}/...`)
 
-### 1. Authorization Endpoint
-Initiates user authentication and consent flow. Enforces strict exact-string `redirect_uri` matching and mandatory `S256` Proof Key for Code Exchange (PKCE).
+### 1. Authorization Endpoint (`/{lang}/authorize`)
+Entry point for OAuth 2.0 / OIDC Authorization Code Flow with PKCE. Clients can initiate authorization in any supported locale (`en`, `bn`, `ko`, `es`, `zh`, `ar`).
 
 ```http
-GET /signin?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=openid%20profile%20email&state={STATE}&code_challenge={CHALLENGE}&code_challenge_method=S256 HTTP/1.1
+GET /{lang}/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=openid%20profile%20email&state={STATE}&code_challenge={CHALLENGE}&code_challenge_method=S256 HTTP/1.1
 Host: auth.clouburstlab.com
 ```
 
@@ -70,26 +75,41 @@ Host: auth.clouburstlab.com
 | `response_type` | `string` | **Yes** | Must be `code` |
 | `scope` | `string` | No | Space-delimited scopes registered to the client (e.g. `openid profile email offline_access`) |
 | `state` | `string` | **Yes** | Cryptographic CSRF state token |
-| `code_challenge` | `string` | **Yes** | Base64URL-encoded SHA-256 hash of `code_verifier` |
+| `code_challenge` | `string` | **Yes** | Base64URL-encoded SHA-256 hash of `code_verifier` (RFC 7636) |
 | `code_challenge_method`| `string` | **Yes** | Strictly `S256` (`plain` is rejected per OAuth 2.0 Security BCP 212) |
+| `nonce` | `string` | No | Replay prevention nonce bound to the issued ID token |
+
+#### Flow Progression
+1. **Unauthenticated User**: Redirected to `/{lang}/signin` with all OAuth query parameters preserved.
+2. **Authenticated User**: Redirected to `/{lang}/consent` with all OAuth query parameters preserved.
+3. **Consent Granted**: Issues an authorization code and redirects back to the client callback:
+   ```http
+   HTTP/1.1 302 Found
+   Location: https://yourapp.com/callback?code={AUTHORIZATION_CODE}&state={STATE}&iss=https%3A%2F%2Fauth.clouburstlab.com
+   ```
+   *(Includes RFC 9207 `iss` parameter to prevent mix-up attacks)*
 
 ---
 
-### 2. Token Endpoint
-Exchanges authorization code, refresh token, or client credentials for access and ID tokens. Client authentication and PKCE verification are strictly validated **before** atomic single-use JTI consumption.
+## ⚡ Raw Machine OAuth APIs (`/api/oauth/...`)
+
+All raw machine endpoints reside under `/api/oauth/` and are explicitly excluded from `proxy.ts` i18n redirect rules.
+
+### 1. Token Endpoint (`POST /api/oauth/token`)
+Exchanges an authorization code, refresh token, or client credentials for access and ID tokens. Validates client credentials and PKCE `code_verifier` prior to atomic single-use JTI code redemption.
 
 ```http
-POST /api/sso/v1/token HTTP/1.1
+POST /api/oauth/token HTTP/1.1
 Host: auth.clouburstlab.com
 Content-Type: application/x-www-form-urlencoded
 ```
 
 #### Flow A: Authorization Code Exchange (with PKCE)
 > [!IMPORTANT]
-> `redirect_uri` is **mandatory** during `authorization_code` exchange and must strictly match the `redirect_uri` used at `/signin`.
+> `redirect_uri` is **mandatory** during `authorization_code` exchange and must strictly match the `redirect_uri` used at `/{lang}/authorize`.
 
 ```bash
-curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
+curl -X POST "https://auth.clouburstlab.com/api/oauth/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=authorization_code" \
   -d "client_id=your_client_id" \
@@ -104,7 +124,7 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
 > If `scope` is passed during refresh, it must be an equal or narrower subset of the originally granted scopes. Escalating scopes returns `400 invalid_scope`.
 
 ```bash
-curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
+curl -X POST "https://auth.clouburstlab.com/api/oauth/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=refresh_token" \
   -d "client_id=your_client_id" \
@@ -114,7 +134,7 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
 
 #### Flow C: Client Credentials Grant (M2M)
 ```bash
-curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
+curl -X POST "https://auth.clouburstlab.com/api/oauth/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=client_credentials" \
   -d "client_id=your_client_id" \
@@ -136,11 +156,11 @@ curl -X POST "https://auth.clouburstlab.com/api/sso/v1/token" \
 
 ---
 
-### 3. UserInfo Endpoint
-Returns claims about the authenticated user based on granted scopes.
+### 2. UserInfo Endpoint (`GET, POST /api/oauth/userinfo`)
+Returns identity claims for the authenticated subject based on granted scopes.
 
 ```http
-GET /api/sso/v1/userinfo HTTP/1.1
+GET /api/oauth/userinfo HTTP/1.1
 Host: auth.clouburstlab.com
 Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
@@ -162,30 +182,80 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 
 ---
 
-### 4. JSON Web Key Set (JWKS)
-Returns the public RSA verification keys used by ClouAuth to sign RS256 ID tokens. Private keys are encrypted at rest with AES-256-GCM.
+### 3. Token Introspection (`POST /api/oauth/introspect`)
+RFC 7662 compliant token introspection for resource servers and API gateways.
 
 ```http
-GET /api/sso/v1/jwks.json HTTP/1.1
-Host: auth.clouburstlab.com
-```
-
----
-
-### 5. Token Revocation (RFC 7009)
-Revokes an active access token or refresh token.
-
-```http
-POST /api/sso/v1/revoke HTTP/1.1
+POST /api/oauth/introspect HTTP/1.1
 Host: auth.clouburstlab.com
 Content-Type: application/x-www-form-urlencoded
 
-token=YOUR_TOKEN_STRING&token_type_hint=refresh_token
+token=YOUR_ACCESS_OR_REFRESH_TOKEN&client_id=your_client_id&client_secret=your_client_secret
+```
+
+**Active Token Response (`200 OK`):**
+```json
+{
+  "active": true,
+  "scope": "openid profile email",
+  "client_id": "cbl_client_123",
+  "sub": "cm0a1b2c3d4e5f6g7h8i9j0k",
+  "exp": 1727403600,
+  "iat": 1727400000,
+  "iss": "https://auth.clouburstlab.com",
+  "token_type": "Bearer"
+}
+```
+
+**Inactive / Revoked Token Response (`200 OK`):**
+```json
+{
+  "active": false
+}
 ```
 
 ---
 
-## 🌉 Inter-Services Bridge Endpoints
+### 4. JSON Web Key Set (`GET /api/oauth/jwks.json` / `GET /api/oauth/jwks`)
+Returns public RSA keys used by ClouAuth to sign RS256 ID tokens. Private keys are encrypted at rest with AES-256-GCM.
+
+```http
+GET /api/oauth/jwks.json HTTP/1.1
+Host: auth.clouburstlab.com
+```
+
+**Response (`200 OK`):**
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "key_2026_09_active",
+      "n": "u1b7Y9...",
+      "e": "AQAB"
+    }
+  ]
+}
+```
+
+---
+
+### 5. Token Revocation (`POST /api/oauth/revoke`)
+RFC 7009 compliant token revocation. Revokes active access or refresh tokens. Guaranteed HTTP 200 response per RFC specification.
+
+```http
+POST /api/oauth/revoke HTTP/1.1
+Host: auth.clouburstlab.com
+Content-Type: application/x-www-form-urlencoded
+
+token=YOUR_TOKEN_STRING&token_type_hint=refresh_token&client_id=your_client_id&client_secret=your_client_secret
+```
+
+---
+
+## 🌉 Inter-Services Bridge Endpoints (`/api/inter-services/...`)
 
 Dedicated endpoints for **clouburstlab** internal microservices and authorized ecosystem applications:
 
@@ -200,7 +270,7 @@ Cookie: session_token=...
 ```
 
 ### 2. Connected Drives Bridge
-Retrieves refreshed, decrypted OAuth tokens for third-party cloud drives. Third-party `UserApp` tokens must forward the user's `session_token` cookie or an end-user `access_token` matching `sub`; querying arbitrary `?user_id=` is restricted to internal ecosystem tokens (`isInternalService: true`).
+Retrieves refreshed, decrypted OAuth tokens for third-party cloud drives.
 
 ```http
 GET /api/inter-services/v1/connected-drives?provider=google_drive&refresh=true HTTP/1.1

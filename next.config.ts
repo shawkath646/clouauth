@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   cacheComponents: true,
   partialPrefetching: true,
+  serverExternalPackages: [
+    "mssql",
+    "tedious",
+    "@azure/identity",
+    "open",
+    "powershell-utils",
+  ],
   images: {
     remotePatterns: [
       {
@@ -63,7 +70,7 @@ const nextConfig: NextConfig = {
         },
       ],
     },
-  ],
+  ]
 };
 
 export default nextConfig;

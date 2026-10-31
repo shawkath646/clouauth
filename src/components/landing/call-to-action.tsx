@@ -5,11 +5,20 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { BrandName } from "@/components/ui/brand-name";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function CallToAction({ isLoggedIn }: { isLoggedIn?: boolean }) {
-  const { t } = useTranslations("landing");
+export interface CallToActionProps {
+  isLoggedIn?: boolean;
+  locale?: Locale;
+  dict: Dictionary<"landing">["callToAction"];
+}
 
+export function CallToAction({
+  isLoggedIn,
+  locale = defaultLocale,
+  dict,
+}: CallToActionProps) {
   return (
     <section className="py-10 sm:py-14 md:py-18 relative">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -23,14 +32,14 @@ export function CallToAction({ isLoggedIn }: { isLoggedIn?: boolean }) {
           {isLoggedIn ? (
             <>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">
-                {t('callToAction.loggedIn.title')} <BrandName /> {t('callToAction.loggedIn.titleSuffix')}
+                {dict.loggedIn.title} <BrandName /> {dict.loggedIn.titleSuffix}
               </h2>
               <p className="text-sm sm:text-base text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
-                {t('callToAction.loggedIn.description')}
+                {dict.loggedIn.description}
               </p>
               <div className="flex justify-center">
-                <Button render={<Link href="/profile" />} nativeButton={false} size="default" className="h-10 px-6 text-sm shadow-xs">
-                  {t('callToAction.loggedIn.button')}
+                <Button render={<Link href={`/${locale}/profile`} />} nativeButton={false} size="default" className="h-10 px-6 text-sm shadow-xs">
+                  {dict.loggedIn.button}
                   <ArrowRight className="ml-1.5 w-4 h-4" />
                 </Button>
               </div>
@@ -38,21 +47,18 @@ export function CallToAction({ isLoggedIn }: { isLoggedIn?: boolean }) {
           ) : (
             <>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">
-                {t('callToAction.loggedOut.title')}
+                {dict.loggedOut.title}
               </h2>
               <p className="text-sm sm:text-base text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
-                {t('callToAction.loggedOut.descriptionPart1')} <BrandName /> {t('callToAction.loggedOut.descriptionPart2')}
+                {dict.loggedOut.descriptionPart1} <BrandName /> {dict.loggedOut.descriptionPart2}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button render={<Link href="/signup" />} nativeButton={false} size="default" className="h-10 px-5 text-sm shadow-xs">
-                  {t('callToAction.loggedOut.createAccount')}
+                <Button render={<Link href={`/${locale}/signup`} />} nativeButton={false} size="default" className="h-10 px-5 text-sm shadow-xs">
+                  {dict.loggedOut.createAccount}
                   <ArrowRight className="ml-1.5 w-4 h-4" />
                 </Button>
-                <Button render={<Link href="/signin" />} nativeButton={false} size="default" variant="outline" className="h-10 px-5 text-sm bg-background">
-                  {t('callToAction.loggedOut.signIn')}
-                </Button>
-                <Button render={<Link href="/docs" />} nativeButton={false} size="default" variant="ghost" className="h-10 px-4 text-sm">
-                  {t('callToAction.loggedOut.documentation')}
+                <Button render={<Link href={`/${locale}/signin`} />} nativeButton={false} size="default" variant="outline" className="h-10 px-5 text-sm">
+                  {dict.loggedOut.signIn}
                 </Button>
               </div>
             </>

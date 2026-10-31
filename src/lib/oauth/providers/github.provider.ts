@@ -1,4 +1,4 @@
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
 export class GithubOAuthProvider implements IOAuthProvider {

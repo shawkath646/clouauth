@@ -70,7 +70,7 @@
         "intro": {
           "part1": "이제",
           "code": "access_token",
-          "part2": "을(를) 얻었으므로 이를 사용하여 /api/sso/v1/userinfo 엔드포인트에서 사용자 프로필을 가져옵니다."
+          "part2": "을(를) 얻었으므로 이를 사용하여 /api/oauth/userinfo 엔드포인트에서 사용자 프로필을 가져옵니다."
         }
       }
     },

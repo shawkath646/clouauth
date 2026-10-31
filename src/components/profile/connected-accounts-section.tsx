@@ -10,11 +10,18 @@ import type { FullProfile } from "@/types/profile.types";
 import { SOCIAL_PROVIDERS, DRIVE_PROVIDERS } from "@/constants/providers.constant";
 import { HardDrive, Cloud, Box, Loader2, ShieldCheck } from "lucide-react";
 import { initializeOAuthProvider, disconnectOAuthAccount } from "@/actions/oauth/oauth.actions";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 import { toast } from "sonner";
 
-export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) {
-  const { t } = useTranslations("profile_security");
+export interface ConnectedAccountsSectionProps {
+  profile: FullProfile;
+  dict: Pick<Dictionary<"profile_security">, "sso" | "cloudDrives">;
+}
+
+export function ConnectedAccountsSection({
+  profile,
+  dict,
+}: ConnectedAccountsSectionProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,17 +51,17 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
     }
   }, [searchParams, router, pathname]);
 
-  const handleDisconnect = (providerId: string) => {
+  const handleDisconnect = async (providerId: string) => {
     setDisconnectingProvider(providerId);
     startTransition(async () => {
       const res = await disconnectOAuthAccount(providerId);
-      setDisconnectingProvider(null);
       if (res.success) {
-        toast.success("Account disconnected successfully");
+        toast.success("Account disconnected successfully!");
         router.refresh();
       } else {
-        toast.error("Failed to disconnect", { description: res.error });
+        toast.error("Disconnection failed", { description: res.error });
       }
+      setDisconnectingProvider(null);
     });
   };
 
@@ -72,7 +79,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
 
   return (
     <div className="space-y-6">
-      <SectionCard title={t("sso.title")} description={t("sso.desc")} noPadding>
+      <SectionCard title={dict.sso.title} description={dict.sso.desc} noPadding>
         {SOCIAL_PROVIDERS.map((provider, index) => {
           const connected = isConnected(provider.id);
           const isDisconnecting = disconnectingProvider === provider.id;
@@ -98,7 +105,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                   <div className="space-y-1">
                     <div className="text-base font-semibold">{provider.name}</div>
                     <p className="text-sm text-muted-foreground">
-                      {connected ? t("sso.connected") : t("sso.notConnected")}
+                      {connected ? dict.sso.connected : dict.sso.notConnected}
                     </p>
                   </div>
                 </div>
@@ -111,7 +118,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                     onClick={() => handleDisconnect(provider.id)}
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
                   >
-                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : t("sso.disconnect")}
+                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : dict.sso.disconnect}
                   </Button>
                 ) : (
                   <form
@@ -128,7 +135,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                       className="shrink-0 gap-2"
                     >
                       {isConnecting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      <span>{t("sso.connect")}</span>
+                      <span>{dict.sso.connect}</span>
                     </Button>
                   </form>
                 )}
@@ -139,11 +146,11 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
         })}
       </SectionCard>
 
-      <SectionCard title={t("cloudDrives.title")} description={t("cloudDrives.desc")} noPadding>
+      <SectionCard title={dict.cloudDrives.title} description={dict.cloudDrives.desc} noPadding>
         <div className="mx-5 my-4 sm:mx-6 p-3.5 rounded-xl bg-primary/5 border border-primary/15 flex items-start gap-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
           <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
           <span>
-            {t("cloudDrives.privacyNote")}
+            {dict.cloudDrives.privacyNote}
           </span>
         </div>
         <Separator className="opacity-50" />
@@ -163,7 +170,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                   <div className="space-y-1">
                     <div className="text-base font-semibold">{provider.name}</div>
                     <p className="text-sm text-muted-foreground">
-                      {connected ? t("sso.connected") : t("sso.notConnected")}
+                      {connected ? dict.sso.connected : dict.sso.notConnected}
                     </p>
                   </div>
                 </div>
@@ -176,7 +183,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                     onClick={() => handleDisconnect(provider.id)}
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
                   >
-                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : t("sso.disconnect")}
+                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : dict.sso.disconnect}
                   </Button>
                 ) : (
                   <form
@@ -193,7 +200,7 @@ export function ConnectedAccountsSection({ profile }: { profile: FullProfile }) 
                       className="shrink-0 gap-2"
                     >
                       {isConnecting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      <span>{t("sso.connect")}</span>
+                      <span>{dict.sso.connect}</span>
                     </Button>
                   </form>
                 )}

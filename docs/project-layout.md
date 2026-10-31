@@ -93,7 +93,7 @@ The application proxy runs before requests reach page components or routes:
 - **Session Validation:** Inspects `session_token` and validates it against the active database session.
 - **Transparent Refresh:** If `session_token` has expired but `refresh_token` is present, it transparently executes a rotation via `refreshSession()`, queues updated cookies onto the response, and injects updated cookies into downstream Server Components.
 - **Protected Route Enforcement:** Intercepts unauthenticated navigation to `/profile/*` and issues a redirect with a sanitized `return_to` parameter.
-- **i18n Locale Resolution:** Automatically inspects the `Accept-Language` header and persists the resolved language into the `NEXT_LOCALE` cookie.
+- **i18n Locale Resolution:** URL dynamic segment `/[lang]` based routing with SSG support (`generateStaticParams`). Explicit proxy bypass for `/api` and `/.well-known` endpoints.
 
 ### 2. `src/lib/session.ts` (Session Engine)
 Houses the core session and token lifecycle logic:
@@ -105,7 +105,7 @@ Houses the core session and token lifecycle logic:
 
 ### 3. `src/lib/sso/` (OAuth 2.0 & OIDC Server Engine)
 Implements the OpenID Connect Identity Provider:
-- **`signing-keys.ts`:** Lazily initializes 2048-bit RSA key pairs (`RS256`), stores them in the `SigningKey` table, and exposes public JWK sets via `/api/sso/v1/jwks.json`.
+- **`signing-keys.ts`:** Lazily initializes 2048-bit RSA key pairs (`RS256`), stores them in the `SigningKey` table, and exposes public JWK sets via `/api/oauth/jwks.json`.
 - **`cors.ts`:** Handles cross-origin preflight (`OPTIONS`) and applies permissive yet secure CORS headers (`Access-Control-Allow-Origin: *`) required by OAuth 2.0 token and discovery endpoints.
 
 ### 4. `src/actions/auth/` (Server Actions)

@@ -24,7 +24,7 @@ flowchart TD
     subgraph CoreEngine["ClouAuth Core Engine"]
         AuthServer["Auth & Server Actions\n• Passkeys / WebAuthn (SimpleWebAuthn)\n• TOTP Authenticator (RFC 6238)\n• Sudo Mode Step-Up Engine\n• Google / GitHub / Microsoft OAuth\n• Google reCAPTCHA v3 Verification"]
         
-        OIDCServer["OAuth 2.0 & OIDC Server\n• Discovery: /.well-known/openid-configuration\n• Auth Endpoint: /signin\n• Token Endpoint: /api/sso/v1/token\n• UserInfo: /api/sso/v1/userinfo\n• JWKS: /api/sso/v1/jwks.json\n• Revocation: /api/sso/v1/revoke"]
+        OIDCServer["OAuth 2.0 & OIDC Server\n• Discovery: /.well-known/openid-configuration\n• Auth UI: /{lang}/authorize & /{lang}/consent\n• Token Endpoint: /api/oauth/token\n• UserInfo: /api/oauth/userinfo\n• JWKS: /api/oauth/jwks.json\n• Revocation: /api/oauth/revoke\n• Introspection: /api/oauth/introspect"]
 
         InterServices["Inter-Services Bridge\n• /api/inter-services/v1/user-session\n• /api/inter-services/v1/connected-drives\n• /api/inter-services/v1/email-queue"]
         
@@ -124,7 +124,7 @@ Available at `/.well-known/openid-configuration`:
 
 ### Asymmetric Key Management (RS256 JWKS)
 - ClouAuth manages 2048-bit RSA key pairs dynamically generated via `jose`.
-- Private keys sign OIDC ID tokens; public keys are exported as JSON Web Keys (JWK) and published at `/api/sso/v1/jwks.json`.
+- Private keys sign OIDC ID tokens; public keys are exported as JSON Web Keys (JWK) and published at `/api/oauth/jwks.json`.
 - Automatic key rotation is supported with zero client downtime by preserving active and valid historical keys in the `SigningKey` table.
 
 ---

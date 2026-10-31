@@ -3,35 +3,40 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/profile/section-card";
+import { EditableField } from "@/components/profile/editable-field";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Download,
   FileText,
   Globe,
-  Link2,
   Lock,
-  ExternalLink,
-  Copy,
+  Link2,
   Check,
+  Copy,
+  ExternalLink,
   Loader2,
 } from "lucide-react";
-import { EditableField } from "@/components/profile/editable-field";
 import type { FullProfile } from "@/types/profile.types";
-import type { ProfileVisibility } from "@/types/preferences.types";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import { BrandName } from "@/components/ui/brand-name";
-import { useTranslations } from "@/lib/i18n/hooks";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ProfileVisibility } from "@/types/preferences.types";
 import { updateProfileVisibility } from "@/actions/profile/personal-info.actions";
 import { toast } from "sonner";
 import { cn } from "@/utils/utils";
 
-interface PrivacySectionProps {
+export interface PrivacySectionProps {
   profile?: FullProfile;
+  locale?: Locale;
+  dict: Dictionary<"profile_personal">["privacySection"];
 }
 
-export function PrivacySection({ profile }: PrivacySectionProps) {
-  const { t } = useTranslations("profile_personal");
-
+export function PrivacySection({
+  profile,
+  locale = defaultLocale,
+  dict,
+}: PrivacySectionProps) {
   const initialVisibility: ProfileVisibility =
     profile?.preferences?.profile_visibility || "public";
 
@@ -40,14 +45,14 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
   const [copied, setCopied] = useState(false);
 
   const username = profile?.user?.username || "";
-  const profilePath = `/p/${username}`;
+  const profilePath = username ? `/${locale}/p/${username}` : `/${locale}/profile`;
 
   const handleVisibilityChange = async (newVisibility: ProfileVisibility) => {
-    if (newVisibility === visibility || isUpdating) return;
+    if (newVisibility === visibility || isUpdating !== null) return;
 
-    setIsUpdating(newVisibility);
     const previous = visibility;
     setVisibility(newVisibility);
+    setIsUpdating(newVisibility);
 
     try {
       const res = await updateProfileVisibility(newVisibility);
@@ -58,9 +63,9 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
         });
       } else {
         const labels: Record<ProfileVisibility, string> = {
-          public: t("privacySection.public"),
-          link_only: t("privacySection.viewWithLinks"),
-          private: t("privacySection.private"),
+          public: dict.public,
+          link_only: dict.viewWithLinks,
+          private: dict.private,
         };
         toast.success(`Profile transparency set to ${labels[newVisibility]}`);
       }
@@ -77,7 +82,7 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
       const fullUrl = `${window.location.origin}${profilePath}`;
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
-      toast.success(t("privacySection.linkCopied"));
+      toast.success(dict.linkCopied);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Failed to copy link");
@@ -94,24 +99,24 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
   }[] = [
     {
       id: "public",
-      title: t("privacySection.public"),
-      description: t("privacySection.publicDesc"),
+      title: dict.public,
+      description: dict.publicDesc,
       icon: Globe,
       badge: "Indexed",
       badgeVariant: "emerald",
     },
     {
       id: "link_only",
-      title: t("privacySection.viewWithLinks"),
-      description: t("privacySection.viewWithLinksDesc"),
+      title: dict.viewWithLinks,
+      description: dict.viewWithLinksDesc,
       icon: Link2,
       badge: "Unlisted",
       badgeVariant: "blue",
     },
     {
       id: "private",
-      title: t("privacySection.private"),
-      description: t("privacySection.privateDesc"),
+      title: dict.private,
+      description: dict.privateDesc,
       icon: Lock,
       badge: "Hidden",
       badgeVariant: "amber",
@@ -122,8 +127,8 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
     <div className="space-y-6">
       {/* Shell 1: Profile Transparency Shell */}
       <SectionCard
-        title={t("privacySection.profileTransparency")}
-        description={t("privacySection.profileTransparencyDesc")}
+        title={dict.profileTransparency}
+        description={dict.profileTransparencyDesc}
       >
         <div className="space-y-4">
           {/* Options Grid */}
@@ -238,7 +243,7 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>{t("privacySection.copyLink")}</span>
+                      <span>{dict.copyLink}</span>
                     </>
                   )}
                 </Button>
@@ -251,7 +256,7 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
                     "h-8 gap-1.5 text-xs flex-1 sm:flex-initial"
                   )}
                 >
-                  <span>{t("privacySection.viewPublicProfile")}</span>
+                  <span>{dict.viewPublicProfile}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -260,10 +265,10 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
         </div>
       </SectionCard>
 
-      {/* Shell 2: Privacy & Data Management (Activity Visibility removed) */}
+      {/* Shell 2: Privacy & Data Management */}
       <SectionCard
-        title={t("privacySection.title")}
-        description={t("privacySection.desc")}
+        title={dict.title}
+        description={dict.desc}
         noPadding
       >
         <div className="flex items-center justify-between p-4 border-b">
@@ -273,11 +278,11 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
             </div>
             <div className="min-w-0">
               <h4 className="text-base font-semibold truncate">
-                {t("privacySection.downloadData")}
+                {dict.downloadData}
               </h4>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {t("privacySection.downloadDataDesc")} <BrandName />{" "}
-                {t("privacySection.downloadDataDesc2")}
+                {dict.downloadDataDesc} <BrandName />{" "}
+                {dict.downloadDataDesc2}
               </p>
             </div>
           </div>
@@ -292,16 +297,16 @@ export function PrivacySection({ profile }: PrivacySectionProps) {
               })
             }
           >
-            {t("privacySection.requestDownload")}
+            {dict.requestDownload}
           </Button>
         </div>
 
         <EditableField
-          label={t("privacySection.privacyPolicy")}
-          value={t("privacySection.privacyPolicyDesc")}
+          label={dict.privacyPolicy}
+          value={dict.privacyPolicyDesc}
           icon={<FileText className="w-5 h-5" />}
           onEdit={() => window.open("/privacy", "_blank")}
-          editLabel={t("privacySection.viewPolicy")}
+          editLabel={dict.viewPolicy}
           showSeparator={false}
         />
       </SectionCard>

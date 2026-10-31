@@ -1,38 +1,38 @@
 import { z } from "zod";
-import type { TranslationKey } from "@/types/i18n.types";
+import type { Dictionary } from "@/types/i18n.types";
 
 const noHtmlRegex = /<[a-z\/][^>]*>/i;
 
-export const getSignInSchema = (t: (key: TranslationKey<"schema_auth">) => string) => z.object({
+export const getSignInSchema = (dict: Dictionary<"schema_auth">) => z.object({
   username: z.string()
     .trim()
-    .min(1, t("signIn.usernameRequired"))
+    .min(1, dict.signIn.usernameRequired)
     .max(100),
   password: z.string()
-    .min(1, t("signIn.passwordRequired"))
+    .min(1, dict.signIn.passwordRequired)
     .max(100),
   rememberMe: z.boolean().default(true),
 });
 
-export const getSignUpSchema = (t: (key: TranslationKey<"schema_auth">) => string) => z.object({
+export const getSignUpSchema = (dict: Dictionary<"schema_auth">) => z.object({
   firstName: z.string()
     .trim()
-    .min(1, t("signUp.firstNameRequired"))
+    .min(1, dict.signUp.firstNameRequired)
     .max(50)
     .refine((val) => !noHtmlRegex.test(val), { message: "HTML is not allowed!" }),
   lastName: z.string()
     .trim()
-    .min(1, t("signUp.lastNameRequired"))
+    .min(1, dict.signUp.lastNameRequired)
     .max(50)
     .refine((val) => !noHtmlRegex.test(val), { message: "HTML is not allowed!" }),
   email: z.string()
     .trim()
     .toLowerCase()
-    .min(1, t("signUp.emailRequired")) 
-    .email(t("signUp.emailInvalid"))
+    .min(1, dict.signUp.emailRequired) 
+    .email(dict.signUp.emailInvalid)
     .max(100),
   password: z.string()
-    .min(8, t("signUp.passwordMin"))
+    .min(8, dict.signUp.passwordMin)
     .max(100)
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")

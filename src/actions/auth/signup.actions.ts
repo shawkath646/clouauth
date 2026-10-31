@@ -6,7 +6,8 @@ import { getSignUpSchema, type SignUpValues } from "@/schema/auth.schema";
 import { createSession } from "@/lib/session";
 import { generateAndUploadAvatar } from "@/lib/avatar";
 import { handleError, getErrorCode } from "@/utils/error";
-import { getServerTranslations } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/server";
+import { defaultLocale } from "@/lib/i18n/config";
 import { generateUniqueUsername } from "./helpers";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
 
@@ -20,8 +21,8 @@ export async function signUp(data: SignUpValues, recaptchaToken?: string) {
       };
     }
 
-    const { t } = await getServerTranslations("schema_auth");
-    const signUpSchema = getSignUpSchema(t);
+    const schemaDict = await getDictionary("schema_auth", defaultLocale);
+    const signUpSchema = getSignUpSchema(schemaDict);
     const parsed = signUpSchema.safeParse(data);
     if (!parsed.success) {
       return { success: false, error: "Invalid input data." };

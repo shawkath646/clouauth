@@ -1,6 +1,6 @@
 "use server";
 
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { authenticateExternalUser, type SignInReturn } from "@/actions/auth/auth";
 import { handleError } from "@/utils/error";

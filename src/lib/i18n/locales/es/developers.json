@@ -70,7 +70,7 @@
         "intro": {
           "part1": "Ahora que tiene el",
           "code": "access_token",
-          "part2": "úselo para obtener el perfil del usuario desde el endpoint /api/sso/v1/userinfo."
+          "part2": "úselo para obtener el perfil del usuario desde el endpoint /api/oauth/userinfo."
         }
       }
     },

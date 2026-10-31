@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { updateProfileAddress } from "@/actions/profile/personal-info.actions";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { DBAddress } from "@/types/user.types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getAddressSchema, AddressValues } from "@/schema/profile.schema";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { DBAddress } from "@/types/user.types";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   Form,
   FormControl,
@@ -20,19 +21,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface EditAddressFormProps {
+export interface EditAddressFormProps {
   initialData: {
     addresses?: DBAddress[];
   };
+  locale?: Locale;
+  schemaDict: Dictionary<"schema_profile">;
+  personalDict: Dictionary<"profile_personal">["editAddress"];
 }
 
-export function EditAddressForm({ initialData }: EditAddressFormProps) {
-  const { t } = useTranslations("schema_profile");
-  const { t: tUI } = useTranslations("profile_personal");
+export function EditAddressForm({
+  initialData,
+  locale = defaultLocale,
+  schemaDict,
+  personalDict,
+}: EditAddressFormProps) {
   const defaultAddress = initialData.addresses?.find(a => a.is_default) || initialData.addresses?.[0];
 
   const form = useForm<AddressValues>({
-    resolver: zodResolver(getAddressSchema(t)),
+    resolver: zodResolver(getAddressSchema(schemaDict)),
     defaultValues: {
       address_1: defaultAddress?.address_1 || "",
       address_2: defaultAddress?.address_2 || "",
@@ -44,7 +51,7 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
   });
 
   const onSubmit = async (data: AddressValues) => {
-    const res = await updateProfileAddress(data);
+    const res = await updateProfileAddress(data, locale);
     
     if (res && !res.success) {
       toast.error("Error", { description: res.error || "Failed to update address" });
@@ -56,8 +63,8 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
   return (
     <section>
       <header className="mb-15">
-        <h2 className="text-2xl font-semibold tracking-tight mb-1">{tUI("editAddress.title")}</h2>
-        <p className="text-muted-foreground text-sm">{tUI("editAddress.desc")}</p>
+        <h2 className="text-2xl font-semibold tracking-tight mb-1">{personalDict.title}</h2>
+        <p className="text-muted-foreground text-sm">{personalDict.desc}</p>
       </header>
       
       <Form {...form}>
@@ -68,7 +75,7 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
               name="address_1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{tUI("editAddress.addr1")}</FormLabel>
+                  <FormLabel>{personalDict.addr1}</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="address-line1" />
                   </FormControl>
@@ -82,7 +89,7 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
               name="address_2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{tUI("editAddress.addr2")}</FormLabel>
+                  <FormLabel>{personalDict.addr2}</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value || ""} autoComplete="address-line2" />
                   </FormControl>
@@ -97,7 +104,7 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{tUI("editAddress.city")}</FormLabel>
+                    <FormLabel>{personalDict.city}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="address-level2" />
                     </FormControl>
@@ -105,12 +112,13 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{tUI("editAddress.state")}</FormLabel>
+                    <FormLabel>{personalDict.state}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value || ""} autoComplete="address-level1" />
                     </FormControl>
@@ -126,7 +134,7 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
                 name="zip_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{tUI("editAddress.zip")}</FormLabel>
+                    <FormLabel>{personalDict.zip}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="postal-code" />
                     </FormControl>
@@ -134,12 +142,13 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{tUI("editAddress.country")}</FormLabel>
+                    <FormLabel>{personalDict.country}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="country-name" />
                     </FormControl>
@@ -151,12 +160,12 @@ export function EditAddressForm({ initialData }: EditAddressFormProps) {
           </div>
           
           <div className="flex items-center justify-end gap-3 mt-10">
-            <Link href="/profile" className={buttonVariants({ variant: "ghost", className: "h-9" })}>
-              {tUI("editAddress.cancel")}
+            <Link href={`/${locale}/profile`} className={buttonVariants({ variant: "ghost", className: "h-9" })}>
+              {personalDict.cancel}
             </Link>
             <Button type="submit" disabled={isSaving} className={buttonVariants({ className: "h-9" })}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {tUI("editAddress.save")}
+              {personalDict.save}
             </Button>
           </div>
         </form>

@@ -11,8 +11,9 @@ import { uploadCustomAvatar } from "@/actions/profile/upload-avatar.actions";
 import { toast } from "sonner";
 import getCroppedImg from "@/utils/crop-image";
 import { handleError } from "@/utils/error";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
 
-export function EditAvatarForm() {
+export function EditAvatarForm({ locale = defaultLocale }: { locale?: Locale }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -57,14 +58,14 @@ export function EditAvatarForm() {
       
       if (result.success && result.data) {
         toast.success("Avatar updated", { description: "Your new avatar has been saved." });
-        router.push("/profile");
+        router.push(`/${locale}/profile`);
       } else {
         throw new Error(result.error || "Upload failed");
       }
     } catch (e: unknown) {
-        const em = handleError(e, "Failed to execute EditAvatarForm");
-        toast.error("Error", { description: em });
-      } finally {
+      const em = handleError(e, "Failed to execute EditAvatarForm");
+      toast.error("Error", { description: em });
+    } finally {
       setIsUploading(false);
     }
   };
@@ -76,7 +77,7 @@ export function EditAvatarForm() {
         <p className="text-muted-foreground text-sm">Choose a new image to represent your account.</p>
       </header>
 
-      <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-muted/30 rounded-xl border border-dashed relative overflow-hidden mb-6">
+      <div className="flex flex-col items-center justify-center min-h-100 w-full bg-muted/30 rounded-xl border border-dashed relative overflow-hidden mb-6">
         {!imageSrc ? (
           <div className="flex flex-col items-center gap-4 p-8 text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -133,7 +134,7 @@ export function EditAvatarForm() {
             Choose Different
           </Button>
         )}
-        <Link href="/profile" className={buttonVariants({ variant: "ghost", className: "h-9" })}>
+        <Link href={`/${locale}/profile`} className={buttonVariants({ variant: "ghost", className: "h-9" })}>
           Cancel
         </Link>
         {imageSrc && (

@@ -2,19 +2,20 @@
 
 import { motion } from "framer-motion";
 import { ShieldCheck, Network, LockKeyhole, UserCheck } from "lucide-react";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 
 const securityFeaturesKeys = [
   { icon: LockKeyhole, key: "encryptedComm" },
   { icon: Network, key: "sessionProtection" },
   { icon: UserCheck, key: "identityVerification" },
   { icon: ShieldCheck, key: "modernArchitecture" }
-];
+] as const;
 
+export interface SecuritySectionProps {
+  dict: Dictionary<"landing">["securitySection"];
+}
 
-export function SecuritySection() {
-  const { t } = useTranslations("landing");
-
+export function SecuritySection({ dict }: SecuritySectionProps) {
   return (
     <section className="py-20 md:py-32" id="security">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,46 +29,56 @@ export function SecuritySection() {
             className="lg:w-1/2"
           >
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">
-              {t('securitySection.title')}
+              {dict.title}
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              {t('securitySection.description')}
+              {dict.description}
             </p>
 
             <div className="space-y-6">
-              {securityFeaturesKeys.map((feature, idx) => (
-                <div key={idx} className="flex gap-4">
-                  <div className="flex-shrink-0 mt-1">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <feature.icon className="w-5 h-5 text-primary" />
+              {securityFeaturesKeys.map((feature, idx) => {
+                const featData = dict.features[feature.key];
+                return (
+                  <div key={idx} className="flex gap-4">
+                    <div className="shrink-0 mt-1">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <feature.icon className="w-5 h-5 text-primary" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{featData.title}</h3>
+                      <p className="text-muted-foreground">{featData.description}</p>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{t(`securitySection.features.${feature.key}.title`)}</h3>
-                    <p className="text-muted-foreground">{t(`securitySection.features.${feature.key}.description`)}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
 
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1, transitionEnd: { transform: "none" } }}
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0, transitionEnd: { transform: "none" } }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="lg:w-1/2 w-full relative"
+            transition={{ duration: 0.6 }}
+            className="lg:w-1/2"
           >
-            <div className="aspect-square max-w-md mx-auto relative rounded-3xl overflow-hidden border bg-muted/20 flex items-center justify-center">
-              {/* Abstract Security Graphic */}
-              <div className="absolute inset-0 bg-grid-black/[0.05] dark:bg-grid-white/[0.05] bg-[bottom_1px_center]" />
-              <div className="relative z-10 flex flex-col items-center">
-                <ShieldCheck className="w-32 h-32 text-primary/80 mb-6" strokeWidth={1} />
-                <div className="bg-background border rounded-xl p-4 shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-sm font-medium">{t('securitySection.statusSecure')}</span>
-                  </div>
+            <div className="relative rounded-2xl border bg-muted/20 p-8 shadow-sm">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-4">
+                  <span className="font-mono text-xs text-muted-foreground">TLS 1.3 / Strict-Transport-Security</span>
+                  <span className="text-xs text-emerald-500 font-medium">Enforced</span>
+                </div>
+                <div className="flex items-center justify-between border-b pb-4">
+                  <span className="font-mono text-xs text-muted-foreground">OIDC Discovery (RFC 8414)</span>
+                  <span className="text-xs text-emerald-500 font-medium">Active</span>
+                </div>
+                <div className="flex items-center justify-between border-b pb-4">
+                  <span className="font-mono text-xs text-muted-foreground">PKCE Code Challenge (S256)</span>
+                  <span className="text-xs text-emerald-500 font-medium">Mandatory</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-muted-foreground">Token Rotation & Replay Protection</span>
+                  <span className="text-xs text-emerald-500 font-medium">Enabled</span>
                 </div>
               </div>
             </div>

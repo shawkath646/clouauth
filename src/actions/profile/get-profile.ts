@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
@@ -11,7 +12,10 @@ import type { DBUserPreference } from "@/types/preferences.types";
 import { handleError } from "@/utils/error";
 import { getUserSecurityActivities } from "@/lib/security-activity";
 
+
 export const getMinimalProfile = cache(async (): Promise<{ success: boolean, data?: MinimalProfile, error?: string }> => {
+    await connection();
+
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -46,6 +50,8 @@ export const getMinimalProfile = cache(async (): Promise<{ success: boolean, dat
 });
 
 export const getExtendedProfile = cache(async (): Promise<{ success: boolean, data?: ExtendedProfile, error?: string }> => {
+    await connection();
+
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {
@@ -166,10 +172,6 @@ export const getSecuredFullProfile = cache(async (): Promise<{ success: boolean,
                 provider: acc.provider,
                 provider_user_id: acc.provider_user_id,
                 created_on: acc.created_on.toISOString(),
-                // Do not expose raw tokens
-                access_token: undefined,
-                refresh_token: undefined,
-                expires_at: acc.expires_at
             }))
         };
 
@@ -181,6 +183,8 @@ export const getSecuredFullProfile = cache(async (): Promise<{ success: boolean,
 });
 
 export const getFullProfile = cache(async (): Promise<{ success: boolean, data?: FullProfile, error?: string }> => {
+    await connection();
+
     try {
         const sessionData = await getUserSession();
         if (!sessionData) {

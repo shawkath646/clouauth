@@ -1,7 +1,7 @@
-import { getEnv } from "@/utils/env";
-import { locales, type Locale } from "@/lib/i18n/config";
+import { getEnv } from "@/utils/utils";
+import { defaultLocale, locales, type Locale } from "@/lib/i18n/config";
 
-const BASE_URL = (getEnv("NEXT_PUBLIC_BASE_URL", true) || "https://clouburstlab.com").replace(/\/$/, "");
+const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL", true).replace(/\/$/, "");
 
 /**
  * Truncates a string cleanly without cutting words in half when possible.
@@ -43,16 +43,15 @@ export function clampMetaDescription(description: string, maxLen = 160): string 
 /**
  * Generates canonical and multi-locale hreflang alternate URLs for Google/Bing compliance.
  */
-export function getLocalizedAlternates(pathname: string = "") {
+export function getLocalizedAlternates(pathname: string = "", currentLocale: Locale = defaultLocale) {
   const cleanPath = pathname.startsWith("/") ? pathname : pathname ? `/${pathname}` : "";
-  const canonical = `${BASE_URL}${cleanPath}`;
+  const canonical = `${BASE_URL}/${currentLocale}${cleanPath}`;
 
   const languages: Record<string, string> = {};
   for (const loc of locales) {
-    const separator = cleanPath.includes("?") ? "&" : "?";
-    languages[loc] = `${BASE_URL}${cleanPath}${separator}locale=${loc}`;
+    languages[loc] = `${BASE_URL}/${loc}${cleanPath}`;
   }
-  languages["x-default"] = canonical;
+  languages["x-default"] = `${BASE_URL}/${defaultLocale}${cleanPath}`;
 
   return {
     canonical,

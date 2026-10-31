@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getUsernameSchema, UsernameValues } from "@/schema/profile.schema";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   Form,
   FormControl,
@@ -21,17 +22,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface EditUsernameFormProps {
+export interface EditUsernameFormProps {
   initialData: {
     username: string;
     username_last_changed?: Date | string | null;
   };
+  locale?: Locale;
+  schemaDict: Dictionary<"schema_profile">;
+  personalDict: Dictionary<"profile_personal">["editUsername"];
 }
 
-export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
+export function EditUsernameForm({
+  initialData,
+  locale = defaultLocale,
+  schemaDict,
+  personalDict,
+}: EditUsernameFormProps) {
   const router = useRouter();
-  const { t } = useTranslations("schema_profile");
-  const { t: tUI } = useTranslations("profile_personal");
   const [daysSinceChange, setDaysSinceChange] = useState<number>(60);
 
   useEffect(() => {
@@ -50,18 +57,18 @@ export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
   const daysRemaining = 60 - daysSinceChange;
 
   const form = useForm<UsernameValues>({
-    resolver: zodResolver(getUsernameSchema(t)),
+    resolver: zodResolver(getUsernameSchema(schemaDict)),
     defaultValues: {
       username: initialData.username,
     },
   });
 
   const onSubmit = async (data: UsernameValues) => {
-    const res = await updateProfileUsername(data);
+    const res = await updateProfileUsername(data, locale);
     
     if (res.success) {
       toast.success("Profile updated", { description: "Your username has been updated successfully." });
-      router.push("/profile");
+      router.push(`/${locale}/profile`);
     } else {
       toast.error("Error", { description: res.error || "Failed to update profile" });
     }
@@ -72,16 +79,16 @@ export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
   return (
     <section>
       <header className="mb-15">
-        <h2 className="text-2xl font-semibold tracking-tight mb-1">{tUI("editUsername.title")}</h2>
-        <p className="text-muted-foreground text-sm">{tUI("editUsername.desc")}</p>
+        <h2 className="text-2xl font-semibold tracking-tight mb-1">{personalDict.title}</h2>
+        <p className="text-muted-foreground text-sm">{personalDict.desc}</p>
       </header>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {isLocked ? (
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-xl text-sm" dangerouslySetInnerHTML={{ __html: tUI("editUsername.lockedMsg").replace("{days}", `<strong>${daysRemaining}</strong>`) }} />
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-xl text-sm" dangerouslySetInnerHTML={{ __html: personalDict.lockedMsg.replace("{days}", `<strong>${daysRemaining}</strong>`) }} />
           ) : (
-            <div className="p-4 bg-primary/10 border border-primary/20 text-primary rounded-xl text-sm" dangerouslySetInnerHTML={{ __html: tUI("editUsername.warningMsg") }} />
+            <div className="p-4 bg-primary/10 border border-primary/20 text-primary rounded-xl text-sm" dangerouslySetInnerHTML={{ __html: personalDict.warningMsg }} />
           )}
 
           <FormField
@@ -89,7 +96,7 @@ export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{tUI("editUsername.label")}</FormLabel>
+                <FormLabel>{personalDict.label}</FormLabel>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-muted-foreground z-10">@</span>
                   <FormControl>
@@ -107,12 +114,12 @@ export function EditUsernameForm({ initialData }: EditUsernameFormProps) {
           />
           
           <div className="flex items-center justify-end gap-3 mt-10">
-            <Link href="/profile" className={buttonVariants({ variant: "ghost", className: "h-9" })}>
-              {tUI("editUsername.cancel")}
+            <Link href={`/${locale}/profile`} className={buttonVariants({ variant: "ghost", className: "h-9" })}>
+              {personalDict.cancel}
             </Link>
             <Button type="submit" disabled={isSaving || isLocked} className={buttonVariants({ className: "h-9" })}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {tUI("editUsername.save")}
+              {personalDict.save}
             </Button>
           </div>
         </form>

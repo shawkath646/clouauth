@@ -12,10 +12,28 @@ import { revokeUserSessionAction, revokeAllUserSessionsAction } from "@/actions/
 import { toast } from "sonner";
 import { BrandName } from "@/components/ui/brand-name";
 
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function DevicesSection({ profile }: { profile: FullProfile }) {
-  const { t } = useTranslations("profile_security");
+export interface DevicesSectionProps {
+  profile: FullProfile;
+  locale?: Locale;
+  dict: Pick<
+    Dictionary<"profile_security">,
+    | "activeSessions"
+    | "signedOutSuccess"
+    | "signedOutError"
+    | "unexpectedError"
+    | "signedOutAllSuccess"
+    | "signedOutAllError"
+  >;
+}
+
+export function DevicesSection({
+  profile,
+  locale = defaultLocale,
+  dict,
+}: DevicesSectionProps) {
   const sessions = profile.sessions || [];
   const [signingOutId, setSigningOutId] = useState<string | null>(null);
   const [isSigningOutAll, setIsSigningOutAll] = useState(false);
@@ -26,17 +44,17 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
     try {
       const res = await revokeUserSessionAction(sessionId);
       if (res.success) {
-        toast.success(t("signedOutSuccess"));
+        toast.success(dict.signedOutSuccess);
         if (res.isCurrent) {
-          router.push("/signin");
+          router.push(`/${locale}/signin`);
         } else {
           router.refresh();
         }
       } else {
-        toast.error(t("signedOutError"), { description: res.error });
+        toast.error(dict.signedOutError, { description: res.error });
       }
     } catch {
-      toast.error(t("unexpectedError"));
+      toast.error(dict.unexpectedError);
     } finally {
       setSigningOutId(null);
     }
@@ -47,13 +65,13 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
     try {
       const res = await revokeAllUserSessionsAction(true);
       if (res.success) {
-        toast.success(t("signedOutAllSuccess"));
-        router.push("/signin");
+        toast.success(dict.signedOutAllSuccess);
+        router.push(`/${locale}/signin`);
       } else {
-        toast.error(t("signedOutAllError"), { description: res.error });
+        toast.error(dict.signedOutAllError, { description: res.error });
       }
     } catch {
-      toast.error(t("unexpectedError"));
+      toast.error(dict.unexpectedError);
     } finally {
       setIsSigningOutAll(false);
     }
@@ -62,8 +80,8 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
   return (
     <div className="space-y-6">
       <SectionCard 
-        title={t("activeSessions.title")} 
-        description={<span>{t("activeSessions.desc1")} <BrandName /> {t("activeSessions.desc2")}</span>}
+        title={dict.activeSessions.title} 
+        description={<span>{dict.activeSessions.desc1} <BrandName /> {dict.activeSessions.desc2}</span>}
         noPadding
         headerAction={
           sessions.length > 0 ? (
@@ -75,14 +93,14 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
               className="rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 hidden sm:flex items-center gap-1.5"
             >
               {isSigningOutAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-              <span>{t("activeSessions.signOutAll")}</span>
+              <span>{dict.activeSessions.signOutAll}</span>
             </Button>
           ) : undefined
         }
       >
         {sessions.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground text-sm">
-            {t("activeSessions.noSessions")}
+            {dict.activeSessions.noSessions}
           </div>
         ) : (
           sessions.map((session, index) => {
@@ -103,16 +121,16 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
                     </div>
                     <div className="space-y-1.5 min-w-0">
                       <div className="text-base font-semibold flex items-center gap-2 flex-wrap">
-                        <span className="truncate">{session.device_name || t("activeSessions.unknownDevice")}</span>
+                        <span className="truncate">{session.device_name || dict.activeSessions.unknownDevice}</span>
                         {isCurrent && (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase tracking-wider font-bold py-0 h-5">{t("activeSessions.currentSession")}</Badge>
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase tracking-wider font-bold py-0 h-5">{dict.activeSessions.currentSession}</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {session.user_agent || t("activeSessions.unknownBrowser")} • {session.ip_address || t("activeSessions.unknownIP")}
+                        {session.user_agent || dict.activeSessions.unknownBrowser} • {session.ip_address || dict.activeSessions.unknownIP}
                       </p>
                       <p className={`text-sm font-medium ${isCurrent ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                        {isCurrent ? t("activeSessions.activeNow") : t("activeSessions.lastActive").replace("{date}", new Date(session.updated_on).toLocaleString())}
+                        {isCurrent ? dict.activeSessions.activeNow : dict.activeSessions.lastActive.replace("{date}", new Date(session.updated_on).toLocaleString())}
                       </p>
                     </div>
                   </div>
@@ -124,7 +142,7 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />}
-                    <span>{t("activeSessions.signOut")}</span>
+                    <span>{dict.activeSessions.signOut}</span>
                   </Button>
                 </div>
                 {index < sessions.length - 1 && <Separator className="opacity-50" />}
@@ -142,7 +160,7 @@ export function DevicesSection({ profile }: { profile: FullProfile }) {
               className="w-full text-destructive hover:text-destructive/80 hover:bg-destructive/10 items-center justify-center gap-2"
             >
               {isSigningOutAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-              <span>{t("activeSessions.signOutAll")}</span>
+              <span>{dict.activeSessions.signOutAll}</span>
             </Button>
           </div>
         )}

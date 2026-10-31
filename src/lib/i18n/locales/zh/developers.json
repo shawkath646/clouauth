@@ -70,7 +70,7 @@
         "intro": {
           "part1": "现在您已经有了",
           "code": "access_token",
-          "part2": "，使用它从 /api/sso/v1/userinfo 端点获取用户资料。"
+          "part2": "，使用它从 /api/oauth/userinfo 端点获取用户资料。"
         }
       }
     },

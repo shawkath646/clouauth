@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { encryptSymmetric } from "@/lib/encryption";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 
 export interface RefreshedTokenResult {
   accessToken: string;

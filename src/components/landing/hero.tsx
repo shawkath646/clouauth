@@ -8,10 +8,16 @@ import { motion } from "framer-motion";
 import type { MinimalProfile } from "@/types/profile.types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BrandName } from "@/components/ui/brand-name";
-import { useTranslations } from "@/lib/i18n/hooks";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
-export function Hero({ profile }: { profile?: MinimalProfile | null }) {
-  const { t } = useTranslations("landing");
+export interface HeroProps {
+  profile?: MinimalProfile | null;
+  locale?: Locale;
+  dict: Dictionary<"landing">["hero"];
+}
+
+export function Hero({ profile, locale = defaultLocale, dict }: HeroProps) {
   return (
     <section className="relative overflow-hidden pt-24 md:pt-32 pb-16 md:pb-24">
       {/* Background decorations */}
@@ -28,7 +34,7 @@ export function Hero({ profile }: { profile?: MinimalProfile | null }) {
             className="flex items-center gap-2 mb-6 text-primary font-medium text-sm tracking-wide uppercase"
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>{t('hero.subtitle')} <BrandName /></span>
+            <span>{dict.subtitle} <BrandName /></span>
           </motion.div>
 
           <motion.h1
@@ -37,8 +43,10 @@ export function Hero({ profile }: { profile?: MinimalProfile | null }) {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6"
           >
-            {t('hero.titleLine1')}<br className="hidden sm:block" />
-            <span className="text-muted-foreground">{t('hero.titleLine2')} <BrandName /> {t('hero.titleLine2Service')}</span>
+            {dict.titleLine1}<br className="hidden sm:block" />
+            <span className="text-muted-foreground">
+              {dict.titleLine2} <BrandName /> {dict.titleLine2Service}
+            </span>
           </motion.h1>
 
           <motion.p
@@ -47,7 +55,9 @@ export function Hero({ profile }: { profile?: MinimalProfile | null }) {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed"
           >
-            {t('hero.description')} <BrandName />{t('hero.descriptionSuffix')}
+            {dict.description}{" "}
+            <BrandName />
+            {dict.descriptionSuffix}
           </motion.p>
 
           <motion.div
@@ -58,11 +68,11 @@ export function Hero({ profile }: { profile?: MinimalProfile | null }) {
           >
             {!profile && (
               <>
-                <Button render={<Link href="/signup" />} nativeButton={false} size="lg" className="h-12 px-8 text-base shadow-sm self-start">
-                  {t('hero.createAccount')}
+                <Button render={<Link href={`/${locale}/signup`} />} nativeButton={false} size="lg" className="h-12 px-8 text-base shadow-sm self-start">
+                  {dict.createAccount}
                 </Button>
-                <Button render={<Link href="/signin" />} nativeButton={false} size="lg" variant="outline" className="h-12 px-8 text-base self-start">
-                  {t('hero.signIn')}
+                <Button render={<Link href={`/${locale}/signin`} />} nativeButton={false} size="lg" variant="outline" className="h-12 px-8 text-base self-start">
+                  {dict.signIn}
                 </Button>
               </>
             )}
@@ -76,11 +86,11 @@ export function Hero({ profile }: { profile?: MinimalProfile | null }) {
               className="h-12 px-6 text-base hidden sm:inline-flex group"
             >
               <LayoutGrid className="mr-2 w-4 h-4 transition-transform duration-200 group-hover:scale-110 text-primary" />
-              {t('hero.viewApps')}
+              {dict.viewApps}
             </Button>
 
             {profile && (
-              <Link href="/profile" className="flex items-center gap-3 hover:bg-muted/50 p-2 pr-6 rounded-full border bg-card transition-colors shadow-sm self-start">
+              <Link href={`/${locale}/profile`} className="flex items-center gap-3 hover:bg-muted/50 p-2 pr-6 rounded-full border bg-card transition-colors shadow-sm self-start">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={profile.avatar || ""} />
                   <AvatarFallback className="bg-primary/10 text-primary">

@@ -5,7 +5,7 @@ import { generateSecret, generateURI, verify } from "otplib";
 import QRCode from "qrcode";
 import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import { encryptSymmetric } from "@/lib/encryption";
 import { requireUserSession } from "./helpers";
 import { recordSecurityActivity } from "@/lib/security-activity";

@@ -59,7 +59,7 @@
         "intro": {
           "part1": "Once the user authenticates, they are redirected back to your app with a",
           "code": "code",
-          "part2": "Exchange it at /api/sso/v1/token for access, refresh, and ID tokens."
+          "part2": "Exchange it at /api/oauth/token for access, refresh, and ID tokens."
         }
       }
     },
@@ -70,7 +70,7 @@
         "intro": {
           "part1": "Now that you have the",
           "code": "access_token",
-          "part2": "use it to fetch the user's profile claims from the /api/sso/v1/userinfo endpoint."
+          "part2": "use it to fetch the user's profile claims from the /api/oauth/userinfo endpoint."
         }
       }
     },

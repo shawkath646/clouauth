@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
@@ -8,130 +8,111 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Key, 
-  ShieldCheck, 
-  Fingerprint, 
-  Smartphone, 
-  Mail, 
-  KeyRound, 
-  MonitorSmartphone, 
+import {
+  ShieldCheck,
+  Smartphone,
   ChevronRight,
-  LogOut,
-  AlertTriangle,
-  CheckCircle2,
-  Globe,
+  Key,
+  KeyRound,
+  Fingerprint,
+  Mail,
+  LogIn,
   ShieldAlert,
   Shield,
+  Laptop,
+  Globe,
+  Loader2,
   RefreshCw,
-  Loader2
 } from "lucide-react";
 import type { FullProfile, DBSecurityActivity } from "@/types/profile.types";
-import { useTranslations } from "@/lib/i18n/hooks";
 import { getRecentSecurityActivitiesAction } from "@/actions/profile/security-activity.actions";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 import { cn } from "@/utils/utils";
 
-function formatRelativeTime(dateInput: string | Date, isMounted: boolean): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  if (isNaN(date.getTime())) return "Recently";
-
+function formatRelativeTime(dateString: string | Date, isMounted: boolean): string {
+  const date = new Date(dateString);
   if (!isMounted) {
     return date.toISOString().split("T")[0] || "Recently";
   }
-
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHours = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHours / 24);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffSec < 45) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) {
-    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    return `Yesterday at ${time}`;
-  }
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffInSeconds < 60) return "Just now";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
 
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
   });
 }
 
-function formatFullDateTime(dateInput: string | Date, isMounted: boolean): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  if (isNaN(date.getTime())) return "";
+function formatFullDateTime(dateString: string | Date, isMounted: boolean): string {
+  const d = new Date(dateString);
   if (!isMounted) {
-    return date.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    return d.toISOString();
   }
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+  return d.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
   });
 }
 
 function getActivityIcon(event: string, device?: string | null) {
-  const isMobile =
-    device &&
-    (device.includes("iPhone") || device.includes("Android") || device.includes("iPad"));
+  const ev = event.toLowerCase();
+  const isMobile = device?.toLowerCase().includes("mobile") || device?.toLowerCase().includes("android") || device?.toLowerCase().includes("iphone");
 
-  switch (event) {
-    case "LOGIN_PASSWORD":
-    case "LOGIN_OAUTH":
-    case "LOGIN_GOOGLE_ONE_TAP":
-      return isMobile ? (
-        <Smartphone className="w-5 h-5 text-primary" />
-      ) : (
-        <MonitorSmartphone className="w-5 h-5 text-primary" />
-      );
-    case "LOGIN_PASSKEY":
-    case "PASSKEY_ADDED":
-    case "PASSKEY_REMOVED":
-      return <Fingerprint className="w-5 h-5 text-primary" />;
-    case "LOGIN_2FA":
-      return <ShieldCheck className="w-5 h-5 text-primary" />;
-    case "PASSWORD_CHANGED":
-    case "PASSWORD_SET":
+  switch (true) {
+    case ev.includes("login") || ev.includes("signin"):
+      return isMobile ? <Smartphone className="w-5 h-5 text-primary" /> : <LogIn className="w-5 h-5 text-primary" />;
+    case ev.includes("password"):
       return <Key className="w-5 h-5 text-amber-500" />;
-    case "TOTP_ENABLED":
+    case ev.includes("passkey"):
+      return <Fingerprint className="w-5 h-5 text-indigo-500" />;
+    case ev.includes("totp") || ev.includes("2fa") || ev.includes("authenticator"):
       return <ShieldCheck className="w-5 h-5 text-emerald-500" />;
-    case "TOTP_DISABLED":
+    case ev.includes("email"):
+      return <Mail className="w-5 h-5 text-blue-500" />;
+    case ev.includes("phone"):
+      return <Smartphone className="w-5 h-5 text-emerald-500" />;
+    case ev.includes("revoke") || ev.includes("deleted") || ev.includes("failed"):
       return <ShieldAlert className="w-5 h-5 text-destructive" />;
-    case "RECOVERY_CODES_GENERATED":
-      return <KeyRound className="w-5 h-5 text-primary" />;
-    case "RECOVERY_EMAIL_VERIFIED":
-      return <Mail className="w-5 h-5 text-primary" />;
-    case "SESSION_REVOKED":
-    case "ALL_SESSIONS_REVOKED":
-      return <LogOut className="w-5 h-5 text-muted-foreground" />;
-    case "ACCOUNT_DISABLED":
-      return <AlertTriangle className="w-5 h-5 text-destructive" />;
-    case "ACCOUNT_REENABLED":
-      return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
-    case "OAUTH_CONNECTED":
-    case "OAUTH_DISCONNECTED":
+    case isMobile:
+      return <Smartphone className="w-5 h-5 text-primary" />;
+    case device?.toLowerCase().includes("mac") || device?.toLowerCase().includes("windows") || device?.toLowerCase().includes("linux"):
+      return <Laptop className="w-5 h-5 text-primary" />;
+    case Boolean(device):
       return <Globe className="w-5 h-5 text-primary" />;
-    case "SUDO_VERIFIED":
-      return <ShieldCheck className="w-5 h-5 text-primary" />;
     default:
       return <Shield className="w-5 h-5 text-primary" />;
   }
 }
 
-export function SecuritySection({ profile }: { profile: FullProfile }) {
-  const { t } = useTranslations("profile_security");
+export interface SecuritySectionProps {
+  profile: FullProfile;
+  locale?: Locale;
+  dict: Pick<
+    Dictionary<"profile_security">,
+    "signInSecurity" | "recoveryMethods" | "recentActivity"
+  >;
+}
+
+export function SecuritySection({
+  profile,
+  locale = defaultLocale,
+  dict,
+}: SecuritySectionProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -183,14 +164,14 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
   return (
     <div className="space-y-6">
       <SectionCard 
-        title={t('signInSecurity.title')} 
-        description={t('signInSecurity.desc')} 
+        title={dict.signInSecurity.title} 
+        description={dict.signInSecurity.desc} 
         noPadding
       >
         <div role="region" aria-label="Sign in methods" className="divide-y divide-border/50">
           {/* Password Row */}
           <Link
-            href="/profile/password"
+            href={`/${locale}/profile/password`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -198,21 +179,21 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <Key className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.password')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.password}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.passwordDesc')}
+                  {dict.signInSecurity.passwordDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
-              <span>{hasPassword ? t('signInSecurity.changedOn').replace('{date}', lastChanged) : t('signInSecurity.notSet')}</span>
+              <span>{hasPassword ? dict.signInSecurity.changedOn.replace('{date}', lastChanged) : dict.signInSecurity.notSet}</span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
           </Link>
 
           {/* 2-Step Verification Row */}
           <Link
-            href="/profile/authenticator"
+            href={`/${locale}/profile/authenticator`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -220,15 +201,15 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <ShieldCheck className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.twoStep')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.twoStep}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.twoStepDesc')}
+                  {dict.signInSecurity.twoStepDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
               <span>
-                {(hasPasskeys || hasTotp) ? t('signInSecurity.enabled') : t('signInSecurity.disabled')}
+                {(hasPasskeys || hasTotp) ? dict.signInSecurity.enabled : dict.signInSecurity.disabled}
               </span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
@@ -236,7 +217,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
 
           {/* Passkeys Row */}
           <Link
-            href="/profile/passkeys"
+            href={`/${locale}/profile/passkeys`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -244,17 +225,17 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <Fingerprint className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.passkeys')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.passkeys}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.passkeysDesc')}
+                  {dict.signInSecurity.passkeysDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
               <span>
                 {hasPasskeys 
-                  ? `${passkeysCount} ${passkeysCount === 1 ? t('signInSecurity.device') : t('signInSecurity.devices')}` 
-                  : t('signInSecurity.disabled')}
+                  ? `${passkeysCount} ${passkeysCount === 1 ? dict.signInSecurity.device : dict.signInSecurity.devices}` 
+                  : dict.signInSecurity.disabled}
               </span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
@@ -264,14 +245,14 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
 
       {/* Recovery Methods Shell */}
       <SectionCard 
-        title={t('recoveryMethods.title')} 
-        description={t('recoveryMethods.desc')} 
+        title={dict.recoveryMethods.title} 
+        description={dict.recoveryMethods.desc} 
         noPadding
       >
         <div role="region" aria-label="Recovery methods" className="divide-y divide-border/50">
           {/* Phone Numbers Row */}
           <Link
-            href="/profile/phone"
+            href={`/${locale}/profile/phone`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -279,21 +260,21 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <Smartphone className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.phoneNumbers')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.phoneNumbers}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.phoneDesc')}
+                  {dict.signInSecurity.phoneDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
-              <span>{phoneCount > 0 ? phoneCount : t('signInSecurity.notSet')}</span>
+              <span>{phoneCount > 0 ? phoneCount : dict.signInSecurity.notSet}</span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
           </Link>
 
           {/* Recovery Email Row */}
           <Link
-            href="/profile/recovery-email"
+            href={`/${locale}/profile/recovery-email`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -301,21 +282,21 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <Mail className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.recoveryEmail')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.recoveryEmail}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.recoveryEmailDesc')}
+                  {dict.signInSecurity.recoveryEmailDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
-              <span>{recoveryEmail || t('signInSecurity.notSet')}</span>
+              <span>{recoveryEmail || dict.signInSecurity.notSet}</span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
           </Link>
 
           {/* Backup Codes Row */}
           <Link
-            href="/profile/backup-codes"
+            href={`/${locale}/profile/backup-codes`}
             className="flex items-center justify-between px-5 py-4 sm:px-6 hover:bg-muted/10 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0">
@@ -323,27 +304,27 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
                 <KeyRound className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-base font-semibold truncate">{t('signInSecurity.backupCodes')}</h4>
+                <h4 className="text-base font-semibold truncate">{dict.signInSecurity.backupCodes}</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('signInSecurity.backupCodesDesc')}
+                  {dict.signInSecurity.backupCodesDesc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-4">
-              <span>{profile.recovery_codes && profile.recovery_codes.length > 0 ? t('signInSecurity.codesCount').replace('{count}', profile.recovery_codes.length.toString()) : t('signInSecurity.notGenerated')}</span>
+              <span>{profile.recovery_codes && profile.recovery_codes.length > 0 ? dict.signInSecurity.codesCount.replace('{count}', profile.recovery_codes.length.toString()) : dict.signInSecurity.notGenerated}</span>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </div>
           </Link>
         </div>
       </SectionCard>
 
-      <SectionCard title={t('recentActivity.title')} description={t('recentActivity.desc')} noPadding>
+      <SectionCard title={dict.recentActivity.title} description={dict.recentActivity.desc} noPadding>
         {activities.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 sm:p-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center text-muted-foreground mb-3">
               <ShieldCheck className="w-6 h-6 opacity-60 text-primary" />
             </div>
-            <h5 className="text-sm font-semibold text-foreground">{t('recentActivity.noActivity')}</h5>
+            <h5 className="text-sm font-semibold text-foreground">{dict.recentActivity.noActivity}</h5>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm">
               Logins, password changes, and other sensitive security events will appear here.
             </p>
@@ -419,7 +400,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
             onClick={handleOpenReview}
             className="w-full text-primary hover:text-primary/80 font-medium text-sm"
           >
-            {t('recentActivity.reviewAll')}
+            {dict.recentActivity.reviewAll}
           </Button>
         </div>
       </SectionCard>
@@ -428,9 +409,9 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
         <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
           <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/50">
             <div>
-              <DialogTitle className="text-lg font-bold">{t('recentActivity.dialogTitle')}</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{dict.recentActivity.dialogTitle}</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {t('recentActivity.dialogDesc')}
+                {dict.recentActivity.dialogDesc}
               </DialogDescription>
             </div>
             <Button
@@ -438,7 +419,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
               size="icon-sm"
               onClick={handleRefresh}
               disabled={isPending}
-              title={t('recentActivity.refresh')}
+              title={dict.recentActivity.refresh}
               className="shrink-0 mr-6"
             >
               <RefreshCw className={cn("w-3.5 h-3.5", isPending && "animate-spin")} />
@@ -454,7 +435,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
             ) : allActivities.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                 <ShieldCheck className="w-8 h-8 opacity-50 mb-2 text-primary" />
-                <p className="text-sm">{t('recentActivity.noActivity')}</p>
+                <p className="text-sm">{dict.recentActivity.noActivity}</p>
               </div>
             ) : (
               allActivities.map((act) => {
@@ -526,7 +507,7 @@ export function SecuritySection({ profile }: { profile: FullProfile }) {
 
           <DialogFooter className="pt-2 border-t border-border/50 -mx-6 -mb-6 px-6 py-3 bg-muted/10">
             <Button variant="outline" size="sm" onClick={() => setIsDialogOpen(false)}>
-              {t('recentActivity.close')}
+              {dict.recentActivity.close}
             </Button>
           </DialogFooter>
         </DialogContent>

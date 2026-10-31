@@ -1,5 +1,5 @@
 import "server-only";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 
 const GOOGLE_RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 const DEFAULT_MIN_SCORE = 0.5;

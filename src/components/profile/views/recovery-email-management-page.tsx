@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getEmailSchema, EmailValues } from "@/schema/security.schema";
-import { useTranslations } from "@/lib/i18n/hooks";
+import type { Dictionary } from "@/types/i18n.types";
 import {
   Form,
   FormControl,
@@ -20,23 +20,28 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-interface RecoveryEmailManagementPageProps {
+export interface RecoveryEmailManagementPageProps {
   email?: string;
   isVerified?: boolean;
+  schemaDict: Dictionary<"schema_security">;
+  securityDict: Dictionary<"profile_security">["email"];
 }
 
-export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmailManagementPageProps) {
+export function RecoveryEmailManagementPage({
+  email,
+  isVerified,
+  schemaDict,
+  securityDict,
+}: RecoveryEmailManagementPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isVerifyingState, setIsVerifyingState] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const { t } = useTranslations("schema_security");
-  const { t: tUI } = useTranslations("profile_security");
   const lastSubmittedCodeRef = useRef("");
 
   const form = useForm<EmailValues>({
-    resolver: zodResolver(getEmailSchema(t)),
+    resolver: zodResolver(getEmailSchema(schemaDict)),
     defaultValues: {
       email: email || "",
     },
@@ -48,6 +53,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
     if (res.success) {
       toast.success("Recovery email updated");
       setIsEditing(false);
+      window.location.reload();
     } else {
       toast.error("Error", { description: res.error });
     }
@@ -56,35 +62,42 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
   const handleSendVerification = async () => {
     if (!email) return;
     setIsSendingCode(true);
-    const res = await sendRecoveryEmailVerificationCodeAction(email);
-    setIsSendingCode(false);
-    
-    if (res.success) {
-      toast.success("Verification code sent to " + email);
-      setIsVerifyingState(true);
-    } else {
-      toast.error("Error", { description: res.error });
+    try {
+      const res = await sendRecoveryEmailVerificationCodeAction(email);
+      if (res.success) {
+        toast.success("Verification code sent to your recovery email");
+        setIsVerifyingState(true);
+      } else {
+        toast.error("Error", { description: res.error });
+      }
+    } catch {
+      toast.error("Failed to send verification code");
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
-  const handleVerifyCode = async (codeVal?: string) => {
-    const targetCode = (codeVal !== undefined ? codeVal : verificationCode).trim();
-    if (!targetCode || targetCode.length !== 6 || isVerifyingCode) return;
+  const handleVerifyCode = async (valToVerify?: string) => {
+    const targetCode = valToVerify || verificationCode;
+    if (targetCode.length !== 6 || isVerifyingCode || lastSubmittedCodeRef.current === targetCode) return;
 
-    if (lastSubmittedCodeRef.current === targetCode) return;
     lastSubmittedCodeRef.current = targetCode;
-
     setIsVerifyingCode(true);
-    const res = await verifyRecoveryEmailAction(targetCode);
-    setIsVerifyingCode(false);
-    
-    if (res.success) {
-      toast.success("Recovery email verified successfully");
-      setIsVerifyingState(false);
-      setVerificationCode("");
+    try {
+      const res = await verifyRecoveryEmailAction(targetCode);
+      if (res.success) {
+        toast.success("Recovery email verified successfully");
+        setIsVerifyingState(false);
+        setVerificationCode("");
+        window.location.reload();
+      } else {
+        toast.error("Verification failed", { description: res.error });
+      }
+    } catch {
+      toast.error("An error occurred during verification");
+    } finally {
+      setIsVerifyingCode(false);
       lastSubmittedCodeRef.current = "";
-    } else {
-      toast.error("Verification failed", { description: res.error });
     }
   };
 
@@ -92,7 +105,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
 
   if (isVerifyingState) {
     return (
-      <SectionCard title="Verify Recovery Email" description={tUI("email.desc")}>
+      <SectionCard title="Verify Recovery Email" description={securityDict.desc}>
         <div className="space-y-4 max-w-md py-2">
           <p className="text-sm text-muted-foreground">
             Enter the 6-digit verification code sent to <strong>{email}</strong>
@@ -122,7 +135,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
               }}
               className="w-1/2"
             >
-              {tUI("email.cancel")}
+              {securityDict.cancel}
             </Button>
             <Button 
               type="button" 
@@ -142,8 +155,8 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
   if (isEditing) {
     return (
       <SectionCard
-        title={email ? tUI("email.editTitleChange") : tUI("email.editTitleAdd")}
-        description={tUI("email.editDesc")}
+        title={email ? securityDict.editTitleChange : securityDict.editTitleAdd}
+        description={securityDict.editDesc}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-md">
@@ -152,12 +165,12 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{tUI("email.label")}</FormLabel>
+                  <FormLabel>{securityDict.label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="email"
-                      placeholder={tUI("email.placeholder")}
+                      placeholder={securityDict.placeholder}
                       autoComplete="email"
                     />
                   </FormControl>
@@ -175,11 +188,11 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
                   form.reset({ email: email || "" });
                 }}
               >
-                {tUI("email.cancel")}
+                {securityDict.cancel}
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {tUI("email.saveBtn")}
+                {securityDict.saveBtn}
               </Button>
             </div>
           </form>
@@ -190,8 +203,8 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
 
   return (
     <SectionCard
-      title={tUI("email.title")}
-      description={tUI("email.desc")}
+      title={securityDict.title}
+      description={securityDict.desc}
       noPadding
       headerAction={
         email ? (
@@ -200,7 +213,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
             size="sm"
             variant="outline"
           >
-            {tUI("email.changeBtn")}
+            {securityDict.changeBtn}
           </Button>
         ) : undefined
       }
@@ -210,9 +223,9 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Mail className="w-7 h-7 text-primary" />
           </div>
-          <h4 className="text-base font-semibold mb-1">{tUI("email.noEmailTitle")}</h4>
+          <h4 className="text-base font-semibold mb-1">{securityDict.noEmailTitle}</h4>
           <p className="text-sm text-muted-foreground max-w-sm mb-6">
-            {tUI("email.noEmailDesc")}
+            {securityDict.noEmailDesc}
           </p>
           <Button
             onClick={() => setIsEditing(true)}
@@ -221,7 +234,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>{tUI("email.addBtn")}</span>
+            <span>{securityDict.addBtn}</span>
           </Button>
         </div>
       ) : (
@@ -237,7 +250,7 @@ export function RecoveryEmailManagementPage({ email, isVerified }: RecoveryEmail
             <div>
               <h4 className="text-base font-semibold">{email}</h4>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {isVerified ? tUI("email.activeDesc") : "Unverified recovery email"}
+                {isVerified ? securityDict.activeDesc : "Unverified recovery email"}
               </p>
             </div>
           </div>

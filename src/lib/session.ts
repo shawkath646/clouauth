@@ -6,12 +6,11 @@ import prisma from "./prisma";
 import {
   COOKIE_SESSION_TOKEN_NAME,
   COOKIE_REFRESH_TOKEN_NAME,
-  SESSION_TOKEN_TTL,
   REFRESH_TOKEN_TTL,
   REFRESH_TOKEN_TTL_REMEMBER_ME,
 } from "@/constants/session.constants";
 import { handleError } from "@/utils/error";
-import { getEnv } from "@/utils/env";
+import { getEnv } from "@/utils/utils";
 import type {
   SessionData,
   SafeDBUserSession,
@@ -19,6 +18,7 @@ import type {
   DBUserSession,
 } from "@/types/session.types";
 import { getSecureCookieOptions } from "@/utils/utils";
+
 
 const generateRandomValue = () => crypto.randomBytes(32).toString("hex");
 const hashToken = (token: string) =>
@@ -44,10 +44,12 @@ function timingSafeEqualStr(
 }
 
 function sanitizeSession(session: DBUserSession): SafeDBUserSession {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     session_token_hash,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     refresh_token_hash,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     previous_refresh_token_hash,
     ...safeSession
   } = session;
@@ -496,7 +498,7 @@ async function withTimeout<T>(
  * Eliminates duplicate DB queries when layouts, pages, and server helpers
  * inspect the user session within the same React Server Component render tree.
  */
-export const getUserSession = cache(async () => {
+export const getUserSession = async () => {
   const headersList = await headers();
   const cookieStore = await cookies();
 
@@ -535,7 +537,7 @@ export const getUserSession = cache(async () => {
     5000,
     null
   );
-});
+};
 
 export async function signOut(sessionId?: string) {
   const cookieStore = await cookies();
@@ -743,7 +745,10 @@ export async function getOAuthSession(token: string) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub as string },
-      include: { emails: { where: { is_primary: true } } },
+      include: {
+        emails: { where: { is_primary: true } },
+        phones: { where: { is_primary: true } },
+      },
     });
 
     if (!user) return null;

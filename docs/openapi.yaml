@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: ClouAuth Centralized OAuth 2.0 & OpenID Connect 1.0 API
-  version: 1.0.0
+  version: 2.0.0
   description: >
     Official OpenAPI 3.1 specification for ClouAuth — the centralized OAuth 2.0
-    (RFC 6749, RFC 7636 PKCE, RFC 7009 Revocation, BCP 212) and OpenID Connect
-    Core 1.0 Identity Provider and Inter-Service Bridge for the clouburstlab
-    ecosystem.
+    (RFC 6749, RFC 7636 PKCE, RFC 7009 Revocation, RFC 7662 Introspection, RFC 9207, BCP 212)
+    and OpenID Connect Core 1.0 Identity Provider and Inter-Service Bridge.
+
+    Architecture Enforcement:
+    - User UI Routes: Localized under `/{lang}/...` (`/{lang}/authorize`, `/{lang}/consent`, etc.)
+    - Machine API Routes: Headless under `/api/oauth/...` and `/api/inter-services/...`
   contact:
     name: Shawkat Hossain Maruf
     url: https://shawkath646.dev
@@ -47,6 +50,7 @@ components:
             - unauthorized_client
             - unsupported_grant_type
             - invalid_scope
+            - access_denied
             - server_error
         error_description:
           type: string
@@ -96,8 +100,65 @@ components:
         picture:
           type: string
           format: uri
+        phone_number:
+          type: string
+        phone_number_verified:
+          type: boolean
         updated_at:
           type: integer
+    TokenIntrospectResponse:
+      type: object
+      required:
+        - active
+      properties:
+        active:
+          type: boolean
+        scope:
+          type: string
+        client_id:
+          type: string
+        sub:
+          type: string
+        exp:
+          type: integer
+        iat:
+          type: integer
+        iss:
+          type: string
+        token_type:
+          type: string
+    JwksResponse:
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            required:
+              - kty
+              - use
+              - alg
+              - kid
+              - n
+              - e
+            properties:
+              kty:
+                type: string
+                example: RSA
+              use:
+                type: string
+                example: sig
+              alg:
+                type: string
+                example: RS256
+              kid:
+                type: string
+              n:
+                type: string
+              e:
+                type: string
 paths:
   /.well-known/openid-configuration:
     get:
@@ -123,6 +184,8 @@ paths:
                     type: string
                   revocation_endpoint:
                     type: string
+                  introspection_endpoint:
+                    type: string
                   jwks_uri:
                     type: string
                   response_types_supported:
@@ -141,13 +204,21 @@ paths:
                     type: array
                     items:
                       type: string
-  /signin:
+
+  /{lang}/authorize:
     get:
-      summary: OAuth 2.0 Authorization Endpoint
-      operationId: authorize
+      summary: OAuth 2.0 / OIDC Authorization Endpoint (Human UI)
+      operationId: authorizeEndpoint
       tags:
-        - OIDC & OAuth 2.0
+        - Human UI (Localized)
       parameters:
+        - name: lang
+          in: path
+          required: true
+          description: Supported UI locale
+          schema:
+            type: string
+            enum: [en, bn, ko, es, zh, ar]
         - name: client_id
           in: query
           required: true
@@ -195,16 +266,71 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Renders interactive authentication & consent screen
         "302":
-          description: Redirects to `redirect_uri?code=...&state=...`
-  /api/sso/v1/token:
-    post:
-      summary: OAuth 2.0 Token Endpoint
-      operationId: exchangeToken
+          description: >
+            Redirects unauthenticated user to `/{lang}/signin`, authenticated user to
+            `/{lang}/consent`, or directly to callback URI with `code`, `state`, and `iss`.
+        "400":
+          description: Invalid client_id, missing parameters, or PKCE misconfiguration
+
+  /{lang}/consent:
+    get:
+      summary: Localized OAuth Consent Screen (Human UI)
+      operationId: consentScreen
       tags:
-        - OIDC & OAuth 2.0
+        - Human UI (Localized)
+      parameters:
+        - name: lang
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [en, bn, ko, es, zh, ar]
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: code_challenge
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Renders interactive consent interface
+
+  /api/oauth/token:
+    post:
+      summary: OAuth 2.0 Token Endpoint (Machine API)
+      operationId: exchangeOAuthToken
+      tags:
+        - Machine APIs (OAuth 2.0)
       security:
         - BasicAuth: []
         - {}
@@ -229,7 +355,7 @@ paths:
                   type: string
                 code:
                   type: string
-                  description: Required when `grant_type=authorization_code`.
+                  description: Mandatory when `grant_type=authorization_code`.
                 redirect_uri:
                   type: string
                   format: uri
@@ -242,7 +368,7 @@ paths:
                   description: Mandatory PKCE S256 verifier when `code_challenge` was issued.
                 refresh_token:
                   type: string
-                  description: Required when `grant_type=refresh_token`.
+                  description: Mandatory when `grant_type=refresh_token`.
                 scope:
                   type: string
                   description: >
@@ -294,12 +420,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OAuthError"
-  /api/sso/v1/userinfo:
+
+  /api/oauth/userinfo:
     get:
-      summary: OpenID Connect UserInfo Endpoint
-      operationId: getUserInfo
+      summary: OpenID Connect UserInfo Endpoint (GET)
+      operationId: getOAuthUserInfo
       tags:
-        - OIDC & OAuth 2.0
+        - Machine APIs (OAuth 2.0)
       security:
         - BearerAuth: []
       responses:
@@ -313,9 +440,9 @@ paths:
           description: Invalid or expired access token
     post:
       summary: OpenID Connect UserInfo Endpoint (POST)
-      operationId: postUserInfo
+      operationId: postOAuthUserInfo
       tags:
-        - OIDC & OAuth 2.0
+        - Machine APIs (OAuth 2.0)
       security:
         - BearerAuth: []
       responses:
@@ -327,48 +454,81 @@ paths:
                 $ref: "#/components/schemas/UserInfoResponse"
         "401":
           description: Invalid or expired access token
-  /api/sso/v1/jwks.json:
+
+  /api/oauth/introspect:
+    post:
+      summary: OAuth 2.0 Token Introspection (RFC 7662)
+      operationId: introspectToken
+      tags:
+        - Machine APIs (OAuth 2.0)
+      security:
+        - BasicAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                token_type_hint:
+                  type: string
+                  enum: [access_token, refresh_token]
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+      responses:
+        "200":
+          description: Introspection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenIntrospectResponse"
+        "401":
+          description: Invalid client credentials
+
+  /api/oauth/jwks.json:
     get:
       summary: JSON Web Key Set (JWKS)
-      operationId: getJwks
+      operationId: getOAuthJwksJson
       tags:
-        - OIDC & OAuth 2.0
+        - Machine APIs (OAuth 2.0)
       responses:
         "200":
           description: Public RSA signing keys (`RS256`)
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - keys
-                properties:
-                  keys:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        kty:
-                          type: string
-                          example: RSA
-                        use:
-                          type: string
-                          example: sig
-                        alg:
-                          type: string
-                          example: RS256
-                        kid:
-                          type: string
-                        n:
-                          type: string
-                        e:
-                          type: string
-  /api/sso/v1/revoke:
+                $ref: "#/components/schemas/JwksResponse"
+
+  /api/oauth/jwks:
+    get:
+      summary: JSON Web Key Set (Alias)
+      operationId: getOAuthJwks
+      tags:
+        - Machine APIs (OAuth 2.0)
+      responses:
+        "200":
+          description: Public RSA signing keys (`RS256`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JwksResponse"
+
+  /api/oauth/revoke:
     post:
       summary: OAuth 2.0 Token Revocation (RFC 7009)
-      operationId: revokeToken
+      operationId: revokeOAuthToken
       tags:
-        - OIDC & OAuth 2.0
+        - Machine APIs (OAuth 2.0)
+      security:
+        - BasicAuth: []
+        - {}
       requestBody:
         required: true
         content:
@@ -390,6 +550,7 @@ paths:
       responses:
         "200":
           description: Token revoked (or already invalid per RFC 7009)
+
   /api/inter-services/v1/user-session:
     get:
       summary: Resolve Active User Session Across Subdomains
@@ -429,6 +590,7 @@ paths:
           description: Missing or invalid application Bearer token
         "403":
           description: Application disabled or unauthorized
+
   /api/inter-services/v1/connected-drives:
     get:
       summary: Retrieve Decrypted Cloud Drive Credentials
@@ -471,6 +633,7 @@ paths:
           description: Unauthorized application or missing user session
         "403":
           description: Forbidden attempt to query arbitrary `user_id` without `internal_service` privileges
+
   /api/inter-services/v1/email-queue:
     get:
       summary: Pull Queued Transactional Emails (Internal Service Only)
@@ -553,6 +716,7 @@ paths:
           description: Email queued
         "403":
           description: Caller lacks `internal_service` privileges
+
   /api/auth/v1/cleanup-sessions:
     get:
       summary: Purge Expired Sessions, TempSessions, and RevokedTokens

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,12 +26,14 @@ import {
 } from "lucide-react";
 import { disableAccount, deleteAccount } from "@/actions/profile/danger-zone.actions";
 import { toast } from "sonner";
-import { useTranslations } from "@/lib/i18n/hooks";
-import { useRouter } from "next/navigation";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/types/i18n.types";
 
 interface DangerZoneSectionProps {
   username?: string;
   hasPassword?: boolean;
+  locale?: Locale;
+  dict: Dictionary<"profile_security">["dangerZone"];
 }
 
 export function DangerZoneSection({
@@ -38,8 +41,9 @@ export function DangerZoneSection({
   username = "",
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hasPassword = true,
+  locale = defaultLocale,
+  dict,
 }: DangerZoneSectionProps) {
-  const { t } = useTranslations("profile_security");
   const router = useRouter();
 
   // Disable account dialog state
@@ -67,14 +71,22 @@ export function DangerZoneSection({
         return;
       }
       if (res.success) {
-        toast.success(t("dangerZone.disableSuccess"));
-        router.push("/signin");
+        toast.success(dict.disableSuccess);
+        router.push(`/${locale}/signin`);
       } else {
-        toast.error(res.error || t("dangerZone.disableError"));
+        toast.error(res.error || dict.disableError);
       }
     } finally {
       setIsDisabling(false);
     }
+  };
+
+  const reasonMap: Record<string, string> = {
+    reasonNoLongerNeed: dict.reasonNoLongerNeed,
+    reasonPrivacyConcerns: dict.reasonPrivacyConcerns,
+    reasonSwitchingAccount: dict.reasonSwitchingAccount,
+    reasonTooComplex: dict.reasonTooComplex,
+    reasonOther: dict.reasonOther,
   };
 
   const handleDelete = async () => {
@@ -84,7 +96,7 @@ export function DangerZoneSection({
     const reason =
       selectedReasonKey === "reasonOther" && customReason.trim()
         ? customReason.trim()
-        : t(`dangerZone.${selectedReasonKey}`);
+        : reasonMap[selectedReasonKey] || dict.reasonOther;
 
     try {
       const res = await deleteAccount({ reason });
@@ -95,15 +107,15 @@ export function DangerZoneSection({
       }
 
       if (res.success) {
-        toast.success(t("dangerZone.deleteSuccess"));
-        router.push("/signin");
+        toast.success(dict.deleteSuccess);
+        router.push(`/${locale}/signin`);
       } else {
-        const errorMsg = res.error || t("dangerZone.deleteError");
+        const errorMsg = res.error || dict.deleteError;
         setDeleteError(errorMsg);
         toast.error(errorMsg);
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : t("dangerZone.deleteError");
+      const msg = e instanceof Error ? e.message : dict.deleteError;
       setDeleteError(msg);
       toast.error(msg);
     } finally {
@@ -112,16 +124,16 @@ export function DangerZoneSection({
   };
 
   const reasonOptions = [
-    { key: "reasonNoLongerNeed", label: t("dangerZone.reasonNoLongerNeed") },
-    { key: "reasonPrivacyConcerns", label: t("dangerZone.reasonPrivacyConcerns") },
-    { key: "reasonSwitchingAccount", label: t("dangerZone.reasonSwitchingAccount") },
-    { key: "reasonTooComplex", label: t("dangerZone.reasonTooComplex") },
-    { key: "reasonOther", label: t("dangerZone.reasonOther") },
+    { key: "reasonNoLongerNeed", label: dict.reasonNoLongerNeed },
+    { key: "reasonPrivacyConcerns", label: dict.reasonPrivacyConcerns },
+    { key: "reasonSwitchingAccount", label: dict.reasonSwitchingAccount },
+    { key: "reasonTooComplex", label: dict.reasonTooComplex },
+    { key: "reasonOther", label: dict.reasonOther },
   ];
 
   return (
     <div className="space-y-6">
-      <SectionCard variant="danger" title={t("dangerZone.title")} description={t("dangerZone.desc")} noPadding>
+      <SectionCard variant="danger" title={dict.title} description={dict.desc} noPadding>
         {/* Permanent Account Deletion */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 sm:px-6 sm:py-4 gap-4 hover:bg-muted/10 transition-colors">
           <div className="flex items-start sm:items-center gap-4">
@@ -129,14 +141,14 @@ export function DangerZoneSection({
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-semibold">{t("dangerZone.deleteTitle")}</h4>
-              <p className="text-sm font-normal text-muted-foreground mt-1">{t("dangerZone.deleteDesc")}</p>
+              <h4 className="text-base font-semibold">{dict.deleteTitle}</h4>
+              <p className="text-sm font-normal text-muted-foreground mt-1">{dict.deleteDesc}</p>
             </div>
           </div>
 
           <AlertDialog onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
             <AlertDialogTrigger render={<Button variant="destructive" size="sm" className="rounded-full shrink-0 self-start sm:self-center" />}>
-              {t("dangerZone.deleteBtn")}
+              {dict.deleteBtn}
             </AlertDialogTrigger>
 
             <AlertDialogContent className="rounded-2xl border-destructive/30 bg-background/95 backdrop-blur-xl max-w-md w-full p-6">
@@ -145,23 +157,23 @@ export function DangerZoneSection({
                   <AlertTriangle className="w-6 h-6" />
                 </div>
                 <AlertDialogTitle className="text-xl font-bold text-destructive">
-                  {t("dangerZone.deleteModalTitle")}
+                  {dict.deleteModalTitle}
                 </AlertDialogTitle>
                 <AlertDialogDescription className="text-sm text-muted-foreground">
-                  {t("dangerZone.deleteModalDesc")}
+                  {dict.deleteModalDesc}
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
               <div className="my-4 space-y-3 rounded-xl bg-destructive/5 border border-destructive/15 p-4 text-xs text-muted-foreground">
                 <p className="font-semibold text-destructive flex items-center gap-1.5 text-sm">
                   <ShieldAlert className="w-4 h-4 shrink-0" />
-                  {t("dangerZone.whatWillHappen")}
+                  {dict.whatWillHappen}
                 </p>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li>{t("dangerZone.happenSessions")}</li>
-                  <li>{t("dangerZone.happenCredentials")}</li>
-                  <li>{t("dangerZone.happenOAuth")}</li>
-                  <li>{t("dangerZone.happenCompliance")}</li>
+                  <li>{dict.happenSessions}</li>
+                  <li>{dict.happenCredentials}</li>
+                  <li>{dict.happenOAuth}</li>
+                  <li>{dict.happenCompliance}</li>
                 </ul>
               </div>
 
@@ -174,7 +186,7 @@ export function DangerZoneSection({
 
               <div className="space-y-2 mb-4 text-left">
                 <Label htmlFor="delete-reason" className="text-xs font-medium text-foreground">
-                  {t("dangerZone.reasonLabel")}
+                  {dict.reasonLabel}
                 </Label>
                 <select
                   id="delete-reason"
@@ -191,7 +203,7 @@ export function DangerZoneSection({
 
                 {selectedReasonKey === "reasonOther" && (
                   <Input
-                    placeholder={t("dangerZone.reasonPlaceholder")}
+                    placeholder={dict.reasonPlaceholder}
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
                     className="mt-2 text-sm"
@@ -202,7 +214,7 @@ export function DangerZoneSection({
 
               <AlertDialogFooter className="flex-row justify-end gap-2">
                 <AlertDialogCancel className="rounded-full mt-0" disabled={isDeleting}>
-                  {t("dangerZone.modalCancel")}
+                  {dict.modalCancel}
                 </AlertDialogCancel>
                 <Button
                   variant="destructive"
@@ -213,10 +225,10 @@ export function DangerZoneSection({
                   {isDeleting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t("dangerZone.deleting")}
+                      {dict.deleting}
                     </>
                   ) : (
-                    t("dangerZone.confirmDelete")
+                    dict.confirmDelete
                   )}
                 </Button>
               </AlertDialogFooter>
@@ -233,44 +245,44 @@ export function DangerZoneSection({
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-semibold">{t("dangerZone.disableTitle")}</h4>
-              <p className="text-sm font-normal text-muted-foreground mt-1">{t("dangerZone.disableDesc")}</p>
+              <h4 className="text-base font-semibold">{dict.disableTitle}</h4>
+              <p className="text-sm font-normal text-muted-foreground mt-1">{dict.disableDesc}</p>
             </div>
           </div>
           <AlertDialog onOpenChange={(open) => { if (!open) setDisableStep(1); }}>
             <AlertDialogTrigger render={<Button variant="outline" size="sm" className="rounded-full shrink-0 self-start sm:self-center text-orange-500 border-orange-500/20 hover:bg-orange-500/10 hover:text-orange-600" />}>
-              {t("dangerZone.disableBtn")}
+              {dict.disableBtn}
             </AlertDialogTrigger>
             <AlertDialogContent className="rounded-xl border-orange-500/20 bg-background/95 backdrop-blur-xl">
               {disableStep === 1 ? (
                 <>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>{t("dangerZone.disableTitle")}</AlertDialogTitle>
+                    <AlertDialogTitle>{dict.disableTitle}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {t("dangerZone.modalDesc")}
+                      {dict.modalDesc}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-full">{t("dangerZone.modalCancel")}</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-full">{dict.modalCancel}</AlertDialogCancel>
                     <Button
                       variant="default"
                       className="rounded-full bg-orange-500 hover:bg-orange-600 text-white"
                       onClick={() => setDisableStep(2)}
                     >
-                      {t("dangerZone.continue")}
+                      {dict.continue}
                     </Button>
                   </AlertDialogFooter>
                 </>
               ) : (
                 <>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>{t("dangerZone.modalWarning")}</AlertDialogTitle>
+                    <AlertDialogTitle>{dict.modalWarning}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {t("dangerZone.disableFinalConfirm")}
+                      {dict.disableFinalConfirm}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-full" disabled={isDisabling}>{t("dangerZone.modalCancel")}</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-full" disabled={isDisabling}>{dict.modalCancel}</AlertDialogCancel>
                     <Button
                       variant="destructive"
                       className="rounded-full"
@@ -278,7 +290,7 @@ export function DangerZoneSection({
                       onClick={handleDisable}
                     >
                       {isDisabling && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      {t("dangerZone.modalConfirm")}
+                      {dict.modalConfirm}
                     </Button>
                   </AlertDialogFooter>
                 </>

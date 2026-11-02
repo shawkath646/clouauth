@@ -28,4 +28,22 @@ model OAuthClientConfig {
   token_endpoint_auth_method String
 
   app UserApp @relation(fields: [app_id], references: [id], onDelete: Cascade)
+  consents OAuthConsent[]
+}
+
+model OAuthConsent {
+  id         String    @id @default(cuid())
+  user_id    String
+  client_id  String
+  scopes     String    @db.Text
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  revoked_at DateTime?
+
+  user   User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  client OAuthClientConfig @relation(fields: [client_id], references: [client_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, client_id])
+  @@index([user_id])
+  @@index([client_id])
 }

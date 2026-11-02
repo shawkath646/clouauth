@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Shield, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { updateProfilePreferences } from "@/actions/profile/personal-info.actions";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
 import iconLight from "@/assets/icon_light.png";
@@ -20,7 +21,11 @@ export function Navigation({ locale = defaultLocale, dict }: NavigationProps) {
   
   const toggleTheme = () => {
     const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "light" : "dark");
+    const nextTheme = isDark ? "light" : "dark";
+    setTheme(nextTheme);
+    document.cookie = `theme=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `theme_pref=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
+    updateProfilePreferences({ theme: nextTheme }).catch(() => {});
   };
 
   return (

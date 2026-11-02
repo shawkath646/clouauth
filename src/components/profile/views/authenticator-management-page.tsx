@@ -10,6 +10,7 @@ import { removeTwoFactorMethodAction } from "@/actions/profile/security-info.act
 import { toast } from "sonner";
 import Image from "next/image";
 import type { Dictionary } from "@/types/i18n.types";
+import { formatTime } from "@/utils/utils";
 
 interface AuthenticatorMethod {
   id: string;
@@ -204,7 +205,7 @@ export function AuthenticatorManagementPage({
               <div>
                 <h4 className="text-base font-semibold">{dict.connectedTitle}</h4>
                 <p className="text-xs text-muted-foreground">
-                  {dict.addedOn.replace("{date}", new Date(authenticator.added_on).toLocaleDateString())}
+                  {dict.addedOn.replace("{date}", formatTime(authenticator.added_on, { format: "date" }))}
                 </p>
               </div>
             </div>

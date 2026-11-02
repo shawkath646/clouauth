@@ -280,6 +280,23 @@ async function handleRefreshTokenGrant(
     );
   }
 
+  const consent = await prisma.oAuthConsent.findUnique({
+    where: {
+      user_id_client_id: {
+        user_id: String(payload.sub),
+        client_id: tokenClientId,
+      },
+    },
+  });
+
+  if (!consent || consent.revoked_at) {
+    return tokenError(
+      400,
+      "invalid_grant",
+      "User has revoked authorization for this application."
+    );
+  }
+
   const expDate = payload.exp
     ? new Date(payload.exp * 1000)
     : new Date(Date.now() + 30 * 86400000);

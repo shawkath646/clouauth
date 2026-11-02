@@ -1,24 +1,22 @@
 "use server";
 
-import prisma from "@/lib/prisma";
-import { verifyPassword, hashCode, verifyCode } from "@/lib/security/hash";
 import crypto from "crypto";
 import { verify } from "otplib";
 import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
+import prisma from "@/lib/prisma";
+import { verifyPassword, hashCode, verifyCode } from "@/lib/security/hash";
 import { handleError } from "@/utils/error";
 import { sendEmail } from "@/lib/email";
 import { decryptSymmetric } from "@/lib/encryption";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
 import { getUserSession } from "@/lib/session";
-import {
-  getWebAuthnConfig,
-  checkLockout,
-  handleFailedAttempt,
-} from "./helpers";
 import { recordSecurityActivity } from "@/lib/security-activity";
+import type { DBTempSession } from "@/types/session.types";
+import { getWebAuthnConfig, checkLockout, reserveAttempt } from "./helpers";
+import { getSafeReturnTo } from "@/utils/url";
 
 export interface SudoActionResult {
   success: boolean;
@@ -27,226 +25,183 @@ export interface SudoActionResult {
   options?: unknown;
 }
 
-/**
- * Validates that the Sudo TempSession exists, is not expired, and belongs to the currently authenticated user session.
- */
-async function requireAuthenticatedSudoSession(tempSessionId: string) {
-  const activeSessionData = await getUserSession();
-  if (!activeSessionData?.session) {
-    return {
-      ok: false as const,
-      error: "Unauthorized. Please sign in again.",
-    };
+type ActiveSession = NonNullable<Awaited<ReturnType<typeof getUserSession>>>;
+type AuthenticationResponse = Parameters<typeof verifyAuthenticationResponse>[0]["response"];
+
+type SudoContext = { tempSession: DBTempSession; activeSession: ActiveSession };
+type SudoContextResult =
+  | ({ ok: true } & SudoContext)
+  | { ok: false; error: string };
+
+type VerifierResult = { ok: boolean; error?: string };
+type Verifier = (ctx: SudoContext) => Promise<VerifierResult>;
+type RecaptchaOptions = { action: string; token?: string };
+
+const SUDO_FLOW = "sudo";
+const DEFAULT_RETURN_TO = "/profile";
+
+const fail = (error: string): SudoActionResult => ({ success: false, error });
+
+async function checkRecaptcha(options: RecaptchaOptions): Promise<string | null> {
+  const result = await verifyRecaptcha(options.token, { expectedAction: options.action });
+  return result.success ? null : result.error || "Security check failed.";
+}
+
+async function requireSudoContext(tempSessionId: string): Promise<SudoContextResult> {
+  if (!tempSessionId) {
+    return { ok: false, error: "Missing required session token." };
+  }
+
+  const activeSession = await getUserSession();
+  if (!activeSession?.session) {
+    return { ok: false, error: "Unauthorized. Please sign in again." };
   }
 
   const tempSession = await prisma.tempSession.findUnique({
     where: { id: tempSessionId },
   });
 
-  if (
-    !tempSession ||
-    tempSession.expires_on < new Date() ||
-    tempSession.flow_type !== "sudo"
-  ) {
-    return {
-      ok: false as const,
-      error: "Verification session expired. Please try again.",
-    };
+  if (!tempSession || tempSession.expires_on < new Date() || tempSession.flow_type !== SUDO_FLOW) {
+    return { ok: false, error: "Verification session expired. Please try again." };
   }
 
-  if (tempSession.user_id !== activeSessionData.user.id) {
-    return {
-      ok: false as const,
-      error: "Session mismatch. Unauthorized step-up request.",
-    };
+  if (tempSession.user_id !== activeSession.user.id) {
+    return { ok: false, error: "Session mismatch. Unauthorized step-up request." };
   }
 
-  return {
-    ok: true as const,
-    tempSession,
-    activeSessionData,
-  };
+  return { ok: true, tempSession, activeSession };
 }
 
-/**
- * Marks the active session as fresh in Sudo mode, deletes the tempSession,
- * records security activity, and returns the target redirect URL.
- */
-async function completeSudoSuccess(
-  tempSessionId: string,
-  sessionId: string,
-  userId: string,
-  payloadString?: string | null
-): Promise<SudoActionResult> {
+function resolveReturnTo(payload: string | null | undefined): string {
+  if (!payload) return DEFAULT_RETURN_TO;
+  try {
+    const { return_to } = JSON.parse(payload) as { return_to?: unknown };
+    if (typeof return_to === "string") {
+      return getSafeReturnTo(return_to, "en");
+    }
+  } catch {
+    return DEFAULT_RETURN_TO;
+  }
+  return DEFAULT_RETURN_TO;
+}
+
+async function completeSudoSuccess({
+  tempSession,
+  activeSession,
+}: SudoContext): Promise<SudoActionResult> {
   await prisma.userSession.update({
-    where: { id: sessionId },
+    where: { id: activeSession.session.id },
     data: { last_authenticated_on: new Date() },
   });
 
-  await prisma.tempSession.delete({
-    where: { id: tempSessionId },
-  }).catch(() => {});
+  await prisma.tempSession.deleteMany({ where: { id: tempSession.id } });
 
   await recordSecurityActivity({
-    userId,
+    userId: tempSession.user_id,
     event: "SUDO_VERIFIED",
     title: "Elevated access granted",
     description: "Sudo re-authentication confirmed for sensitive settings access",
   });
 
-  let returnTo = "/profile";
-  if (payloadString) {
-    try {
-      const parsed = JSON.parse(payloadString);
-      if (
-        parsed.return_to &&
-        parsed.return_to.startsWith("/") &&
-        !parsed.return_to.startsWith("//")
-      ) {
-        returnTo = parsed.return_to;
-      }
-    } catch {}
-  }
-
-  return { success: true, redirectUrl: returnTo };
+  return { success: true, redirectUrl: resolveReturnTo(tempSession.payload) };
 }
 
-/**
- * Higher-order runner executing standard step-up verifications with uniform reCAPTCHA,
- * session authentication, lockout guarding, failed attempt auditing, and success elevation.
- */
-async function runSudoVerification(
+async function withSudoContext(
   tempSessionId: string,
-  recaptchaAction: string,
-  recaptchaToken: string | undefined,
-  verifier: (ctx: {
-    tempSession: NonNullable<Awaited<ReturnType<typeof requireAuthenticatedSudoSession>>["tempSession"]>;
-    userId: string;
-  }) => Promise<{ ok: boolean; error?: string }>
+  recaptcha: RecaptchaOptions | undefined,
+  handler: (ctx: SudoContext) => Promise<SudoActionResult>
 ): Promise<SudoActionResult> {
   try {
-    const recaptcha = await verifyRecaptcha(recaptchaToken, {
-      expectedAction: recaptchaAction,
-    });
-    if (!recaptcha.success) {
-      return {
-        success: false,
-        error: recaptcha.error || "Security check failed.",
-      };
+    if (recaptcha) {
+      const recaptchaError = await checkRecaptcha(recaptcha);
+      if (recaptchaError) return fail(recaptchaError);
     }
 
-    if (!tempSessionId) {
-      return { success: false, error: "Missing required session token." };
-    }
+    const ctx = await requireSudoContext(tempSessionId);
+    if (!ctx.ok) return fail(ctx.error);
 
-    const sudoCtx = await requireAuthenticatedSudoSession(tempSessionId);
-    if (!sudoCtx.ok) {
-      return { success: false, error: sudoCtx.error };
-    }
+    const lockout = checkLockout(ctx.tempSession.locked_until);
+    if (lockout) return fail(lockout);
 
-    const { tempSession, activeSessionData } = sudoCtx;
-
-    const lockout = checkLockout(tempSession.locked_until);
-    if (lockout) {
-      return { success: false, error: lockout };
-    }
-
-    const verificationResult = await verifier({
-      tempSession,
-      userId: tempSession.user_id,
-    });
-
-    if (!verificationResult.ok) {
-      await handleFailedAttempt("tempSession", tempSession.id);
-      return {
-        success: false,
-        error: verificationResult.error || "Verification failed.",
-      };
-    }
-
-    return await completeSudoSuccess(
-      tempSession.id,
-      activeSessionData.session.id,
-      tempSession.user_id,
-      tempSession.payload
-    );
+    return await handler(ctx);
   } catch (e: unknown) {
-    return { success: false, error: handleError(e, true) };
+    return fail(handleError(e, true));
   }
 }
 
-/**
- * 1. Resolve Sudo via Password
- */
+function runSudoVerification(
+  tempSessionId: string,
+  verifier: Verifier,
+  recaptcha?: RecaptchaOptions
+): Promise<SudoActionResult> {
+  return withSudoContext(tempSessionId, recaptcha, async (ctx) => {
+    const blocked = await reserveAttempt("tempSession", ctx.tempSession.id);
+    if (blocked) return fail(blocked);
+
+    const result = await verifier(ctx);
+    if (!result.ok) return fail(result.error || "Verification failed.");
+
+    return completeSudoSuccess(ctx);
+  });
+}
+
+function decodePublicKey(stored: string): Uint8Array<ArrayBuffer> {
+  const raw = stored.trim();
+  const encoding = raw.includes("-") || raw.includes("_") ? "base64url" : "base64";
+  return new Uint8Array(Buffer.from(raw, encoding));
+}
+
 export async function resolveSudoPassword(
   tempSessionId: string,
   password: string,
   recaptchaToken?: string
 ): Promise<SudoActionResult> {
-  if (!password) {
-    return { success: false, error: "Password is required." };
-  }
+  if (!password) return fail("Password is required.");
 
   return runSudoVerification(
     tempSessionId,
-    "sudo_password",
-    recaptchaToken,
-    async ({ userId }) => {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { password: true },
+    async ({ tempSession }) => {
+      const credential = await prisma.passwordCredential.findUnique({
+        where: { user_id: tempSession.user_id },
+        select: { password_hash: true },
       });
 
-      if (!user?.password) {
+      if (!credential) {
         return { ok: false, error: "No password configured for this account." };
       }
 
-      const isMatch = await verifyPassword(password, user.password.password_hash);
+      const isMatch = await verifyPassword(password, credential.password_hash);
       return { ok: isMatch, error: isMatch ? undefined : "Incorrect password." };
-    }
+    },
+    { action: "sudo_password", token: recaptchaToken }
   );
 }
 
-/**
- * 2. Get Sudo Passkey Authentication Options
- */
 export async function getSudoPasskeyOptions(
   tempSessionId: string
 ): Promise<SudoActionResult> {
-  try {
-    const sudoCtx = await requireAuthenticatedSudoSession(tempSessionId);
-    if (!sudoCtx.ok) {
-      return { success: false, error: sudoCtx.error };
-    }
-
-    const { tempSession } = sudoCtx;
-
-    const passkeys = await prisma.passkeyCredential.findMany({
-      where: { two_factor_id: tempSession.user_id },
-    });
+  return withSudoContext(tempSessionId, undefined, async ({ tempSession }) => {
+    const [passkeys, { rpID }] = await Promise.all([
+      prisma.passkeyCredential.findMany({
+        where: { two_factor_id: tempSession.user_id },
+        select: { credential_id: true, rp_id: true },
+      }),
+      getWebAuthnConfig(),
+    ]);
 
     if (passkeys.length === 0) {
-      return {
-        success: false,
-        error: "No passkeys registered for this account.",
-      };
+      return fail("No passkeys registered for this account.");
     }
 
-    const { rpID } = await getWebAuthnConfig();
-    const matchingPasskeys = passkeys.filter(
-      (p) => !p.rp_id || p.rp_id === rpID
-    );
-
-    if (matchingPasskeys.length === 0) {
-      return {
-        success: false,
-        error: `No passkeys registered for this domain (${rpID}).`,
-      };
+    const matching = passkeys.filter((p) => !p.rp_id || p.rp_id === rpID);
+    if (matching.length === 0) {
+      return fail(`No passkeys registered for this domain (${rpID}).`);
     }
 
     const options = await generateAuthenticationOptions({
       rpID,
-      userVerification: "preferred",
+      userVerification: "required",
+      allowCredentials: matching.map((p) => ({ id: p.credential_id })),
     });
 
     await prisma.tempSession.update({
@@ -255,92 +210,62 @@ export async function getSudoPasskeyOptions(
     });
 
     return { success: true, options };
-  } catch (e: unknown) {
-    return { success: false, error: handleError(e, true) };
-  }
+  });
 }
 
-/**
- * 3. Resolve Sudo via Passkey
- */
 export async function resolveSudoPasskey(
   tempSessionId: string,
-  payload: Parameters<typeof verifyAuthenticationResponse>[0]["response"]
+  payload: AuthenticationResponse
 ): Promise<SudoActionResult> {
-  try {
-    const sudoCtx = await requireAuthenticatedSudoSession(tempSessionId);
-    if (!sudoCtx.ok) {
-      return { success: false, error: sudoCtx.error };
-    }
-
-    const { tempSession, activeSessionData } = sudoCtx;
-
-    if (!tempSession.challenge) {
-      return {
-        success: false,
-        error: "No active challenge found. Please retry.",
-      };
-    }
-
+  return runSudoVerification(tempSessionId, async ({ tempSession }) => {
     const expectedChallenge = tempSession.challenge;
+    if (!expectedChallenge) {
+      return { ok: false, error: "No active challenge found. Please retry." };
+    }
 
-    // Immediately clear challenge to avoid replay attacks
-    await prisma.tempSession.update({
-      where: { id: tempSession.id },
+    const { count } = await prisma.tempSession.updateMany({
+      where: { id: tempSession.id, challenge: expectedChallenge },
       data: { challenge: null },
     });
+    if (count !== 1) {
+      return { ok: false, error: "Challenge already used. Please retry." };
+    }
 
     const passkey = await prisma.passkeyCredential.findUnique({
       where: { credential_id: payload.id },
     });
-
     if (!passkey || passkey.two_factor_id !== tempSession.user_id) {
-      await handleFailedAttempt("tempSession", tempSession.id);
-      return {
-        success: false,
-        error: "Passkey not recognized for this account.",
-      };
+      return { ok: false, error: "Passkey not recognized for this account." };
     }
 
     const { expectedOrigin, expectedRPID } = await getWebAuthnConfig();
 
-    const rawKey = passkey.public_key.trim();
-    const isBase64Url = rawKey.includes("-") || rawKey.includes("_");
-    const keyBuf = Buffer.from(rawKey, isBase64Url ? "base64url" : "base64");
-    const credentialPublicKey = new Uint8Array(
-      keyBuf.buffer,
-      keyBuf.byteOffset,
-      keyBuf.byteLength
-    );
-
-    const normalizedPayload = {
+    const attachment = payload.authenticatorAttachment;
+    const response = {
       ...payload,
       authenticatorAttachment:
-        payload.authenticatorAttachment === "platform" ||
-        payload.authenticatorAttachment === "cross-platform"
-          ? payload.authenticatorAttachment
+        attachment === "platform" || attachment === "cross-platform"
+          ? attachment
           : undefined,
-    } as Parameters<typeof verifyAuthenticationResponse>[0]["response"];
+    } as AuthenticationResponse;
 
     const verification = await verifyAuthenticationResponse({
-      response: normalizedPayload,
+      response,
       expectedChallenge,
       expectedOrigin,
       expectedRPID,
-      requireUserVerification: false,
+      requireUserVerification: true,
       credential: {
         id: passkey.credential_id,
-        publicKey: credentialPublicKey,
+        publicKey: decodePublicKey(passkey.public_key),
         counter: passkey.sign_count,
       },
     });
 
     if (!verification.verified) {
-      await handleFailedAttempt("tempSession", tempSession.id);
-      return { success: false, error: "Passkey verification failed." };
+      return { ok: false, error: "Passkey verification failed." };
     }
 
-    // Update passkey counter
     await prisma.passkeyCredential.update({
       where: { id: passkey.id },
       data: {
@@ -349,141 +274,93 @@ export async function resolveSudoPasskey(
       },
     });
 
-    return await completeSudoSuccess(
-      tempSession.id,
-      activeSessionData.session.id,
-      tempSession.user_id,
-      tempSession.payload
-    );
-  } catch (e: unknown) {
-    return { success: false, error: handleError(e, true) };
-  }
+    return { ok: true };
+  });
 }
 
-/**
- * 4. Send Sudo Email Verification Code (OTP)
- */
 export async function sendSudoEmailCode(
   tempSessionId: string,
   recaptchaToken?: string
 ): Promise<SudoActionResult> {
-  try {
-    const recaptcha = await verifyRecaptcha(recaptchaToken, {
-      expectedAction: "send_sudo_code",
-    });
-    if (!recaptcha.success) {
-      return {
-        success: false,
-        error: recaptcha.error || "Security check failed.",
-      };
+  return withSudoContext(
+    tempSessionId,
+    { action: "send_sudo_code", token: recaptchaToken },
+    async ({ tempSession }) => {
+      const primaryEmail = await prisma.userEmail.findFirst({
+        where: { user_id: tempSession.user_id, is_primary: true },
+        select: { address: true },
+      });
+
+      if (!primaryEmail) {
+        return fail("No primary email found for this account.");
+      }
+
+      const rawCode = Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join("");
+
+      await prisma.tempSession.update({
+        where: { id: tempSession.id },
+        data: {
+          code_hash: await hashCode(rawCode),
+          destination: primaryEmail.address,
+        },
+      });
+
+      await sendEmail("verification_code", {
+        data: { code: rawCode },
+        userId: tempSession.user_id,
+      });
+
+      return { success: true };
     }
-
-    const sudoCtx = await requireAuthenticatedSudoSession(tempSessionId);
-    if (!sudoCtx.ok) {
-      return { success: false, error: sudoCtx.error };
-    }
-
-    const { tempSession } = sudoCtx;
-
-    const user = await prisma.user.findUnique({
-      where: { id: tempSession.user_id },
-      include: { emails: { where: { is_primary: true } } },
-    });
-
-    const primaryEmail = user?.emails[0]?.address;
-    if (!primaryEmail) {
-      return {
-        success: false,
-        error: "No primary email found for this account.",
-      };
-    }
-
-    const rawCode = Array.from({ length: 6 }, () =>
-      crypto.randomInt(0, 10)
-    ).join("");
-    const codeHash = await hashCode(rawCode);
-
-    await prisma.tempSession.update({
-      where: { id: tempSession.id },
-      data: {
-        code_hash: codeHash,
-        destination: primaryEmail,
-        failed_attempts: 0,
-        locked_until: null,
-      },
-    });
-
-    await sendEmail("verification_code", {
-      data: { code: rawCode },
-      userId: user.id,
-    });
-
-    return { success: true };
-  } catch (e: unknown) {
-    return { success: false, error: handleError(e, true) };
-  }
+  );
 }
 
-/**
- * 5. Resolve Sudo via Email OTP Code
- */
 export async function resolveSudoEmailCode(
   tempSessionId: string,
   code: string,
   recaptchaToken?: string
 ): Promise<SudoActionResult> {
+  if (!code?.trim()) return fail("Verification code is required.");
+
   return runSudoVerification(
     tempSessionId,
-    "verify_sudo_code",
-    recaptchaToken,
     async ({ tempSession }) => {
       if (!tempSession.code_hash) {
-        return {
-          ok: false,
-          error: "No code has been sent yet. Please request a code.",
-        };
+        return { ok: false, error: "No code has been sent yet. Please request a code." };
       }
 
       const isMatch = await verifyCode(code, tempSession.code_hash);
-      return {
-        ok: isMatch,
-        error: isMatch ? undefined : "Incorrect verification code.",
-      };
-    }
+      return { ok: isMatch, error: isMatch ? undefined : "Incorrect verification code." };
+    },
+    { action: "verify_sudo_code", token: recaptchaToken }
   );
 }
 
-/**
- * 6. Resolve Sudo via TOTP (Authenticator App)
- */
 export async function resolveSudoTotp(
   tempSessionId: string,
   code: string,
   recaptchaToken?: string
 ): Promise<SudoActionResult> {
+  if (!code?.trim()) return fail("Authenticator code is required.");
+
   return runSudoVerification(
     tempSessionId,
-    "verify_sudo_totp",
-    recaptchaToken,
-    async ({ userId }) => {
+    async ({ tempSession }) => {
       const totp = await prisma.totpMethod.findUnique({
-        where: { two_factor_id: userId },
+        where: { two_factor_id: tempSession.user_id },
       });
 
       if (!totp || !totp.enabled) {
         return { ok: false, error: "Authenticator app is not enabled." };
       }
 
-      const decryptedSecret = decryptSymmetric(totp.secret);
       const { valid } = await verify({
         token: code.trim(),
-        secret: decryptedSecret,
+        secret: decryptSymmetric(totp.secret),
       });
 
-      return {
-        ok: valid,
-        error: valid ? undefined : "Incorrect authenticator code.",
-      };
-    }
+      return { ok: valid, error: valid ? undefined : "Incorrect authenticator code." };
+    },
+    { action: "verify_sudo_totp", token: recaptchaToken }
   );
 }

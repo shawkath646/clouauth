@@ -21,26 +21,26 @@ export default function VerificationMethodStep({
       case "passkey":
         return {
           icon: Fingerprint,
-          title: method.name || dict.passkey,
+          title: dict.passkey,
           description: dict.passkeyDesc,
         };
       case "totp":
         return {
           icon: ShieldCheck,
-          title: method.name || dict.authenticatorApp,
+          title: dict.authenticatorApp,
           description: dict.authenticatorAppDesc,
         };
       case "phone":
         return {
           icon: Smartphone,
-          title: method.name || dict.approveFromPhone,
+          title: dict.approveFromPhone,
           description: dict.approveFromPhoneDesc,
         };
       case "code":
       default: {
         return {
           icon: Mail,
-          title: method.name || dict.emailCode,
+          title: dict.emailCode,
           description: dict.emailCodeDesc,
         };
       }
@@ -56,7 +56,6 @@ export default function VerificationMethodStep({
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="w-full max-w-105 p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/[0.08] shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
     >
-      {/* Header with security icon badge */}
       <div className="flex flex-col items-center text-center mb-5">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-xs">
           <ShieldCheck className="h-6 w-6 stroke-[2.2]" />
@@ -69,7 +68,6 @@ export default function VerificationMethodStep({
         </p>
       </div>
 
-      {/* Methods List */}
       <div className="space-y-2.5">
         {availableMethods.map((method) => {
           const ui = getMethodUI(method);

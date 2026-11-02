@@ -11,6 +11,7 @@ import type { FullProfile } from "@/types/profile.types";
 import { DBAddress } from "@/types/user.types";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
+import { formatTime } from "@/utils/utils";
 
 export interface PersonalInfoSectionProps {
   profile: FullProfile;
@@ -26,7 +27,12 @@ export function PersonalInfoSection({
   const initials = `${profile.user.first_name[0] || ""}${profile.user.last_name[0] || ""}`.toUpperCase();
   const primaryEmail = profile.emails.find(e => e.is_primary) || profile.emails[0];
   const defaultAddress = profile.addresses?.find(a => a.is_default) || profile.addresses?.[0];
-  const joinDate = new Date(profile.user.created_on).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
+  const joinDate = formatTime(profile.user.created_on, {
+    format: "date",
+    locale,
+    month: "long",
+    preferences: profile.preferences,
+  });
 
   const formatAddress = (addr: DBAddress) => {
     if (!addr) return dict.notSet;

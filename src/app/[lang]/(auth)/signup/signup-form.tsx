@@ -26,8 +26,10 @@ import { handleError } from "@/utils/error";
 import { useReCaptcha } from "@/lib/recaptcha/client";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
+import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
 export interface SignUpFormProps {
+  authRequest?: string | null;
   locale?: Locale;
   dict: Dictionary<"signup">;
   commonDict: Dictionary<"common">;
@@ -35,6 +37,7 @@ export interface SignUpFormProps {
 }
 
 export default function SignUpForm({
+  authRequest = null,
   locale = defaultLocale,
   dict,
   commonDict,
@@ -42,7 +45,10 @@ export default function SignUpForm({
 }: SignUpFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("return_to");
+  const effectiveAuthRequest = authRequest || searchParams.get(AUTH_REQUEST_PARAM);
+  const returnTo = effectiveAuthRequest
+    ? `/${locale}/consent?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+    : searchParams.get("return_to");
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +73,13 @@ export default function SignUpForm({
       const recaptchaToken = await executeRecaptcha("signup");
       const response = await signUp(data, recaptchaToken ?? undefined);
       if (response.success) {
-        router.push(response.redirectUrl || `/${locale}/profile`);
+        if (effectiveAuthRequest) {
+          router.push(
+            `/${locale}/consent?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+          );
+        } else {
+          router.push(response.redirectUrl || `/${locale}/profile`);
+        }
       } else {
         setErrorMsg(response.error || "Failed to create account.");
       }
@@ -234,7 +246,11 @@ export default function SignUpForm({
           <p className="mt-6 text-sm text-muted-foreground">
             {dict.alreadyHaveAccount}{" "}
             <Link
-              href={`/${locale}/signin`}
+              href={
+                effectiveAuthRequest
+                  ? `/${locale}/signin?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+                  : `/${locale}/signin`
+              }
               className="font-medium text-primary hover:underline"
             >
               {dict.signIn}

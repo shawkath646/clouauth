@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import Image from "next/image";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Check, Lock, ExternalLink, AlertTriangle, Loader2 } from "lucide-react";
-import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
-import type { Locale } from "@/lib/i18n/config";
+import { confirmConsentAction, denyConsentAction } from "@/actions/oauth/oauth.actions";
 
 interface ConsentClientProps {
   appName: string;
@@ -15,14 +14,8 @@ interface ConsentClientProps {
   userEmail: string;
   userName?: string | null;
   userAvatar?: string | null;
-  clientId: string;
-  redirectUri: string;
-  state?: string | null;
-  codeChallenge?: string | null;
-  codeChallengeMethod?: string | null;
   scope: string;
-  nonce?: string | null;
-  locale: Locale;
+  authRequestToken: string;
 }
 
 const scopeDescriptions: Record<string, { title: string; desc: string }> = {
@@ -56,14 +49,8 @@ export function ConsentClient({
   userEmail,
   userName,
   userAvatar,
-  clientId,
-  redirectUri,
-  state,
-  codeChallenge,
-  codeChallengeMethod,
   scope,
-  nonce,
-  locale,
+  authRequestToken,
 }: ConsentClientProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -76,36 +63,18 @@ export function ConsentClient({
   const handleAuthorize = () => {
     setError(null);
     startTransition(async () => {
-      try {
-        const result = await grantOAuthAccess(
-          clientId,
-          redirectUri,
-          state,
-          codeChallenge,
-          codeChallengeMethod,
-          scope,
-          nonce
-        );
-
-        if (result.success && result.redirectUrl) {
-          window.location.href = result.redirectUrl;
-        } else {
-          setError(result.error || "Failed to authorize application.");
-        }
-      } catch (err: unknown) {
-        setError("An unexpected error occurred during authorization.");
+      const result = await confirmConsentAction(authRequestToken);
+      if (result && !result.success) {
+        setError(result.error || "Failed to authorize application.");
       }
     });
   };
 
   const handleCancel = () => {
-    const cancelUrl = new URL(redirectUri);
-    cancelUrl.searchParams.set("error", "access_denied");
-    cancelUrl.searchParams.set("error_description", "The user denied authorization.");
-    if (state) {
-      cancelUrl.searchParams.set("state", state);
-    }
-    window.location.href = cancelUrl.toString();
+    setError(null);
+    startTransition(async () => {
+      await denyConsentAction(authRequestToken);
+    });
   };
 
   return (
@@ -231,14 +200,14 @@ export function ConsentClient({
           variant="outline"
           onClick={handleCancel}
           disabled={isPending}
-          className="flex-1 rounded-xl h-11 border-border/60 hover:bg-muted"
+          className="flex-1 rounded-xl h-11 border-border/60 hover:bg-muted cursor-pointer"
         >
           Cancel
         </Button>
         <Button
           onClick={handleAuthorize}
           disabled={isPending}
-          className="flex-1 rounded-xl h-11 bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90"
+          className="flex-1 rounded-xl h-11 bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90 cursor-pointer"
         >
           {isPending ? (
             <>

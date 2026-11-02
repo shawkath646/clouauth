@@ -37,5 +37,7 @@
   "scopeProfile": "Full name",
   "scopeEmail": "Email address",
   "scopePhone": "Phone number",
+  "scopeAddress": "আপনার পোস্টাল ঠিকানা অ্যাক্সেস করুন",
+  "scopeOfflineAccess": "আপনার অ্যাকাউন্টে অফলাইন অ্যাক্সেস বজায় রাখুন",
   "scopeOpenid": "Basic identity"
 }

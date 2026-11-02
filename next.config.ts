@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   reactCompiler: true,
   cacheComponents: true,
-  partialPrefetching: true,
+  partialPrefetching: false,
   serverExternalPackages: [
     "mssql",
     "tedious",

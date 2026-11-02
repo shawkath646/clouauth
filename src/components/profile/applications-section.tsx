@@ -123,7 +123,7 @@ export function ApplicationsSection({
       <SectionCard
         title={dict.title}
         description={<span>{dict.desc1} <BrandName /> {dict.desc2}</span>}
-        headerAction={
+        headerAction={initialApps.length > 0 && (
           <Link
             href={`/${locale}/profile/applications/new`}
             className={buttonVariants({ size: "sm", className: "rounded-full gap-1.5 shadow-sm" })}
@@ -131,7 +131,7 @@ export function ApplicationsSection({
             <Plus className="w-4 h-4" />
             <span>{dict.register}</span>
           </Link>
-        }
+        )}
         noPadding
       >
         {initialApps.length === 0 ? (

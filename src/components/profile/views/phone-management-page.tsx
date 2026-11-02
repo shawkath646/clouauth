@@ -8,6 +8,7 @@ import { removeTwoFactorMethodAction } from "@/actions/profile/security-info.act
 import { toast } from "sonner";
 import type { Dictionary } from "@/types/i18n.types";
 import { Label } from "@/components/ui/label";
+import { formatTime } from "@/utils/utils";
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -147,7 +148,7 @@ export function PhoneManagementPage({ phones, dict }: PhoneManagementPageProps) 
                 <div>
                   <h4 className="text-base font-semibold">{dict.activeTitle}</h4>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {dict.activeDesc.replace("{date}", new Date(phone.added_on).toLocaleDateString())}
+                    {dict.activeDesc.replace("{date}", formatTime(phone.added_on, { format: "date" }))}
                   </p>
                 </div>
               </div>

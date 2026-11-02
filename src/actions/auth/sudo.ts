@@ -1,9 +1,10 @@
-"use server";
+import "server-only";
 
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { getSafeReturnTo } from "@/utils/url";
 
 // 15-minute Sudo grace window
 const SUDO_GRACE_WINDOW_MS = 15 * 60 * 1000;
@@ -45,7 +46,7 @@ export async function createSudoTempSession(
       user_id: userId,
       flow_type: "sudo",
       expires_on: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes TTL
-      payload: JSON.stringify({ return_to: returnTo }),
+      payload: JSON.stringify({ return_to: getSafeReturnTo(returnTo, "en") }),
     },
   });
 

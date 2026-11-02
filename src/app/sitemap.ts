@@ -6,6 +6,8 @@ const routes = [
   { path: "", priority: 1.0, changeFrequency: "monthly" as const },
   { path: "/docs", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/developers", priority: 0.9, changeFrequency: "monthly" as const },
+  { path: "/signin", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/signup", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/privacy", priority: 0.5, changeFrequency: "yearly" as const },
   { path: "/terms", priority: 0.5, changeFrequency: "yearly" as const },
 ];
@@ -25,6 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     return locales.map((locale) => ({
       url: `${baseUrl}/${locale}${path}`,
+      lastModified: new Date(),
       changeFrequency,
       priority,
       alternates: {

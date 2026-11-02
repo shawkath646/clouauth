@@ -37,5 +37,7 @@
   "scopeProfile": "Full name",
   "scopeEmail": "Email address",
   "scopePhone": "Phone number",
+  "scopeAddress": "访问您的邮政地址",
+  "scopeOfflineAccess": "保持对您账户的离线访问权限",
   "scopeOpenid": "Basic identity"
 }

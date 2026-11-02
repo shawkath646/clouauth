@@ -2,15 +2,7 @@ import "server-only";
 import sql from "mssql";
 
 /**
- * Serverless-Optimized Microsoft SQL Server & Azure SQL Database Configuration
- * 
- * Tuning highlights for Azure SQL Serverless + Vercel:
- * - min: 0 prevents dead TCP sockets across serverless pause/freeze/thaw cycles.
- * - max: 2 (in production) prevents pool exhaustion on Azure SQL Free Tier across horizontally scaled lambdas.
- * - idleTimeoutMillis: 10000 aggressively reaps idle sockets before container hibernation.
- * - connectionTimeout / createTimeout: 8000ms (down from 15000ms default) bounds handshake wait time.
- * - validateConnection: "socket" pre-flights the raw socket before checkout from tarn pool.
- * - appName: "ClouAuth-Serverless" aids Azure SQL sys.dm_exec_sessions diagnostics.
+ * Microsoft SQL Server (AWS RDS) Connection & Pool Configuration
  */
 
 export interface ServerlessPoolConfig {
@@ -30,19 +22,17 @@ export function getServerlessPoolConfig(): ServerlessPoolConfig {
     ? parseInt(process.env.MSSQL_POOL_MAX, 10)
     : undefined;
 
-  // In production serverless: 2 connections per container.
-  // In development HMR: 5 connections.
-  const max = customMax && !isNaN(customMax) ? customMax : isProd ? 2 : 5;
+  const max = customMax && !isNaN(customMax) ? customMax : isProd ? 10 : 10;
 
   return {
-    min: 0,                         // Never hold idle sockets open across serverless freeze/thaw
-    max,                            // Max pool size per warm container
-    idleTimeoutMillis: 10000,       // 10s idle eviction before lambda freeze
-    acquireTimeoutMillis: 8000,     // 8s pool acquisition budget
-    createTimeoutMillis: 8000,      // 8s socket handshake timeout (prevents 15s stalls)
-    destroyTimeoutMillis: 3000,     // 3s grace period when closing dead socket
-    reapIntervalMillis: 1000,       // Eviction scan every 1s
-    createRetryIntervalMillis: 200, // 200ms backoff on pool creation retry
+    min: 0,
+    max,
+    idleTimeoutMillis: 30000,
+    acquireTimeoutMillis: 15000,
+    createTimeoutMillis: 15000,
+    destroyTimeoutMillis: 5000,
+    reapIntervalMillis: 5000,
+    createRetryIntervalMillis: 200,
   };
 }
 
@@ -153,17 +143,17 @@ export function getMssqlConfig(): sql.config {
     user,
     password,
     database,
-    connectionTimeout: 8000,  // 8s connection acquisition / handshake timeout
-    requestTimeout: 15000,     // 15s individual statement execution timeout
+    connectionTimeout: 15000,
+    requestTimeout: 30000,
     validateConnection: "socket",
     pool: poolConfig,
     options: {
       encrypt,
       trustServerCertificate,
       enableArithAbort: true,
-      connectTimeout: 8000,
-      requestTimeout: 15000,
-      appName: "ClouAuth-Serverless",
+      connectTimeout: 15000,
+      requestTimeout: 30000,
+      appName: "ClouAuth",
     },
   };
 }

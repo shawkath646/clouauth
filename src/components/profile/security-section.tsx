@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
@@ -33,41 +33,7 @@ import type { FullProfile, DBSecurityActivity } from "@/types/profile.types";
 import { getRecentSecurityActivitiesAction } from "@/actions/profile/security-activity.actions";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
-import { cn } from "@/utils/utils";
-
-function formatRelativeTime(dateString: string | Date, isMounted: boolean): string {
-  const date = new Date(dateString);
-  if (!isMounted) {
-    return date.toISOString().split("T")[0] || "Recently";
-  }
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "Just now";
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours}h ago`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d ago`;
-
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  });
-}
-
-function formatFullDateTime(dateString: string | Date, isMounted: boolean): string {
-  const d = new Date(dateString);
-  if (!isMounted) {
-    return d.toISOString();
-  }
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
+import { cn, formatTime } from "@/utils/utils";
 
 function getActivityIcon(event: string, device?: string | null) {
   const ev = event.toLowerCase();
@@ -108,21 +74,19 @@ export interface SecuritySectionProps {
   >;
 }
 
+const emptySubscribe = () => () => {};
+
 export function SecuritySection({
   profile,
   locale = defaultLocale,
   dict,
 }: SecuritySectionProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const hasPassword = !!profile.password;
   const lastChanged = profile.password?.last_changed_on 
     ? (isMounted
-        ? new Date(profile.password.last_changed_on).toLocaleDateString()
+        ? formatTime(profile.password.last_changed_on, { format: "date", preferences: profile.preferences, locale })
         : new Date(profile.password.last_changed_on).toISOString().split("T")[0])
     : "Never";
     
@@ -332,8 +296,12 @@ export function SecuritySection({
         ) : (
           <div className="divide-y divide-border/50">
             {activities.slice(0, 4).map((activity) => {
-              const relativeTime = formatRelativeTime(activity.created_on, isMounted);
-              const fullDateTime = formatFullDateTime(activity.created_on, isMounted);
+              const relativeTime = isMounted
+                ? formatTime(activity.created_on, { format: "relative", preferences: profile.preferences, locale })
+                : (new Date(activity.created_on).toISOString().split("T")[0] || "Recently");
+              const fullDateTime = isMounted
+                ? formatTime(activity.created_on, { format: "datetime", preferences: profile.preferences, locale })
+                : new Date(activity.created_on).toISOString();
               const locationParts = [activity.city, activity.country].filter(Boolean);
               const locationStr = locationParts.join(", ");
 
@@ -439,8 +407,12 @@ export function SecuritySection({
               </div>
             ) : (
               allActivities.map((act) => {
-                const relativeTime = formatRelativeTime(act.created_on, isMounted);
-                const fullDateTime = formatFullDateTime(act.created_on, isMounted);
+                const relativeTime = isMounted
+                  ? formatTime(act.created_on, { format: "relative", preferences: profile.preferences, locale })
+                  : (new Date(act.created_on).toISOString().split("T")[0] || "Recently");
+                const fullDateTime = isMounted
+                  ? formatTime(act.created_on, { format: "datetime", preferences: profile.preferences, locale })
+                  : new Date(act.created_on).toISOString();
                 const locationParts = [act.city, act.country].filter(Boolean);
                 const locationStr = locationParts.join(", ");
 

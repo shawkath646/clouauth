@@ -1,36 +1,48 @@
 import "server-only";
+
+import crypto from "crypto";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import crypto from "crypto";
+import { SignJWT, jwtVerify } from "jose";
+import type { Prisma } from "@/generated/prisma/client";
 import prisma from "./prisma";
 import {
   COOKIE_SESSION_TOKEN_NAME,
   COOKIE_REFRESH_TOKEN_NAME,
   REFRESH_TOKEN_TTL,
   REFRESH_TOKEN_TTL_REMEMBER_ME,
+  SESSION_TOKEN_TTL,
+  TEMP_SESSION_TTL_MS,
+  DEVICE_ID_COOKIE_NAME,
+  DEVICE_ID_COOKIE_MAX_AGE,
 } from "@/constants/session.constants";
 import { handleError } from "@/utils/error";
-import { getEnv } from "@/utils/utils";
 import type {
   SessionData,
   SafeDBUserSession,
   DBTempSession,
   DBUserSession,
 } from "@/types/session.types";
-import { getSecureCookieOptions } from "@/utils/utils";
+import { getEnv, getSecureCookieOptions } from "@/utils/utils";
 
+const issuer = getEnv("NEXT_PUBLIC_BASE_URL");
+const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
+
+
+const REFRESH_GRACE_MS = 120 * 1000;
+const REMEMBER_ME_THRESHOLD_MS =
+  ((REFRESH_TOKEN_TTL + REFRESH_TOKEN_TTL_REMEMBER_ME) / 2) * 1000;
+
+const SESSION_RESOLVE_TIMEOUT_MS = 5000;
+
+const ACCESS_TOKEN_TTL_S = 3600;
+const OAUTH_REFRESH_TOKEN_TTL_S = 30 * 24 * 3600;
+const DEFAULT_USER_SCOPE = "openid profile email";
+const DEFAULT_SERVICE_SCOPE = "internal_service";
 
 const generateRandomValue = () => crypto.randomBytes(32).toString("hex");
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
-
-function getIssuerUrl(): string {
-  return (
-    getEnv("NEXT_PUBLIC_BASE_URL", true) ||
-    getEnv("NEXT_PUBLIC_APP_URL", true) ||
-    "https://auth.clouburstlab.com"
-  ).replace(/\/+$/, "");
-}
 
 function timingSafeEqualStr(
   a: string | null | undefined,
@@ -39,541 +51,378 @@ function timingSafeEqualStr(
   if (typeof a !== "string" || typeof b !== "string") return false;
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
 }
+
+function parseToken(token: unknown): { id: string; value: string } | null {
+  if (typeof token !== "string") return null;
+  const [id, value, ...rest] = token.split(".");
+  return id && value && rest.length === 0 ? { id, value } : null;
+}
+
+const SECRET_SESSION_FIELDS = [
+  "session_token_hash",
+  "refresh_token_hash",
+  "previous_refresh_token_hash",
+] as const;
 
 function sanitizeSession(session: DBUserSession): SafeDBUserSession {
-  const {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    session_token_hash,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    refresh_token_hash,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    previous_refresh_token_hash,
-    ...safeSession
-  } = session;
-  return safeSession as SafeDBUserSession;
+  const safe: Partial<DBUserSession> = { ...session };
+  for (const field of SECRET_SESSION_FIELDS) delete safe[field];
+  return safe as SafeDBUserSession;
 }
 
-async function setSessionCookies(
-  sessionToken: string,
-  refreshToken: string | null,
-  maxAgeSession: number,
-  maxAgeRefresh: number
-) {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallback: T
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`[Session] Resolution exceeded ${timeoutMs}ms; treating as signed out`);
+      resolve(fallback);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function getRequestMeta() {
+  try {
+    const h = await headers();
+    return {
+      userAgent: h.get("user-agent") || null,
+      ipAddress:
+        h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null,
+    };
+  } catch {
+    return { userAgent: null, ipAddress: null };
+  }
+}
+
+type Rule = [needles: string[], label: string];
+
+const DEVICE_RULES: Rule[] = [
+  [["Windows"], "Windows PC"],
+  [["Macintosh"], "Mac"],
+  [["iPhone"], "iPhone"],
+  [["iPad"], "iPad"],
+  [["Android"], "Android Device"],
+  [["Linux"], "Linux PC"],
+];
+
+const BROWSER_RULES: Rule[] = [
+  [["Edg"], "Edge"],
+  [["OPR", "Opera"], "Opera"],
+  [["Chrome"], "Chrome"],
+  [["Firefox"], "Firefox"],
+  [["Safari"], "Safari"],
+];
+
+const matchRule = (ua: string, rules: Rule[]) =>
+  rules.find(([needles]) => needles.some((n) => ua.includes(n)))?.[1] ?? null;
+
+async function getOrCreateDeviceId(): Promise<string> {
+  const cookieStore = await cookies();
+  const existing = cookieStore.get(DEVICE_ID_COOKIE_NAME)?.value;
+  if (existing) return existing;
+
+  const id = crypto.randomUUID();
+  cookieStore.set(
+    DEVICE_ID_COOKIE_NAME,
+    id,
+    getSecureCookieOptions({ maxAge: DEVICE_ID_COOKIE_MAX_AGE })
+  );
+  return id;
+}
+
+type Ttls = { session: number; refresh: number };
+
+function getTtls(rememberMe: boolean): Ttls {
+  return {
+    session: SESSION_TOKEN_TTL,
+    refresh: rememberMe ? REFRESH_TOKEN_TTL_REMEMBER_ME : REFRESH_TOKEN_TTL,
+  };
+}
+
+function mintTokens(rememberMe: boolean, fixedRefreshExpiresOn?: Date) {
+  const rawSession = generateRandomValue();
+  const rawRefresh = generateRandomValue();
+  const ttl = getTtls(rememberMe);
+  const now = Date.now();
+
+  const refreshExpiresOn =
+    fixedRefreshExpiresOn ?? new Date(now + ttl.refresh * 1000);
+  const refreshSeconds = Math.max(
+    1,
+    Math.floor((refreshExpiresOn.getTime() - now) / 1000)
+  );
+  const sessionSeconds = Math.min(ttl.session, refreshSeconds);
+  const sessionExpiresOn = new Date(now + sessionSeconds * 1000);
+
+  return {
+    ttl: { session: sessionSeconds, refresh: refreshSeconds },
+    sessionHash: hashToken(rawSession),
+    refreshHash: hashToken(rawRefresh),
+    sessionExpiresOn,
+    refreshExpiresOn,
+    toSessionData: (sessionId: string): SessionData => ({
+      sessionToken: `${sessionId}.${rawSession}`,
+      refreshToken: `${sessionId}.${rawRefresh}`,
+      sessionExpiresOn,
+      refreshExpiresOn,
+    }),
+  };
+}
+
+async function setSessionCookies(data: SessionData, ttl: Ttls) {
   const cookieStore = await cookies();
   cookieStore.set(
     COOKIE_SESSION_TOKEN_NAME,
-    sessionToken,
-    getSecureCookieOptions({ maxAge: maxAgeSession })
+    data.sessionToken,
+    getSecureCookieOptions({ maxAge: ttl.session })
   );
-  if (refreshToken && maxAgeRefresh > 0) {
-    cookieStore.set(
-      COOKIE_REFRESH_TOKEN_NAME,
-      refreshToken,
-      getSecureCookieOptions({ maxAge: maxAgeRefresh })
-    );
-  } else {
-    cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
-  }
-  cookieStore.set("clou_logged_in", "1", {
-    path: "/",
-    maxAge: maxAgeSession,
-    sameSite: "lax",
-    httpOnly: false,
-  });
+  cookieStore.set(
+    COOKIE_REFRESH_TOKEN_NAME,
+    data.refreshToken,
+    getSecureCookieOptions({ maxAge: ttl.refresh })
+  );
 }
+
+async function clearSessionCookies() {
+  const cookieStore = await cookies();
+  const options = getSecureCookieOptions({ maxAge: 0 });
+  cookieStore.set(COOKIE_SESSION_TOKEN_NAME, "", options);
+  cookieStore.set(COOKIE_REFRESH_TOKEN_NAME, "", options);
+}
+
+function matchRefreshToken(
+  session: DBUserSession,
+  presentedHash: string
+): "current" | "previous" | null {
+  if (timingSafeEqualStr(session.refresh_token_hash, presentedHash)) return "current";
+  if (
+    timingSafeEqualStr(session.previous_refresh_token_hash, presentedHash) &&
+    new Date(session.updated_on).getTime() + REFRESH_GRACE_MS > Date.now()
+  ) {
+    return "previous";
+  }
+  return null;
+}
+
+const isRememberMeSession = (session: DBUserSession) =>
+  new Date(session.expires_on).getTime() - new Date(session.created_on).getTime() > REMEMBER_ME_THRESHOLD_MS;
 
 export async function createSession(
   userId: string,
   rememberMe: boolean = false
 ): Promise<SessionData> {
-  const rawSessionToken = generateRandomValue();
-  const rawRefreshToken = generateRandomValue();
-
-  const sessionHash = hashToken(rawSessionToken);
-  const refreshHash = hashToken(rawRefreshToken);
-
+  const tokens = mintTokens(rememberMe);
+  const { userAgent, ipAddress } = await getRequestMeta();
+  const deviceFingerprint = await getOrCreateDeviceId();
   const now = new Date();
-  const sessionTtl = rememberMe
-    ? REFRESH_TOKEN_TTL_REMEMBER_ME
-    : REFRESH_TOKEN_TTL;
-  const sessionExpiresOn = new Date(now.getTime() + sessionTtl * 1000);
 
-  const rtTtl = rememberMe
-    ? REFRESH_TOKEN_TTL_REMEMBER_ME
-    : REFRESH_TOKEN_TTL;
-  const refreshExpiresOn = new Date(now.getTime() + rtTtl * 1000);
+  const ua = userAgent ?? "";
+  const browserName = matchRule(ua, BROWSER_RULES);
 
-  const headersList = await headers();
-  const userAgentRaw = headersList.get("user-agent") || "";
-  const ipAddress =
-    headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || null;
-
-  let deviceName = null;
-  let browserName = null;
-
-  if (userAgentRaw) {
-    if (userAgentRaw.includes("Windows")) deviceName = "Windows PC";
-    else if (userAgentRaw.includes("Macintosh")) deviceName = "Mac";
-    else if (userAgentRaw.includes("iPhone")) deviceName = "iPhone";
-    else if (userAgentRaw.includes("iPad")) deviceName = "iPad";
-    else if (userAgentRaw.includes("Android")) deviceName = "Android Device";
-    else if (userAgentRaw.includes("Linux")) deviceName = "Linux PC";
-
-    if (userAgentRaw.includes("Edg")) browserName = "Edge";
-    else if (userAgentRaw.includes("OPR") || userAgentRaw.includes("Opera"))
-      browserName = "Opera";
-    else if (userAgentRaw.includes("Chrome")) browserName = "Chrome";
-    else if (userAgentRaw.includes("Firefox")) browserName = "Firefox";
-    else if (userAgentRaw.includes("Safari")) browserName = "Safari";
-  }
-
-  const cookieStore = await cookies();
-  let deviceFingerprint = cookieStore.get("clou_device_id")?.value;
-  if (!deviceFingerprint) {
-    deviceFingerprint = crypto.randomUUID();
-    cookieStore.set(
-      "clou_device_id",
-      deviceFingerprint,
-      getSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 * 10 })
-    );
-  }
-
-  // Clean up only EXPIRED sessions for this user to prevent DB bloat
   await prisma.userSession.deleteMany({
-    where: {
-      user_id: userId,
-      expires_on: { lt: new Date() },
-    },
+    where: { user_id: userId, expires_on: { lt: now } },
   });
 
-  const existingSession = await prisma.userSession.findFirst({
-    where: {
-      user_id: userId,
-      device_fingerprint: deviceFingerprint,
-    },
-  });
-
-  let session;
-  if (existingSession) {
-    session = await prisma.userSession.update({
-      where: { id: existingSession.id },
-      data: {
-        session_token_hash: sessionHash,
-        refresh_token_hash: refreshHash,
-        previous_refresh_token_hash: null,
-        session_expires_on: sessionExpiresOn,
-        expires_on: refreshExpiresOn,
-        revoked_on: null,
-        last_authenticated_on: new Date(),
-        device_name: deviceName,
-        user_agent: browserName || userAgentRaw || null,
-        ip_address: ipAddress,
-      },
-    });
-  } else {
-    session = await prisma.userSession.create({
-      data: {
-        user_id: userId,
-        session_token_hash: sessionHash,
-        refresh_token_hash: refreshHash,
-        session_expires_on: sessionExpiresOn,
-        expires_on: refreshExpiresOn,
-        last_authenticated_on: new Date(),
-        device_name: deviceName,
-        user_agent: browserName || userAgentRaw || null,
-        ip_address: ipAddress,
-        device_fingerprint: deviceFingerprint,
-      },
-    });
-  }
-
-  const sessionToken = `${session.id}.${rawSessionToken}`;
-  const refreshToken = `${session.id}.${rawRefreshToken}`;
-
-  await setSessionCookies(sessionToken, refreshToken, sessionTtl, rtTtl);
-
-  return {
-    sessionToken,
-    refreshToken,
-    sessionExpiresOn,
-    refreshExpiresOn,
+  const sessionFields = {
+    session_token_hash: tokens.sessionHash,
+    refresh_token_hash: tokens.refreshHash,
+    session_expires_on: tokens.sessionExpiresOn,
+    expires_on: tokens.refreshExpiresOn,
+    last_authenticated_on: now,
+    device_name: matchRule(ua, DEVICE_RULES),
+    user_agent: browserName || userAgent,
+    ip_address: ipAddress,
   };
+
+  const existing = await prisma.userSession.findFirst({
+    where: { user_id: userId, device_fingerprint: deviceFingerprint },
+    select: { id: true },
+  });
+
+  const session = existing
+    ? await prisma.userSession.update({
+      where: { id: existing.id },
+      data: { ...sessionFields, previous_refresh_token_hash: null, revoked_on: null },
+      select: { id: true },
+    })
+    : await prisma.userSession.create({
+      data: { ...sessionFields, user_id: userId, device_fingerprint: deviceFingerprint },
+      select: { id: true },
+    });
+
+  const sessionData = tokens.toSessionData(session.id);
+  await setSessionCookies(sessionData, tokens.ttl);
+  return sessionData;
 }
 
 export async function refreshSession(
   presentedRefreshToken: string,
   setCookies: boolean = true
 ): Promise<SessionData> {
-  if (!presentedRefreshToken || typeof presentedRefreshToken !== "string") {
-    throw new Error("invalid_token_format");
-  }
-  const parts = presentedRefreshToken.split(".");
-  if (parts.length !== 2) throw new Error("invalid_token_format");
+  const parsed = parseToken(presentedRefreshToken);
+  if (!parsed) throw new Error("invalid_token_format");
 
-  const [sessionId, tokenValue] = parts;
-  const presentedHash = hashToken(tokenValue);
+  const presentedHash = hashToken(parsed.value);
+  const session = await prisma.userSession.findUnique({ where: { id: parsed.id } });
 
-  const session = await prisma.userSession.findUnique({
-    where: { id: sessionId },
-  });
+  if (!session) throw new Error("invalid_grant");
+  if (session.revoked_on) throw new Error("session_revoked");
+  if (session.expires_on < new Date()) throw new Error("session_expired");
 
-  if (!session) {
+  const match = matchRefreshToken(session, presentedHash);
+  if (!match) {
+    await revokeSession(session.id);
     throw new Error("invalid_grant");
   }
-  if (session.revoked_on) {
-    throw new Error("session_revoked");
-  }
-  if (session.expires_on < new Date()) {
-    throw new Error("session_expired");
-  }
+  if (match === "previous") throw new Error("concurrent_refresh");
 
-  // Replay Attack Detection: If the presented token doesn't match the active token,
-  // check the 2-minute grace period; if outside the grace window, immediately revoke the compromised session!
-  if (!timingSafeEqualStr(session.refresh_token_hash, presentedHash)) {
-    const isPrevious =
-      session.previous_refresh_token_hash &&
-      timingSafeEqualStr(session.previous_refresh_token_hash, presentedHash);
-    const gracePeriodValid =
-      session.updated_on.getTime() + 120 * 1000 > Date.now();
+  const tokens = mintTokens(isRememberMeSession(session), session.expires_on);
 
-    if (!isPrevious || !gracePeriodValid) {
-      await prisma.userSession.update({
-        where: { id: session.id },
-        data: { revoked_on: new Date() },
-      });
-      throw new Error("invalid_grant");
-    }
-  }
-
-  const rawSessionToken = generateRandomValue();
-  const rawRefreshToken = generateRandomValue();
-  const newSessionHash = hashToken(rawSessionToken);
-  const newRefreshHash = hashToken(rawRefreshToken);
-
-  const now = new Date();
-  const isRememberMe =
-    session.expires_on.getTime() - session.created_on.getTime() >
-    2 * 24 * 60 * 60 * 1000;
-  const sessionTtl = isRememberMe
-    ? REFRESH_TOKEN_TTL_REMEMBER_ME
-    : REFRESH_TOKEN_TTL;
-  const rtTtl = sessionTtl;
-  const sessionExpiresOn = new Date(now.getTime() + sessionTtl * 1000);
-  const refreshExpiresOn = new Date(now.getTime() + rtTtl * 1000);
-
-  await prisma.userSession.update({
-    where: { id: session.id },
+  const { count } = await prisma.userSession.updateMany({
+    where: { id: session.id, refresh_token_hash: session.refresh_token_hash },
     data: {
-      session_token_hash: newSessionHash,
-      refresh_token_hash: newRefreshHash,
+      session_token_hash: tokens.sessionHash,
+      refresh_token_hash: tokens.refreshHash,
       previous_refresh_token_hash: session.refresh_token_hash,
-      session_expires_on: sessionExpiresOn,
-      expires_on: refreshExpiresOn,
+      session_expires_on: tokens.sessionExpiresOn,
     },
   });
+  if (count === 0) throw new Error("concurrent_refresh");
 
-  const newSessionToken = `${session.id}.${rawSessionToken}`;
-  const newRefreshToken = `${session.id}.${rawRefreshToken}`;
-
-  if (setCookies)
-    await setSessionCookies(
-      newSessionToken,
-      newRefreshToken,
-      sessionTtl,
-      rtTtl
-    );
-
-  return {
-    sessionToken: newSessionToken,
-    refreshToken: newRefreshToken,
-    sessionExpiresOn,
-    refreshExpiresOn,
-  };
+  const sessionData = tokens.toSessionData(session.id);
+  if (setCookies) await setSessionCookies(sessionData, tokens.ttl);
+  return sessionData;
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {
-  await prisma.userSession.update({
+  await prisma.userSession.updateMany({
     where: { id: sessionId },
     data: { revoked_on: new Date() },
   });
 }
 
-export async function getSession(
-  sessionToken: string
-): Promise<SafeDBUserSession | null> {
-  if (!sessionToken || typeof sessionToken !== "string") return null;
-  const parts = sessionToken.split(".");
-  if (parts.length !== 2) return null;
+const SESSION_USER_SELECT = {
+  id: true,
+  username: true,
+  first_name: true,
+  last_name: true,
+  avatar: true,
+  emails: {
+    where: { is_primary: true },
+    select: { address: true, verified: true },
+  },
+  preferences: {
+    select: { language: true, timezone: true, theme: true },
+  },
+} satisfies Prisma.UserSelect;
 
-  const [sessionId, tokenValue] = parts;
-  const sessionHash = hashToken(tokenValue);
+type SessionUserRow = Prisma.UserGetPayload<{ select: typeof SESSION_USER_SELECT }>;
 
-  const session = await prisma.userSession.findUnique({
-    where: { id: sessionId },
-  });
-
-  if (
-    !session ||
-    session.revoked_on ||
-    session.session_expires_on < new Date()
-  ) {
-    return null;
-  }
-
-  if (!timingSafeEqualStr(session.session_token_hash, sessionHash)) {
-    return null;
-  }
-
-  return sanitizeSession(session);
+function toSessionUser({ emails, preferences, ...user }: SessionUserRow) {
+  return {
+    ...user,
+    email: emails[0]?.address ?? null,
+    email_verified: Boolean(emails[0]?.verified),
+    language: preferences?.language ?? null,
+    timezone: preferences?.timezone ?? null,
+    theme: preferences?.theme ?? null,
+  };
 }
 
-export const getUserSessionByToken = cache(async (sessionToken: string) => {
-  if (!sessionToken || typeof sessionToken !== "string") return null;
+const isSessionTokenValid = (session: DBUserSession, hash: string) =>
+  session.session_expires_on >= new Date() &&
+  timingSafeEqualStr(session.session_token_hash, hash);
 
-  const parts = sessionToken.split(".");
-  if (parts.length !== 2) return null;
+const isRefreshTokenValid = (session: DBUserSession, hash: string) =>
+  session.expires_on >= new Date() && matchRefreshToken(session, hash) !== null;
 
-  const [sessionId, tokenValue] = parts;
-  const sessionHash = hashToken(tokenValue);
+async function resolveUserSession(
+  token: string,
+  isValid: (session: DBUserSession, tokenHash: string) => boolean,
+  label: string
+) {
+  const parsed = parseToken(token);
+  if (!parsed) return null;
 
   try {
-    const sessionWithUser = await prisma.userSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            emails: {
-              where: { is_primary: true },
-              select: { address: true, verified: true },
-            },
-            first_name: true,
-            last_name: true,
-            avatar: true,
-          },
-        },
-      },
+    const row = await prisma.userSession.findUnique({
+      where: { id: parsed.id },
+      include: { user: { select: SESSION_USER_SELECT } },
     });
 
-    if (
-      !sessionWithUser ||
-      sessionWithUser.revoked_on ||
-      sessionWithUser.session_expires_on < new Date()
-    ) {
+    if (!row?.user || row.revoked_on || !isValid(row, hashToken(parsed.value))) {
       return null;
     }
 
-    if (!timingSafeEqualStr(sessionWithUser.session_token_hash, sessionHash)) {
-      return null;
-    }
-
-    if (!sessionWithUser.user) return null;
-
-    const { user, ...sessionData } = sessionWithUser;
-    const { emails, ...restUser } = user;
-    const transformedUser = {
-      ...restUser,
-      email: emails[0]?.address || null,
-      email_verified: Boolean(emails[0]?.verified),
-    };
-
+    const { user, ...session } = row;
     return {
-      session: sanitizeSession(sessionData as DBUserSession),
-      user: transformedUser,
+      session: sanitizeSession(session as DBUserSession),
+      user: toSessionUser(user),
     };
   } catch (error) {
     console.warn(
-      "[Session Resolution Warning] Failed to validate session token against database:",
+      `[Session Resolution Warning] Failed to validate ${label} against database:`,
       (error as Error)?.message || error
     );
     return null;
   }
-});
-
-export const getUserSessionByRefreshToken = cache(async (refreshToken: string) => {
-  if (!refreshToken || typeof refreshToken !== "string") return null;
-
-  const parts = refreshToken.split(".");
-  if (parts.length !== 2) return null;
-
-  const [sessionId, tokenValue] = parts;
-  const presentedHash = hashToken(tokenValue);
-
-  try {
-    const sessionWithUser = await prisma.userSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            emails: {
-              where: { is_primary: true },
-              select: { address: true, verified: true },
-            },
-            first_name: true,
-            last_name: true,
-            avatar: true,
-          },
-        },
-      },
-    });
-
-    if (
-      !sessionWithUser ||
-      sessionWithUser.revoked_on ||
-      sessionWithUser.expires_on < new Date()
-    ) {
-      return null;
-    }
-
-    const isCurrent = timingSafeEqualStr(
-      sessionWithUser.refresh_token_hash,
-      presentedHash
-    );
-    const isPrevious =
-      sessionWithUser.previous_refresh_token_hash &&
-      timingSafeEqualStr(
-        sessionWithUser.previous_refresh_token_hash,
-        presentedHash
-      );
-    const gracePeriodValid =
-      sessionWithUser.updated_on.getTime() + 120 * 1000 > Date.now();
-
-    if (!isCurrent && !(isPrevious && gracePeriodValid)) {
-      return null;
-    }
-
-    if (!sessionWithUser.user) return null;
-
-    const { user, ...sessionData } = sessionWithUser;
-    const { emails, ...restUser } = user;
-    const transformedUser = {
-      ...restUser,
-      email: emails[0]?.address || null,
-      email_verified: Boolean(emails[0]?.verified),
-    };
-
-    return {
-      session: sanitizeSession(sessionData as DBUserSession),
-      user: transformedUser,
-    };
-  } catch (error) {
-    console.warn(
-      "[Session Resolution Warning] Failed to validate refresh token against database:",
-      (error as Error)?.message || error
-    );
-    return null;
-  }
-});
-
-/**
- * Helper to race an asynchronous promise against a maximum timeout.
- * Prevents transient database freezes or waking serverless databases from hanging UI rendering.
- */
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  fallbackValue: T
-): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeoutPromise = new Promise<T>((resolve) => {
-    timer = setTimeout(() => {
-      resolve(fallbackValue);
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
 }
 
-/**
- * Per-request memoized session resolver using React's `cache()`.
- * Eliminates duplicate DB queries when layouts, pages, and server helpers
- * inspect the user session within the same React Server Component render tree.
- */
+export const getUserSessionByToken = cache((sessionToken: string) =>
+  resolveUserSession(sessionToken, isSessionTokenValid, "session token")
+);
+
+export const getUserSessionByRefreshToken = cache((refreshToken: string) =>
+  resolveUserSession(refreshToken, isRefreshTokenValid, "refresh token")
+);
+
+export async function getSession(sessionToken: string): Promise<SafeDBUserSession | null> {
+  return (await getUserSessionByToken(sessionToken))?.session ?? null;
+}
+
 export const getUserSession = async () => {
-  const headersList = await headers();
   const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
+  const refreshToken = cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
 
-  const sessionToken =
-    headersList.get("x-clouauth-session") ||
-    cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
+  if (!sessionToken && !refreshToken) return null;
 
-  const refreshToken =
-    headersList.get("x-clouauth-refresh") ||
-    cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
+  const resolve = async () => {
+    if (sessionToken) {
+      const session = await getUserSessionByToken(sessionToken);
+      if (session) return session;
+    }
+    return refreshToken ? getUserSessionByRefreshToken(refreshToken) : null;
+  };
 
-  // Fast-path: If neither token cookie exists, return immediately without touching the database
-  if (!sessionToken && !refreshToken) {
-    return null;
-  }
-
-  // Bound overall session resolution time to 5000ms so database cold-starts or pauses
-  // never cause UI page rendering to stall indefinitely.
-  return await withTimeout(
-    (async () => {
-      if (sessionToken && typeof sessionToken === "string") {
-        const sessionData = await getUserSessionByToken(sessionToken);
-        if (sessionData) return sessionData;
-      }
-
-      // Seamless fallback: If session_token is expired or missing, check refresh_token
-      if (refreshToken && typeof refreshToken === "string") {
-        const sessionFromRefresh = await getUserSessionByRefreshToken(refreshToken);
-        if (sessionFromRefresh) {
-          return sessionFromRefresh;
-        }
-      }
-
-      return null;
-    })(),
-    5000,
-    null
-  );
+  return withTimeout(resolve(), SESSION_RESOLVE_TIMEOUT_MS, null);
 };
 
-export async function signOut(sessionId?: string) {
+async function getCurrentSessionId(): Promise<string | null> {
   const cookieStore = await cookies();
+  const token =
+    cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value ??
+    cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
+  return parseToken(token)?.id ?? null;
+}
 
-  if (sessionId) {
-    await revokeSession(sessionId);
-  } else {
-    const sessionToken = cookieStore.get(COOKIE_SESSION_TOKEN_NAME)?.value;
-    if (sessionToken) {
-      const parts = sessionToken.split(".");
-      if (parts.length === 2) {
-        await revokeSession(parts[0]);
-      }
-    } else {
-      const refreshToken = cookieStore.get(COOKIE_REFRESH_TOKEN_NAME)?.value;
-      if (refreshToken) {
-        const parts = refreshToken.split(".");
-        if (parts.length === 2) {
-          await revokeSession(parts[0]);
-        }
-      }
-    }
+export async function signOut(sessionId?: string) {
+  try {
+    const id = sessionId ?? (await getCurrentSessionId());
+    if (id) await revokeSession(id);
+  } finally {
+    await clearSessionCookies();
   }
-
-  const clearCookieOptions = getSecureCookieOptions({ maxAge: 0 });
-  cookieStore.set(COOKIE_SESSION_TOKEN_NAME, "", clearCookieOptions);
-  cookieStore.set(COOKIE_REFRESH_TOKEN_NAME, "", clearCookieOptions);
-  cookieStore.delete(COOKIE_SESSION_TOKEN_NAME);
-  cookieStore.delete(COOKIE_REFRESH_TOKEN_NAME);
-  cookieStore.set("clou_logged_in", "", {
-    path: "/",
-    maxAge: 0,
-    sameSite: "lax",
-    httpOnly: false,
-  });
-  cookieStore.delete("clou_logged_in");
 }
 
 export interface CreateTempSessionOptions {
@@ -589,29 +438,13 @@ export async function createTempSession(
 ): Promise<DBTempSession> {
   const opts: CreateTempSessionOptions =
     typeof options === "boolean" ? { rememberMe: options } : options;
-  const now = new Date();
-  const expiresOn = new Date(now.getTime() + 15 * 60 * 1000);
+  const { userAgent, ipAddress } = await getRequestMeta();
 
-  let ipAddress: string | null = null;
-  let userAgent: string | null = null;
-
-  try {
-    const headersList = await headers();
-    userAgent = headersList.get("user-agent") || null;
-    ipAddress =
-      headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || null;
-  } catch {
-    // Headers might not be available in non-request contexts
-  }
-
-  // 256-bit cryptographically secure unpredictable random identifier
-  const highEntropyId = crypto.randomBytes(32).toString("hex");
-
-  return await prisma.tempSession.create({
+  return prisma.tempSession.create({
     data: {
-      id: highEntropyId,
+      id: generateRandomValue(),
       user_id: userId,
-      expires_on: expiresOn,
+      expires_on: new Date(Date.now() + TEMP_SESSION_TTL_MS),
       remember_me: opts.rememberMe ?? false,
       auth_method: opts.authMethod ?? null,
       flow_type: opts.flowType ?? null,
@@ -622,140 +455,114 @@ export async function createTempSession(
   });
 }
 
-export async function getTempSession(
-  tempSessionId: string
-): Promise<DBTempSession | null> {
-  return await prisma.tempSession.findUnique({
-    where: { id: tempSessionId },
-  });
+export async function getTempSession(tempSessionId: string): Promise<DBTempSession | null> {
+  return prisma.tempSession.findUnique({ where: { id: tempSessionId } });
 }
 
 export async function deleteTempSession(tempSessionId: string): Promise<void> {
   try {
-    await prisma.tempSession.delete({
-      where: { id: tempSessionId },
-    });
+    await prisma.tempSession.deleteMany({ where: { id: tempSessionId } });
   } catch (e: unknown) {
     handleError(e, "Failed to execute deleteTempSession");
   }
 }
 
-export async function createOAuthSession(
-  userId: string,
-  clientId: string,
-  scope: string
-) {
-  const accessExpiresIn = 3600; // 1 hour
-  const refreshExpiresIn = 30 * 24 * 3600; // 30 days
+type OAuthTokenType = "access_token" | "refresh_token" | "client_credentials";
 
-  const { SignJWT } = await import("jose");
-  const { getSecret } = await import("@/lib/jwt-secret");
-  const secret = getSecret();
-  const issuer = getIssuerUrl();
-
-  const accessToken = await new SignJWT({
-    sub: userId,
-    client_id: clientId,
-    scope: scope || "openid profile email",
-    type: "access_token",
-  })
+function signToken(params: {
+  type: OAuthTokenType;
+  sub: string;
+  clientId: string;
+  scope: string;
+  ttlSeconds: number;
+}) {
+  const { type, sub, clientId, scope, ttlSeconds } = params;
+  return new SignJWT({ sub, client_id: clientId, scope, type })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(issuer)
     .setAudience(clientId)
     .setJti(crypto.randomUUID())
     .setIssuedAt()
-    .setExpirationTime(`${accessExpiresIn}s`)
+    .setExpirationTime(`${ttlSeconds}s`)
     .sign(secret);
-
-  const refreshToken = await new SignJWT({
-    sub: userId,
-    client_id: clientId,
-    scope: scope || "openid profile email",
-    type: "refresh_token",
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(issuer)
-    .setAudience(clientId)
-    .setJti(crypto.randomUUID())
-    .setIssuedAt()
-    .setExpirationTime(`${refreshExpiresIn}s`)
-    .sign(secret);
-
-  return {
-    accessToken,
-    refreshToken,
-    expiresIn: accessExpiresIn,
-    scope: scope || "openid profile email",
-  };
 }
 
-export async function createClientCredentialsSession(
-  clientId: string,
-  scope: string
-) {
-  const accessExpiresIn = 3600; // 1 hour
+const verifyOAuthToken = (token: string) =>
+  jwtVerify(token, secret, { algorithms: ["HS256"], issuer });
 
-  const { SignJWT } = await import("jose");
-  const { getSecret } = await import("@/lib/jwt-secret");
-  const secret = getSecret();
-  const issuer = getIssuerUrl();
+export async function createOAuthSession(userId: string, clientId: string, scope: string) {
+  const finalScope = scope || DEFAULT_USER_SCOPE;
 
-  const accessToken = await new SignJWT({
-    sub: clientId,
-    client_id: clientId,
-    scope: scope || "internal_service",
+  const [accessToken, refreshToken] = await Promise.all([
+    signToken({
+      type: "access_token",
+      sub: userId,
+      clientId,
+      scope: finalScope,
+      ttlSeconds: ACCESS_TOKEN_TTL_S,
+    }),
+    signToken({
+      type: "refresh_token",
+      sub: userId,
+      clientId,
+      scope: finalScope,
+      ttlSeconds: OAUTH_REFRESH_TOKEN_TTL_S,
+    }),
+  ]);
+
+  return { accessToken, refreshToken, expiresIn: ACCESS_TOKEN_TTL_S, scope: finalScope };
+}
+
+export async function createClientCredentialsSession(clientId: string, scope: string) {
+  const finalScope = scope || DEFAULT_SERVICE_SCOPE;
+
+  const accessToken = await signToken({
     type: "client_credentials",
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(issuer)
-    .setAudience(clientId)
-    .setJti(crypto.randomUUID())
-    .setIssuedAt()
-    .setExpirationTime(`${accessExpiresIn}s`)
-    .sign(secret);
+    sub: clientId,
+    clientId,
+    scope: finalScope,
+    ttlSeconds: ACCESS_TOKEN_TTL_S,
+  });
 
-  return {
-    accessToken,
-    tokenType: "Bearer",
-    expiresIn: accessExpiresIn,
-    scope: scope || "internal_service",
-  };
+  return { accessToken, tokenType: "Bearer", expiresIn: ACCESS_TOKEN_TTL_S, scope: finalScope };
 }
 
 export async function getOAuthSession(token: string) {
   try {
-    const { jwtVerify } = await import("jose");
-    const { getSecret } = await import("@/lib/jwt-secret");
-    const { payload } = await jwtVerify(token, getSecret(), {
-      algorithms: ["HS256"],
-    });
+    const { payload } = await verifyOAuthToken(token);
+    if (payload.type !== "access_token" || typeof payload.sub !== "string") return null;
 
-    if (payload.type !== "access_token") {
-      return null;
-    }
+    const clientId = String(payload.clientId || payload.client_id || "");
 
-    if (payload.jti) {
-      const revoked = await prisma.revokedToken.findUnique({
-        where: { jti: payload.jti as string },
-      });
-      if (revoked) return null;
-    }
+    const [revoked, user, consent] = await Promise.all([
+      payload.jti
+        ? prisma.revokedToken.findUnique({ where: { jti: payload.jti }, select: { jti: true } })
+        : null,
+      prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: {
+          emails: { where: { is_primary: true } },
+          phones: { where: { is_primary: true } },
+        },
+      }),
+      clientId
+        ? prisma.oAuthConsent.findUnique({
+            where: {
+              user_id_client_id: {
+                user_id: payload.sub,
+                client_id: clientId,
+              },
+            },
+          })
+        : null,
+    ]);
 
-    const scopes = (payload.scope as string).split(" ").filter(Boolean);
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub as string },
-      include: {
-        emails: { where: { is_primary: true } },
-        phones: { where: { is_primary: true } },
-      },
-    });
-
-    if (!user) return null;
+    if (revoked || !user) return null;
+    if (clientId && (!consent || consent.revoked_at)) return null;
 
     return {
       user,
-      scopes,
+      scopes: String(payload.scope ?? "").split(" ").filter(Boolean),
     };
   } catch {
     return null;
@@ -763,28 +570,17 @@ export async function getOAuthSession(token: string) {
 }
 
 export async function revokeOAuthSession(token: string) {
-  const { jwtVerify } = await import("jose");
-  const { getSecret } = await import("@/lib/jwt-secret");
   try {
-    const { payload } = await jwtVerify(token, getSecret(), {
-      algorithms: ["HS256"],
-      maxTokenAge: "30d",
-    });
-    const jti = payload.jti as string;
-    const exp = payload.exp as number;
-
-    if (jti && exp) {
+    const { payload } = await verifyOAuthToken(token);
+    if (payload.jti && payload.exp) {
       await prisma.revokedToken.upsert({
-        where: { jti },
+        where: { jti: payload.jti },
         update: {},
-        create: {
-          jti,
-          expires_at: new Date(exp * 1000),
-        },
+        create: { jti: payload.jti, expires_at: new Date(payload.exp * 1000) },
       });
     }
   } catch {
-    // Token is malformed or signature invalid
+    return true;
   }
   return true;
 }

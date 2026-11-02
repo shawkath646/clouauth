@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { jwtVerify, importJWK, JWTPayload } from "jose";
-import { getSecret } from "@/lib/jwt-secret";
 import prisma from "@/lib/prisma";
 import { getActivePublicJwks } from "@/lib/sso/signing-keys";
+import { getEnv } from "@/utils/utils";
 
 export interface InterServiceAuthResult {
   authorized: boolean;
@@ -16,6 +16,7 @@ export interface InterServiceAuthResult {
   payload?: JWTPayload;
 }
 
+const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
 const ALLOWED_TOKEN_TYPES = new Set([
   "client_credentials",
   "internal_service",
@@ -69,7 +70,7 @@ export async function verifyInterServiceAuth(
   // 2. Try verifying with shared internal HMAC secret (JWT_SECRET)
   if (!verifiedPayload) {
     try {
-      const verified = await jwtVerify(token, getSecret(), {
+      const verified = await jwtVerify(token, secret, {
         algorithms: ["HS256"],
       });
       verifiedPayload = verified.payload;

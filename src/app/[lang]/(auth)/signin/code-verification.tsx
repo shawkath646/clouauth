@@ -4,10 +4,8 @@ import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent, useEffect
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import type { Dictionary } from "@/types/i18n.types";
 import { Loader2, Mail, ShieldCheck, AlertCircle } from "lucide-react";
-
 import { triggerVerificationMethod, resolveCodeVerification, resolveTotpVerification } from "@/actions/auth/verification.actions";
 import { handleError } from "@/utils/error";
 import { SignInReturn } from "@/actions/auth/auth.actions";
@@ -18,6 +16,47 @@ interface CodeVerificationProps {
   tempSessionId: string | null;
   methodType?: "code" | "totp" | string;
   dict: Dictionary<"signin">;
+}
+
+function CodeSlotInput({
+  index,
+  codeLength,
+  digit,
+  isTotp,
+  inputRef,
+  onChange,
+  onKeyDown,
+  onPaste,
+}: {
+  index: number;
+  codeLength: number;
+  digit: string;
+  isTotp: boolean;
+  inputRef: (el: HTMLInputElement | null) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>, index: number) => void;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>, index: number) => void;
+  onPaste: (e: ClipboardEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <Input
+      ref={inputRef}
+      type="text"
+      inputMode="numeric"
+      pattern="\d*"
+      autoComplete={index === 0 ? "one-time-code" : "off"}
+      maxLength={2}
+      value={digit}
+      onChange={(e) => onChange(e, index)}
+      onKeyDown={(e) => onKeyDown(e, index)}
+      onPaste={onPaste}
+      aria-label={`Digit ${index + 1} of ${codeLength}`}
+      className={
+        isTotp
+          ? "w-10 sm:w-11 h-12 px-0 text-center font-mono text-lg sm:text-xl font-bold rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
+          : "w-8 sm:w-9.5 h-11 sm:h-12 px-0 text-center font-mono text-base sm:text-lg font-bold rounded-lg sm:rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
+      }
+    />
+  );
 }
 
 export default function CodeVerification({
@@ -35,7 +74,15 @@ export default function CodeVerification({
   const [isResending, setIsResending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const lastSubmittedRef = useRef<string>("");
+
+  const focusInput = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < codeLength) {
+        inputRefs.current[index]?.focus();
+      }
+    },
+    [codeLength]
+  );
 
   const handleResend = async () => {
     if (!tempSessionId) return;
@@ -53,7 +100,6 @@ export default function CodeVerification({
       } else {
         setCountdown(60);
         setCode(Array(codeLength).fill(""));
-        lastSubmittedRef.current = "";
         focusInput(0);
       }
     } catch (e: unknown) {
@@ -76,9 +122,6 @@ export default function CodeVerification({
       const targetCode = (codeToVerify || code).join("");
       if (targetCode.length !== codeLength || isLoading) return;
 
-      if (lastSubmittedRef.current === targetCode) return;
-      lastSubmittedRef.current = targetCode;
-
       if (!tempSessionId) {
         setErrorMsg("No active session. Please sign in again.");
         return;
@@ -96,6 +139,8 @@ export default function CodeVerification({
 
         if (response && response.action === "ERROR") {
           setErrorMsg(response.error || "Invalid verification code");
+          setCode(Array(codeLength).fill(""));
+          focusInput(0);
         } else {
           onComplete(response);
         }
@@ -106,22 +151,8 @@ export default function CodeVerification({
         setIsLoading(false);
       }
     },
-    [code, codeLength, isLoading, tempSessionId, isTotp, executeRecaptcha, onComplete]
+    [code, codeLength, isLoading, tempSessionId, isTotp, executeRecaptcha, onComplete, focusInput]
   );
-
-  // Auto-submit when all digits are filled
-  useEffect(() => {
-    const fullCode = code.join("");
-    if (fullCode.length === codeLength && fullCode !== lastSubmittedRef.current && !isLoading) {
-      triggerVerification(code);
-    }
-  }, [code, codeLength, isLoading, triggerVerification]);
-
-  const focusInput = (index: number) => {
-    if (index >= 0 && index < codeLength) {
-      inputRefs.current[index]?.focus();
-    }
-  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace") {
@@ -209,24 +240,18 @@ export default function CodeVerification({
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="w-full max-w-105 p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/[0.08] shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
     >
-      {/* Header */}
       <div className="flex flex-col items-center text-center mb-5">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-xs">
           {isTotp ? <ShieldCheck className="h-6 w-6 stroke-[2.2]" /> : <Mail className="h-6 w-6 stroke-[2]" />}
         </div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          {isTotp
-            ? dict.authenticatorApp
-            : dict.enterCode}
+          {isTotp ? dict.authenticatorApp : dict.enterCode}
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-80 leading-relaxed">
-          {isTotp
-            ? dict.authenticatorAppDesc
-            : dict.emailCodeDesc}
+          {isTotp ? dict.authenticatorAppDesc : dict.emailCodeDesc}
         </p>
       </div>
 
-      {/* Error Notice */}
       {errorMsg && (
         <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium text-left">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -234,81 +259,63 @@ export default function CodeVerification({
         </div>
       )}
 
-      {/* Code Input Form */}
       <div className="flex flex-col gap-5">
         <fieldset className="border-0 p-0 m-0">
           <legend className="sr-only">{dict.codePlaceholder}</legend>
 
           {isTotp ? (
-            /* 6-digit layout for TOTP */
             <div className="flex gap-2 sm:gap-2.5 justify-center">
               {code.map((digit, index) => (
-                <Input
+                <CodeSlotInput
                   key={`slot-${index}`}
-                  ref={(el) => {
+                  index={index}
+                  codeLength={codeLength}
+                  digit={digit}
+                  isTotp={true}
+                  inputRef={(el) => {
                     inputRefs.current[index] = el;
                   }}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d*"
-                  autoComplete={index === 0 ? "one-time-code" : "off"}
-                  maxLength={2}
-                  value={digit}
-                  onChange={(e) => handleChange(e, index)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  aria-label={`Digit ${index + 1} of ${codeLength}`}
-                  className="w-10 sm:w-11 h-12 px-0 text-center font-mono text-lg sm:text-xl font-bold rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
                 />
               ))}
             </div>
           ) : (
-            /* 8-digit split layout (4 + 4) for Email OTP */
             <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-              {code.slice(0, 4).map((digit, idx) => {
-                const index = idx;
-                return (
-                  <Input
-                    key={`slot-${index}`}
-                    ref={(el) => {
-                      inputRefs.current[index] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="\d*"
-                    autoComplete={index === 0 ? "one-time-code" : "off"}
-                    maxLength={2}
-                    value={digit}
-                    onChange={(e) => handleChange(e, index)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                    onPaste={handlePaste}
-                    aria-label={`Digit ${index + 1} of ${codeLength}`}
-                    className="w-8 sm:w-9.5 h-11 sm:h-12 px-0 text-center font-mono text-base sm:text-lg font-bold rounded-lg sm:rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
-                  />
-                );
-              })}
+              {code.slice(0, 4).map((digit, index) => (
+                <CodeSlotInput
+                  key={`slot-${index}`}
+                  index={index}
+                  codeLength={codeLength}
+                  digit={digit}
+                  isTotp={false}
+                  inputRef={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                />
+              ))}
 
               <span className="text-muted-foreground/40 font-bold px-0.5 select-none text-sm">—</span>
 
               {code.slice(4, 8).map((digit, idx) => {
                 const index = idx + 4;
                 return (
-                  <Input
+                  <CodeSlotInput
                     key={`slot-${index}`}
-                    ref={(el) => {
+                    index={index}
+                    codeLength={codeLength}
+                    digit={digit}
+                    isTotp={false}
+                    inputRef={(el) => {
                       inputRefs.current[index] = el;
                     }}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="\d*"
-                    autoComplete="off"
-                    maxLength={2}
-                    value={digit}
-                    onChange={(e) => handleChange(e, index)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
-                    aria-label={`Digit ${index + 1} of ${codeLength}`}
-                    className="w-8 sm:w-9.5 h-11 sm:h-12 px-0 text-center font-mono text-base sm:text-lg font-bold rounded-lg sm:rounded-xl border border-border/70 bg-background/80 dark:bg-background/40 shadow-xs focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
                   />
                 );
               })}
@@ -316,7 +323,6 @@ export default function CodeVerification({
           )}
         </fieldset>
 
-        {/* Action Buttons */}
         <div className="flex flex-col gap-3">
           <Button
             className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold rounded-xl cursor-pointer"

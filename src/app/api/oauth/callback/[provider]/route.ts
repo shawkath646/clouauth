@@ -6,6 +6,7 @@ import { encryptSymmetric } from "@/lib/encryption";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { authenticateExternalUser } from "@/actions/auth/auth";
+import { getSafeReturnTo } from "@/utils/url";
 
 export async function GET(
   request: NextRequest,
@@ -68,6 +69,10 @@ export async function GET(
         return errorRedirect("Verification session expired. Please try again.");
       }
 
+      if (!session || session.user.id !== tempSession.user_id) {
+        return errorRedirect("Unauthorized session for step-up verification.");
+      }
+
       // Verify that the returned OAuth profile id matches the user's linked account for this provider
       const linkedAccount = tempSession.user.oauth_accounts.find(
         (acc) =>
@@ -80,12 +85,10 @@ export async function GET(
       }
 
       // Valid Sudo verification: update active session last_authenticated_on
-      if (session) {
-        await prisma.userSession.update({
-          where: { id: session.session.id },
-          data: { last_authenticated_on: new Date() },
-        });
-      }
+      await prisma.userSession.update({
+        where: { id: session.session.id },
+        data: { last_authenticated_on: new Date() },
+      });
 
       await prisma.tempSession.delete({
         where: { id: sudoTid },
@@ -95,8 +98,8 @@ export async function GET(
       if (tempSession.payload) {
         try {
           const parsed = JSON.parse(tempSession.payload);
-          if (parsed.return_to && parsed.return_to.startsWith("/") && !parsed.return_to.startsWith("//")) {
-            returnTo = parsed.return_to;
+          if (parsed.return_to) {
+            returnTo = getSafeReturnTo(parsed.return_to, "en", "/profile");
           }
         } catch {}
       }
@@ -126,18 +129,12 @@ export async function GET(
 
     if (session) {
       const returnToCookie = request.cookies.get("oauth_return_to")?.value;
-      const safeReturnTo =
-        returnToCookie?.startsWith("/") && !returnToCookie.startsWith("//")
-          ? returnToCookie
-          : "/profile/connected";
+      const safeReturnTo = getSafeReturnTo(returnToCookie, "en", "/profile/connected");
       targetUrl = new URL(safeReturnTo, baseUrl);
       targetUrl.searchParams.set("success", `${effectiveProvider}_connected`);
     } else {
       const returnToCookie = request.cookies.get("oauth_return_to")?.value;
-      const safeReturnTo =
-        returnToCookie?.startsWith("/") && !returnToCookie.startsWith("//")
-          ? returnToCookie
-          : null;
+      const safeReturnTo = returnToCookie ? getSafeReturnTo(returnToCookie, "en", "/profile") : null;
 
       targetUrl = new URL("/signin", baseUrl);
 

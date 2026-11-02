@@ -37,5 +37,7 @@
   "scopeProfile": "Full name",
   "scopeEmail": "Email address",
   "scopePhone": "Phone number",
+  "scopeAddress": "Acceder a su dirección postal",
+  "scopeOfflineAccess": "Mantener acceso sin conexión a su cuenta",
   "scopeOpenid": "Basic identity"
 }

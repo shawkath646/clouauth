@@ -3,6 +3,7 @@ import { getUserSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
 import { VerificationMethod } from "@/types/auth.types";
 import { verificationMethodMap, getWebAuthnConfig } from "./helpers";
+import { getSafeReturnTo } from "@/utils/url";
 
 export type SudoUserMeta = {
   username: string;
@@ -105,12 +106,8 @@ export async function resolveTempSessionStep(
       if (tempSession.payload) {
         try {
           const parsed = JSON.parse(tempSession.payload);
-          if (
-            parsed.return_to &&
-            parsed.return_to.startsWith("/") &&
-            !parsed.return_to.startsWith("//")
-          ) {
-            returnTo = parsed.return_to;
+          if (parsed.return_to) {
+            returnTo = getSafeReturnTo(parsed.return_to, "en");
           }
         } catch {}
       }

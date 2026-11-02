@@ -60,5 +60,22 @@
     "deleteSuccess": "애플리케이션이 성공적으로 제거되었습니다!",
     "deleteError": "애플리케이션 삭제에 실패했습니다.",
     "error": "오류"
+  },
+  "connectedApps": {
+    "title": "연결된 애플리케이션",
+    "desc1": "OAuth 2.0 / OpenID Connect를 통해 귀하의",
+    "desc2": "계정에 접근 권한이 있는 애플리케이션입니다.",
+    "noApps": "연결된 애플리케이션 없음",
+    "noAppsDesc": "아직 승인된 타사 애플리케이션이 없습니다.",
+    "scopes": "권한",
+    "connectedOn": "연결 일시",
+    "remove": "연결 해제",
+    "removing": "연결 해제 중...",
+    "removeModalTitle": "애플리케이션 액세스 권한 해제",
+    "removeModalDesc1": "정말로",
+    "removeModalDesc2": "의 접근 권한을 해제하시겠습니까? 활성 토큰이 즉시 모두 무효화되며, 다시 인증하기 전까지 이 애플리케이션은 귀하의 정보에 접근할 수 없습니다.",
+    "cancel": "취소",
+    "removeSuccess": "애플리케이션 연결이 성공적으로 해제되었습니다!",
+    "removeError": "애플리케이션 연결 해제에 실패했습니다."
   }
 }

@@ -20,9 +20,6 @@ export function NotificationsSection({
 }: NotificationsSectionProps) {
   const [securityAlerts, setSecurityAlerts] = useState(profile.notifications?.email_security ?? true);
   const [loginNotifications, setLoginNotifications] = useState(profile.notifications?.login_alerts ?? true);
-  const [productUpdates, setProductUpdates] = useState(profile.notifications?.product_updates ?? false);
-  const [marketingEmails, setMarketingEmails] = useState(profile.notifications?.email_marketing ?? false);
-  const [newsletter, setNewsletter] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -49,30 +46,39 @@ export function NotificationsSection({
         </div>
         <Separator className="opacity-50" />
 
-        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 opacity-60">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{dict.productUpdates}</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-semibold cursor-not-allowed">{dict.productUpdates}</Label>
+              <span className="text-xs text-muted-foreground">(Unavailable)</span>
+            </div>
             <p className="text-sm text-muted-foreground">{dict.productUpdatesDesc} <BrandName />.</p>
           </div>
-          <Switch checked={productUpdates} onCheckedChange={setProductUpdates} />
+          <Switch checked={false} disabled />
         </div>
         <Separator className="opacity-50" />
 
-        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 opacity-60">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{dict.marketing}</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-semibold cursor-not-allowed">{dict.marketing}</Label>
+              <span className="text-xs text-muted-foreground">(Unavailable)</span>
+            </div>
             <p className="text-sm text-muted-foreground">{dict.marketingDesc}</p>
           </div>
-          <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
+          <Switch checked={false} disabled />
         </div>
         <Separator className="opacity-50" />
 
-        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 hover:bg-muted/10 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4 opacity-60">
           <div className="space-y-1 mr-4">
-            <Label className="text-base font-semibold">{dict.newsletter}</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-semibold cursor-not-allowed">{dict.newsletter}</Label>
+              <span className="text-xs text-muted-foreground">(Unavailable)</span>
+            </div>
             <p className="text-sm text-muted-foreground">{dict.newsletterDesc}</p>
           </div>
-          <Switch checked={newsletter} onCheckedChange={setNewsletter} />
+          <Switch checked={false} disabled />
         </div>
       </SectionCard>
     </div>

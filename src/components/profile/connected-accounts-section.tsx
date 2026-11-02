@@ -120,6 +120,19 @@ export function ConnectedAccountsSection({
                   >
                     {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : dict.sso.disconnect}
                   </Button>
+                ) : provider.disabled ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">(Not configured)</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="shrink-0 gap-2 opacity-50 cursor-not-allowed"
+                    >
+                      <span>{dict.sso.connect}</span>
+                    </Button>
+                  </div>
                 ) : (
                   <form
                     action={async () => {
@@ -185,6 +198,19 @@ export function ConnectedAccountsSection({
                   >
                     {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : dict.sso.disconnect}
                   </Button>
+                ) : provider.disabled ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">(Not configured)</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="shrink-0 gap-2 opacity-50 cursor-not-allowed"
+                    >
+                      <span>{dict.sso.connect}</span>
+                    </Button>
+                  </div>
                 ) : (
                   <form
                     action={async () => {

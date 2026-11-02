@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,11 +33,14 @@ import {
   Smartphone,
 } from "lucide-react";
 import type { SudoMeta } from "@/actions/auth/verification";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import { handleError } from "@/utils/error";
 
 interface SudoVerificationStepProps {
   tempSessionId: string;
   sudoMeta: SudoMeta;
   onSuccess: (redirectUrl: string) => void;
+  locale?: Locale;
 }
 
 type SudoActiveTab = "password" | "passkey" | "oauth" | "email" | "totp";
@@ -46,11 +49,11 @@ export default function SudoVerificationStep({
   tempSessionId,
   sudoMeta,
   onSuccess,
+  locale = defaultLocale,
 }: SudoVerificationStepProps) {
   const { user, availableMethods, returnTo } = sudoMeta;
   const { executeRecaptcha } = useReCaptcha();
 
-  // Determine initial active method
   const determineInitialTab = (): SudoActiveTab => {
     if (availableMethods.hasPassword) return "password";
     if (availableMethods.hasPasskey) return "passkey";
@@ -68,7 +71,6 @@ export default function SudoVerificationStep({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Total methods count for showing "Verify another way"
   const methodCount =
     (availableMethods.hasPassword ? 1 : 0) +
     (availableMethods.hasPasskey ? 1 : 0) +
@@ -76,7 +78,22 @@ export default function SudoVerificationStep({
     (availableMethods.hasTotp ? 1 : 0) +
     (availableMethods.hasEmailOtp ? 1 : 0);
 
-  // 1. Password Verification Handler
+  const runAction = async (fn: () => Promise<void>) => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      await fn();
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        setErrorMsg("Passkey prompt was cancelled.");
+      } else {
+        setErrorMsg(handleError(err, true));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
@@ -84,9 +101,7 @@ export default function SudoVerificationStep({
       return;
     }
 
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       const recaptchaToken = await executeRecaptcha("sudo_password");
       const res = await resolveSudoPassword(
         tempSessionId,
@@ -100,27 +115,19 @@ export default function SudoVerificationStep({
       } else {
         setErrorMsg(res.error || "Incorrect password. Please try again.");
       }
-    } catch {
-      setErrorMsg("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
-  // 2. Passkey Verification Handler
   const handlePasskeyVerify = async () => {
     if (!browserSupportsWebAuthn()) {
       setErrorMsg("Your browser does not support passkeys / WebAuthn.");
       return;
     }
 
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       const optionsRes = await getSudoPasskeyOptions(tempSessionId);
       if (!optionsRes.success || !optionsRes.options) {
         setErrorMsg(optionsRes.error || "Could not retrieve passkey challenge.");
-        setIsLoading(false);
         return;
       }
 
@@ -135,36 +142,19 @@ export default function SudoVerificationStep({
       } else {
         setErrorMsg(res.error || "Passkey verification failed.");
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "NotAllowedError") {
-        setErrorMsg("Passkey prompt was cancelled.");
-      } else {
-        setErrorMsg("Failed to authenticate with passkey.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
-  // 3. OAuth Verification Trigger
   const handleOAuthClick = async (provider: string) => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       await continueWithProvider(provider, returnTo, {
         sudoTempSessionId: tempSessionId,
       });
-    } catch {
-      setIsLoading(false);
-      setErrorMsg("Failed to start third-party verification.");
-    }
+    });
   };
 
-  // 4. Send Email OTP Code
   const handleSendEmailCode = async () => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       const recaptchaToken = await executeRecaptcha("send_sudo_code");
       const res = await sendSudoEmailCode(tempSessionId, recaptchaToken ?? undefined);
       if (res.success) {
@@ -173,17 +163,9 @@ export default function SudoVerificationStep({
       } else {
         setErrorMsg(res.error || "Failed to send code.");
       }
-    } catch {
-      setErrorMsg("Could not send code.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
-  const lastSubmittedEmailRef = useRef("");
-  const lastSubmittedTotpRef = useRef("");
-
-  // 5. Submit Email OTP Code
   const handleEmailCodeSubmit = async (e?: React.FormEvent, codeVal?: string) => {
     if (e) e.preventDefault();
     const targetCode = (codeVal !== undefined ? codeVal : otpCode).trim();
@@ -194,12 +176,7 @@ export default function SudoVerificationStep({
       return;
     }
 
-    if (lastSubmittedEmailRef.current === targetCode) return;
-    lastSubmittedEmailRef.current = targetCode;
-
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       const recaptchaToken = await executeRecaptcha("verify_sudo_code");
       const res = await resolveSudoEmailCode(
         tempSessionId,
@@ -212,15 +189,11 @@ export default function SudoVerificationStep({
         onSuccess(res.redirectUrl);
       } else {
         setErrorMsg(res.error || "Incorrect verification code.");
+        setOtpCode("");
       }
-    } catch {
-      setErrorMsg("Failed to verify code.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
-  // 6. Submit TOTP Code
   const handleTotpSubmit = async (e?: React.FormEvent, codeVal?: string) => {
     if (e) e.preventDefault();
     const targetCode = (codeVal !== undefined ? codeVal : totpCode).trim();
@@ -231,12 +204,7 @@ export default function SudoVerificationStep({
       return;
     }
 
-    if (lastSubmittedTotpRef.current === targetCode) return;
-    lastSubmittedTotpRef.current = targetCode;
-
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
+    await runAction(async () => {
       const recaptchaToken = await executeRecaptcha("verify_sudo_totp");
       const res = await resolveSudoTotp(
         tempSessionId,
@@ -249,13 +217,30 @@ export default function SudoVerificationStep({
         onSuccess(res.redirectUrl);
       } else {
         setErrorMsg(res.error || "Incorrect authenticator code.");
+        setTotpCode("");
       }
-    } catch {
-      setErrorMsg("Failed to verify code.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
+
+  const METHOD_CONFIGS: {
+    id: SudoActiveTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    available: boolean;
+  }[] = [
+    { id: "password", label: "Password", icon: KeyRound, available: availableMethods.hasPassword },
+    { id: "passkey", label: "Passkey", icon: Fingerprint, available: availableMethods.hasPasskey },
+    {
+      id: "oauth",
+      label: availableMethods.connectedProviders[0]
+        ? availableMethods.connectedProviders[0].charAt(0).toUpperCase() + availableMethods.connectedProviders[0].slice(1)
+        : "Social",
+      icon: KeyRound,
+      available: availableMethods.connectedProviders.length > 0,
+    },
+    { id: "totp", label: "Authenticator", icon: Smartphone, available: availableMethods.hasTotp },
+    { id: "email", label: "Email OTP", icon: Mail, available: availableMethods.hasEmailOtp },
+  ];
 
   return (
     <motion.div
@@ -265,7 +250,6 @@ export default function SudoVerificationStep({
       transition={{ duration: 0.3 }}
       className="w-full max-w-md p-6 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col mx-auto"
     >
-      {/* Header with User Persona */}
       <div className="text-center mb-6">
         <div className="relative inline-block mb-3">
           <Avatar className="w-16 h-16 border-2 border-primary/30 shadow-md mx-auto">
@@ -289,7 +273,6 @@ export default function SudoVerificationStep({
         </p>
       </div>
 
-      {/* Error Banner */}
       {errorMsg && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -300,9 +283,15 @@ export default function SudoVerificationStep({
         </motion.div>
       )}
 
-      {/* Dynamic Method Form */}
       <div className="space-y-4">
-        {/* Method 1: Password Form */}
+        {methodCount === 0 && (
+          <div className="text-center py-6 px-4 rounded-xl border border-dashed border-border/60 bg-muted/20">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              No verification methods are available for this account.
+            </p>
+          </div>
+        )}
+
         {activeTab === "password" && availableMethods.hasPassword && (
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -320,7 +309,7 @@ export default function SudoVerificationStep({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -330,7 +319,7 @@ export default function SudoVerificationStep({
             <Button
               type="submit"
               disabled={isLoading || !password}
-              className="w-full h-10 rounded-xl gap-2 font-medium"
+              className="w-full h-10 rounded-xl gap-2 font-medium cursor-pointer"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
               <span>Confirm Password</span>
@@ -338,7 +327,6 @@ export default function SudoVerificationStep({
           </form>
         )}
 
-        {/* Method 2: Passkey Trigger */}
         {activeTab === "passkey" && availableMethods.hasPasskey && (
           <div className="space-y-4 text-center">
             <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-muted-foreground">
@@ -349,7 +337,7 @@ export default function SudoVerificationStep({
               type="button"
               onClick={handlePasskeyVerify}
               disabled={isLoading}
-              className="w-full h-10 rounded-xl gap-2 font-medium"
+              className="w-full h-10 rounded-xl gap-2 font-medium cursor-pointer"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
               <span>Verify with Passkey</span>
@@ -357,7 +345,6 @@ export default function SudoVerificationStep({
           </div>
         )}
 
-        {/* Method 3: Connected OAuth Provider(s) */}
         {activeTab === "oauth" && availableMethods.connectedProviders.length > 0 && (
           <div className="space-y-3">
             <p className="text-xs text-center text-muted-foreground mb-1">
@@ -371,7 +358,7 @@ export default function SudoVerificationStep({
                 variant="outline"
                 disabled={isLoading}
                 onClick={() => handleOAuthClick(provider)}
-                className="w-full h-11 rounded-xl border-primary/20 hover:border-primary/40 bg-background/50 hover:bg-background/80 font-medium capitalize gap-2 text-sm justify-center"
+                className="w-full h-11 rounded-xl border-primary/20 hover:border-primary/40 bg-background/50 hover:bg-background/80 font-medium capitalize gap-2 text-sm justify-center cursor-pointer"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -383,7 +370,6 @@ export default function SudoVerificationStep({
           </div>
         )}
 
-        {/* Method 4: Authenticator App (TOTP) */}
         {activeTab === "totp" && availableMethods.hasTotp && (
           <form onSubmit={handleTotpSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -418,7 +404,6 @@ export default function SudoVerificationStep({
           </form>
         )}
 
-        {/* Method 5: Email OTP Code */}
         {activeTab === "email" && availableMethods.hasEmailOtp && (
           <div className="space-y-4">
             {!emailCodeSent ? (
@@ -475,7 +460,7 @@ export default function SudoVerificationStep({
                     type="button"
                     onClick={handleSendEmailCode}
                     disabled={isLoading}
-                    className="text-primary font-medium hover:underline"
+                    className="text-primary font-medium hover:underline cursor-pointer"
                   >
                     Resend
                   </button>
@@ -485,87 +470,34 @@ export default function SudoVerificationStep({
           </div>
         )}
 
-        {/* "Verify Another Way" Method Selector (when user has multiple connected methods) */}
         {methodCount > 1 && (
           <div className="pt-3 border-t border-border/40 text-center">
             <p className="text-xs text-muted-foreground mb-2">Or verify another way:</p>
             <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {availableMethods.hasPassword && activeTab !== "password" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("password");
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all flex items-center gap-1"
-                >
-                  <KeyRound className="w-3 h-3 text-primary" />
-                  <span>Password</span>
-                </button>
-              )}
-
-              {availableMethods.hasPasskey && activeTab !== "passkey" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("passkey");
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all flex items-center gap-1"
-                >
-                  <Fingerprint className="w-3 h-3 text-primary" />
-                  <span>Passkey</span>
-                </button>
-              )}
-
-              {availableMethods.connectedProviders.length > 0 && activeTab !== "oauth" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("oauth");
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all capitalize"
-                >
-                  <span>{availableMethods.connectedProviders[0]}</span>
-                </button>
-              )}
-
-              {availableMethods.hasTotp && activeTab !== "totp" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("totp");
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all flex items-center gap-1"
-                >
-                  <Smartphone className="w-3 h-3 text-primary" />
-                  <span>Authenticator</span>
-                </button>
-              )}
-
-              {availableMethods.hasEmailOtp && activeTab !== "email" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("email");
-                    setErrorMsg(null);
-                  }}
-                  className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all flex items-center gap-1"
-                >
-                  <Mail className="w-3 h-3 text-primary" />
-                  <span>Email OTP</span>
-                </button>
-              )}
+              {METHOD_CONFIGS.filter((m) => m.available && m.id !== activeTab).map((m) => {
+                const Icon = m.icon;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(m.id);
+                      setErrorMsg(null);
+                    }}
+                    className="px-2.5 py-1 text-xs rounded-lg border border-primary/20 bg-background/40 hover:bg-background/80 text-foreground transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Icon className="w-3 h-3 text-primary" />
+                    <span>{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Cancel / Abort Link */}
         <div className="text-center pt-2">
           <Link
-            href={returnTo || "/profile"}
+            href={`/${locale}/profile`}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-3 h-3" />

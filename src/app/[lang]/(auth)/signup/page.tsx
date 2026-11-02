@@ -5,34 +5,53 @@ import SignUpForm from "@/app/[lang]/(auth)/signup/signup-form";
 import JsonLd from "@/components/json-ld";
 import { Metadata } from "next";
 import { locales } from "@/lib/i18n/config";
+import { getLocalizedAlternates } from "@/utils/seo";
+import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
 
-export const metadata: Metadata = {
-  title: "Create an Account",
-  description:
-    "Create your free clouburstlab account. Get a unified identity for OIDC and OAuth 2.0 " +
-    "applications, manage passkeys, and secure your account with two-factor authentication.",
-  alternates: {
-    canonical: "/signup",
-  },
-  openGraph: {
-    title: "Create an Account — clouburstlab",
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = resolveLocale(lang);
+  const search = await searchParams;
+  const hasAuthParams = Boolean(search?.[AUTH_REQUEST_PARAM] || search?.return_to);
+
+  return {
+    title: "Create an Account",
     description:
-      "Join clouburstlab — create a unified identity for all your applications. " +
-      "Free, secure, and OIDC 2.0 compliant.",
-    url: "/signup",
-  },
-};
+      "Create your free clouburstlab account. Get a unified identity for OIDC and OAuth 2.0 " +
+      "applications, manage passkeys, and secure your account with two-factor authentication.",
+    alternates: getLocalizedAlternates("/signup", locale),
+    robots: hasAuthParams ? { index: false, follow: false } : undefined,
+    openGraph: {
+      title: "Create an Account — clouburstlab",
+      description:
+        "Join clouburstlab — create a unified identity for all your applications. " +
+        "Free, secure, and OIDC 2.0 compliant.",
+      url: `/signup`,
+    },
+  };
+}
 
 async function SignUpDynamicContent({
   paramsPromise,
+  searchParamsPromise,
 }: {
   paramsPromise: Promise<{ lang: string }>;
+  searchParamsPromise: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { lang } = await paramsPromise;
+  const [{ lang }, searchParams] = await Promise.all([
+    paramsPromise,
+    searchParamsPromise,
+  ]);
   const locale = resolveLocale(lang);
   const [signupDict, commonDict, schemaAuthDict] = await Promise.all([
     getDictionary("signup", locale),
@@ -40,8 +59,12 @@ async function SignUpDynamicContent({
     getDictionary("schema_auth", locale),
   ]);
 
+  const rawAuthRequest = searchParams?.[AUTH_REQUEST_PARAM];
+  const authRequest = typeof rawAuthRequest === "string" ? rawAuthRequest : null;
+
   return (
     <SignUpForm
+      authRequest={authRequest}
       locale={locale}
       dict={signupDict}
       commonDict={commonDict}
@@ -52,8 +75,10 @@ async function SignUpDynamicContent({
 
 export default async function SignUpPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { lang } = await params;
   const locale = resolveLocale(lang);
@@ -106,7 +131,10 @@ export default async function SignUpPage({
           </div>
         }
       >
-        <SignUpDynamicContent paramsPromise={params} />
+        <SignUpDynamicContent
+          paramsPromise={params}
+          searchParamsPromise={searchParams}
+        />
       </Suspense>
     </>
   );

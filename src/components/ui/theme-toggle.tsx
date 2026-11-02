@@ -3,12 +3,17 @@
 import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
+import { updateProfilePreferences } from "@/actions/profile/personal-info.actions"
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
 
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark")
+    const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
+    setTheme(nextTheme)
+    document.cookie = `theme=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`
+    document.cookie = `theme_pref=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`
+    updateProfilePreferences({ theme: nextTheme }).catch(() => {})
   }
 
   return (

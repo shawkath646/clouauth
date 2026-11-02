@@ -170,7 +170,7 @@ export function ApplicationForm({
         setIsSecretOpen(true); // show modal for new app, redirect on close
       } else {
         toast.success(initialData ? "Application updated" : "Application created");
-        router.push(`/${locale}/profile`);
+        router.push(`/${locale}/profile/applications`);
       }
 
     } catch (e: unknown) {

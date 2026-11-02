@@ -38,15 +38,16 @@ export default function SignInErrorStep({
         )}
 
         <div className="flex flex-col space-y-3">
-          <Link href={actionHref}>
-            <Button 
-              variant="outline"
-              className="w-full rounded-xl h-11 border-primary/20 hover:bg-primary/5"
-            >
+          <Button
+            asChild
+            variant="outline"
+            className="w-full rounded-xl h-11 border-primary/20 hover:bg-primary/5 cursor-pointer"
+          >
+            <Link href={actionHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {actionText}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     </div>
@@ -54,4 +55,3 @@ export default function SignInErrorStep({
 }
 
 export { SignInErrorStep as OAuthErrorStep };
-

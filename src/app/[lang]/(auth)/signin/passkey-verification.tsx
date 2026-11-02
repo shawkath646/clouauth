@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/types/i18n.types";
@@ -20,9 +20,11 @@ interface PasskeyVerificationProps {
   dict: Dictionary<"signin">;
 }
 
+const subscribe = () => () => {};
+
 export default function PasskeyVerification({ onComplete, tempSessionId, options, dict }: PasskeyVerificationProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSupported, setIsSupported] = useState(() => (typeof window !== "undefined" ? browserSupportsWebAuthn() : true));
+  const isSupported = useSyncExternalStore(subscribe, browserSupportsWebAuthn, () => true);
   const isVerifyingRef = useRef(false);
   const hasTriggeredRef = useRef(false);
   const mountedRef = useRef(true);
@@ -42,7 +44,6 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
     if (isVerifyingRef.current) return;
 
     if (!browserSupportsWebAuthn()) {
-      setIsSupported(false);
       toast.error("Browser Unsupported", {
         description: "Your browser does not support passkeys. Please choose another verification method.",
       });
@@ -61,7 +62,6 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
     try {
       let authOptions: PasskeyAuthOptions | null = null;
 
-      // Use initial options only on the very first auto-trigger; on retry, always fetch fresh challenge
       if (!isRetry && !initialOptionsUsedRef.current && options) {
         authOptions = options;
         initialOptionsUsedRef.current = true;
@@ -94,7 +94,6 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
 
       if (e instanceof Error) {
         if (e.name === "NotAllowedError") {
-          // User canceled or timed out; do not display noisy red toast
           toast.info("Passkey prompt canceled", { description: "Click Verify below to try again." });
           return;
         }
@@ -137,11 +136,11 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -15, scale: 0.98 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="w-full max-w-105 p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/[0.08] shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
+      className="w-full max-w-105 p-5 sm:p-6 bg-card/80 dark:bg-card/45 backdrop-blur-2xl border border-border/70 dark:border-white/8 shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col mx-auto"
     >
       <div className="flex flex-col items-center text-center mb-5">
         <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-xs">
-          <Fingerprint className="h-7 w-7 stroke-[2]" />
+          <Fingerprint className="h-7 w-7 stroke-2" />
         </div>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           {dict.passkey}
@@ -160,7 +159,7 @@ export default function PasskeyVerification({ onComplete, tempSessionId, options
         )}
 
         <Button
-          className="w-full h-7 sm:h-8 text-sm sm:text-base font-semibold rounded-xl cursor-pointer"
+          className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold rounded-xl cursor-pointer"
           onClick={() => handleVerify(true)}
           disabled={isLoading || !isSupported}
         >

@@ -60,5 +60,22 @@
     "deleteSuccess": "应用程序移除成功！",
     "deleteError": "无法删除应用程序。",
     "error": "错误"
+  },
+  "connectedApps": {
+    "title": "已连接的应用",
+    "desc1": "通过 OAuth 2.0 / OpenID Connect 有权访问您的",
+    "desc2": "账户的应用程序。",
+    "noApps": "没有已连接的应用",
+    "noAppsDesc": "您尚未授权任何第三方应用程序。",
+    "scopes": "权限",
+    "connectedOn": "授权时间",
+    "remove": "移除",
+    "removing": "正在移除...",
+    "removeModalTitle": "移除应用访问权限",
+    "removeModalDesc1": "您确定要移除对",
+    "removeModalDesc2": "的访问权限吗？这将立即撤销所有有效令牌。在您重新授权之前，该应用将无法再访问您的个人信息。",
+    "cancel": "取消",
+    "removeSuccess": "已成功移除应用访问权限！",
+    "removeError": "移除应用访问权限失败。"
   }
 }

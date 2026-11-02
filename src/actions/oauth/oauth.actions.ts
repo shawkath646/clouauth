@@ -6,13 +6,17 @@ import { SignJWT } from "jose";
 import crypto from "crypto";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { handleError } from "@/utils/error";
-import { getSecret } from "@/lib/jwt-secret";
 import { getSecureCookieOptions } from "@/utils/utils";
 import { requireUserSession } from "@/actions/auth/helpers";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { recordSecurityActivity } from "@/lib/security-activity";
 import { parseClientScopes, parseRedirectUris } from "@/lib/oauth/scope-utils";
+import { getSafeReturnTo } from "@/utils/url";
+import { verifyAuthRequest } from "@/lib/oauth/auth-request";
+import { getEnv } from "@/utils/utils";
+
+const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
 
 export async function grantOAuthAccess(
   client_id: string,
@@ -104,7 +108,28 @@ export async function grantOAuthAccess(
       .setJti(codeId)
       .setIssuedAt()
       .setExpirationTime("5m") // Code is valid for 5 minutes
-      .sign(getSecret());
+      .sign(secret);
+
+    // Persist OAuth consent for the user and client application
+    await prisma.oAuthConsent.upsert({
+      where: {
+        user_id_client_id: {
+          user_id: session.user.id,
+          client_id,
+        },
+      },
+      create: {
+        user_id: session.user.id,
+        client_id,
+        scopes: finalScope,
+        revoked_at: null,
+      },
+      update: {
+        scopes: finalScope,
+        revoked_at: null,
+        updated_at: new Date(),
+      },
+    });
 
     // Build the redirect URL (RFC 6749 & RFC 9207 Issuer Identification)
     const url = new URL(redirect_uri);
@@ -124,6 +149,155 @@ export async function grantOAuthAccess(
     const em = handleError(e, true);
     return { success: false, error: em };
   }
+}
+
+export async function confirmConsentAction(authRequestToken: string) {
+  let redirectUrl: string | null = null;
+  try {
+    const session = await requireUserSession();
+    const authReq = await verifyAuthRequest(authRequestToken);
+
+    if (!authReq) {
+      return {
+        success: false,
+        error: "The authorization request has expired or is invalid. Please restart the request from the application.",
+      };
+    }
+
+    const clientApp = await prisma.oAuthClientConfig.findUnique({
+      where: { client_id: authReq.clientId },
+      include: { app: true },
+    });
+
+    if (!clientApp || !clientApp.enabled) {
+      return {
+        success: false,
+        error: "The application requesting authorization could not be found or has been disabled.",
+      };
+    }
+
+    const registeredUris = parseRedirectUris(clientApp.redirect_uris);
+    if (!registeredUris.includes(authReq.redirectUri)) {
+      return {
+        success: false,
+        error: "The provided redirect URI is not authorized for this application.",
+      };
+    }
+
+    const allowedScopes = new Set(parseClientScopes(clientApp.scopes));
+    const requestedScopes = (authReq.scope || "openid profile email")
+      .split(/\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const grantedScopes = requestedScopes.filter((s) => allowedScopes.has(s));
+    const finalScope =
+      grantedScopes.length > 0
+        ? grantedScopes.join(" ")
+        : Array.from(allowedScopes).join(" ") || "openid profile email";
+
+    const codeId = crypto.randomUUID();
+    const authCode = await new SignJWT({
+      client_id: authReq.clientId,
+      redirect_uri: authReq.redirectUri,
+      user_id: session.user.id,
+      code_challenge: authReq.codeChallenge || undefined,
+      code_challenge_method: authReq.codeChallenge
+        ? authReq.codeChallengeMethod || "S256"
+        : undefined,
+      scope: finalScope,
+      nonce: authReq.nonce || undefined,
+      type: "authorization_code",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setJti(codeId)
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(secret);
+
+    const url = new URL(authReq.redirectUri);
+    url.searchParams.set("code", authCode);
+    if (authReq.state) {
+      url.searchParams.set("state", authReq.state);
+    }
+    const baseURL = (
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://auth.clouburstlab.com"
+    ).replace(/\/$/, "");
+    url.searchParams.set("iss", baseURL);
+
+    // Persist OAuth consent for the user and client application
+    await prisma.oAuthConsent.upsert({
+      where: {
+        user_id_client_id: {
+          user_id: session.user.id,
+          client_id: authReq.clientId,
+        },
+      },
+      create: {
+        user_id: session.user.id,
+        client_id: authReq.clientId,
+        scopes: finalScope,
+        revoked_at: null,
+      },
+      update: {
+        scopes: finalScope,
+        revoked_at: null,
+        updated_at: new Date(),
+      },
+    });
+
+    await recordSecurityActivity({
+      userId: session.user.id,
+      event: "OAUTH_CONSENT_GRANTED",
+      title: `Authorized ${clientApp.app.name}`,
+      description: `Granted OAuth access to ${clientApp.app.name} with scopes: ${finalScope}`,
+    });
+
+    redirectUrl = url.toString();
+  } catch (e: unknown) {
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "digest" in e &&
+      typeof (e as { digest: string }).digest === "string" &&
+      (e as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw e;
+    }
+    const em = handleError(e, true);
+    return { success: false, error: em };
+  }
+
+  if (redirectUrl) {
+    redirect(redirectUrl);
+  }
+}
+
+export async function denyConsentAction(authRequestToken: string) {
+  const authReq = await verifyAuthRequest(authRequestToken);
+  if (!authReq) {
+    redirect("/profile");
+  }
+
+  const url = new URL(authReq.redirectUri);
+  url.searchParams.set("error", "access_denied");
+  url.searchParams.set(
+    "error_description",
+    "The user denied the authorization request."
+  );
+  if (authReq.state) {
+    url.searchParams.set("state", authReq.state);
+  }
+  const baseURL = (
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://auth.clouburstlab.com"
+  ).replace(/\/$/, "");
+  url.searchParams.set("iss", baseURL);
+
+  redirect(url.toString());
 }
 
 async function redirectToProvider(
@@ -163,10 +337,11 @@ async function redirectToProvider(
     );
   }
 
-  if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+  if (returnTo) {
+    const safe = getSafeReturnTo(returnTo, "en");
     cookieStore.set(
       "oauth_return_to",
-      returnTo,
+      safe,
       getSecureCookieOptions({ maxAge: 60 * 10 })
     );
   }
@@ -188,6 +363,10 @@ async function redirectToProvider(
 export async function initializeOAuthProvider(provider: string) {
   try {
     await requireUserSession();
+    const normalized = provider.toLowerCase();
+    if (normalized === "linkedin" || normalized === "dropbox") {
+      redirect(`/profile/connected?error=${encodeURIComponent("This provider is currently not configured.")}`);
+    }
     return await redirectToProvider(provider, "/profile/connected");
   } catch (e: unknown) {
     if (

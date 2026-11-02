@@ -60,5 +60,22 @@
     "deleteSuccess": "¡Aplicación eliminada correctamente!",
     "deleteError": "Error al eliminar la aplicación.",
     "error": "Error"
+  },
+  "connectedApps": {
+    "title": "Aplicaciones Conectadas",
+    "desc1": "Aplicaciones que tienen acceso a tu cuenta de",
+    "desc2": "mediante OAuth 2.0 / OpenID Connect.",
+    "noApps": "Sin aplicaciones conectadas",
+    "noAppsDesc": "Aún no has autorizado ninguna aplicación de terceros.",
+    "scopes": "Permisos",
+    "connectedOn": "Conectada el",
+    "remove": "Quitar",
+    "removing": "Quitando...",
+    "removeModalTitle": "Quitar acceso de la aplicación",
+    "removeModalDesc1": "¿Estás seguro de que deseas quitar el acceso para",
+    "removeModalDesc2": "? Esto revocará inmediatamente todos los tokens activos. La aplicación no podrá acceder a tus datos hasta que vuelvas a autorizarla.",
+    "cancel": "Cancelar",
+    "removeSuccess": "¡Acceso de la aplicación eliminado correctamente!",
+    "removeError": "Error al quitar el acceso de la aplicación."
   }
 }

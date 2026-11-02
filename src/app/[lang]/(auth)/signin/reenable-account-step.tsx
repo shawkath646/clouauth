@@ -7,13 +7,20 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { enableAccount, type SignInReturn } from "@/actions/auth/auth.actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import { handleError } from "@/utils/error";
 
 interface ReenableAccountStepProps {
   tempSessionId: string | null;
   onComplete: (result: SignInReturn) => void;
+  locale?: Locale;
 }
 
-export default function ReenableAccountStep({ tempSessionId, onComplete }: ReenableAccountStepProps) {
+export default function ReenableAccountStep({
+  tempSessionId,
+  onComplete,
+  locale = defaultLocale,
+}: ReenableAccountStepProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,17 +29,21 @@ export default function ReenableAccountStep({ tempSessionId, onComplete }: Reena
       toast.error("Session expired");
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const res = await enableAccount(tempSessionId);
-      
+
       if (res && res.action === "ERROR") {
         toast.error(res.error || "Failed to re-enable account.");
       } else {
-        toast.success("Account re-enabled successfully!");
+        if (res.action === "LOGIN_SUCCESS") {
+          toast.success("Account re-enabled successfully!");
+        }
         onComplete(res);
       }
+    } catch (e: unknown) {
+      toast.error(handleError(e, true));
     } finally {
       setIsLoading(false);
     }
@@ -64,18 +75,18 @@ export default function ReenableAccountStep({ tempSessionId, onComplete }: Reena
       </div>
 
       <div className="pt-2">
-        <Button 
-          className="w-full h-11 text-base bg-orange-500 hover:bg-orange-600 text-white transition-all" 
+        <Button
+          className="w-full h-11 text-base bg-orange-500 hover:bg-orange-600 text-white transition-all cursor-pointer"
           onClick={handleEnable}
           disabled={isLoading}
         >
           {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
           Re-enable My Account
         </Button>
-        <Button 
-          variant="ghost" 
-          className="w-full mt-4" 
-          onClick={() => router.push("/")}
+        <Button
+          variant="ghost"
+          className="w-full mt-4 cursor-pointer"
+          onClick={() => router.push(`/${locale}`)}
           disabled={isLoading}
         >
           Back to Home

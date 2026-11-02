@@ -11,6 +11,7 @@ import type { FullProfile } from "@/types/profile.types";
 import { revokeUserSessionAction, revokeAllUserSessionsAction } from "@/actions/profile/sessions-management.actions";
 import { toast } from "sonner";
 import { BrandName } from "@/components/ui/brand-name";
+import { formatTime } from "@/utils/utils";
 
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
@@ -130,7 +131,16 @@ export function DevicesSection({
                         {session.user_agent || dict.activeSessions.unknownBrowser} • {session.ip_address || dict.activeSessions.unknownIP}
                       </p>
                       <p className={`text-sm font-medium ${isCurrent ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                        {isCurrent ? dict.activeSessions.activeNow : dict.activeSessions.lastActive.replace("{date}", new Date(session.updated_on).toLocaleString())}
+                        {isCurrent
+                          ? dict.activeSessions.activeNow
+                          : dict.activeSessions.lastActive.replace(
+                              "{date}",
+                              formatTime(session.updated_on, {
+                                format: "datetime",
+                                preferences: profile.preferences,
+                                locale,
+                              })
+                            )}
                       </p>
                     </div>
                   </div>

@@ -25,6 +25,7 @@ model User {
   preferences           UserPreference?
   sessions              UserSession[]
   apps                  UserApp[]               @relation("UserApps")
+  oauth_consents        OAuthConsent[]
   email_queue           EmailQueue[]
   security_activities   SecurityActivity[]
 }

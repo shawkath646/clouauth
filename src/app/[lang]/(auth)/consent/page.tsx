@@ -1,13 +1,12 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 import { getUserSession } from "@/lib/session";
-import prisma from "@/lib/prisma";
-import { parseRedirectUris } from "@/lib/oauth/scope-utils";
 import OAuthErrorStep from "../signin/oauth-error-step";
 import { ConsentClient } from "./consent-client";
+import { verifyAuthRequest } from "@/lib/oauth/auth-request";
+import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -33,72 +32,41 @@ async function ConsentDynamicContent({
 
   await getDictionary("common", locale);
 
-  await connection();
-
   const [searchParams, session] = await Promise.all([
     searchParamsPromise,
     getUserSession(),
   ]);
 
-  const clientId = getStringParam(searchParams.client_id);
-  const redirectUri = getStringParam(searchParams.redirect_uri);
-  const responseType = getStringParam(searchParams.response_type);
-  const scope = getStringParam(searchParams.scope) || "openid profile email";
-  const state = getStringParam(searchParams.state);
-  const codeChallenge = getStringParam(searchParams.code_challenge);
-  const codeChallengeMethod = getStringParam(searchParams.code_challenge_method);
-  const nonce = getStringParam(searchParams.nonce);
+  const authRequest = getStringParam(searchParams?.[AUTH_REQUEST_PARAM]);
 
-  const forwardParams = new URLSearchParams({
-    ...(clientId ? { client_id: clientId } : {}),
-    ...(redirectUri ? { redirect_uri: redirectUri } : {}),
-    ...(responseType ? { response_type: responseType } : {}),
-    scope,
-    ...(state ? { state } : {}),
-    ...(codeChallenge ? { code_challenge: codeChallenge } : {}),
-    ...(codeChallengeMethod ? { code_challenge_method: codeChallengeMethod } : {}),
-    ...(nonce ? { nonce } : {}),
-  });
-
-  // If user is not authenticated, bounce to signin with all context preserved
+  // If user is not authenticated, redirect to sign-in while preserving auth_request
   if (!session) {
-    redirect(`/${locale}/signin?${forwardParams.toString()}`);
+    const signInUrl = authRequest
+      ? `/${locale}/signin?${AUTH_REQUEST_PARAM}=${encodeURIComponent(authRequest)}`
+      : `/${locale}/signin`;
+    redirect(signInUrl);
   }
 
-  // Validate required client & redirect_uri
-  if (!clientId || !redirectUri) {
+  // If auth_request parameter is missing
+  if (!authRequest) {
     return (
       <OAuthErrorStep
-        errorTitle="Invalid Consent Request"
-        errorMessage="Missing required 'client_id' or 'redirect_uri' parameter."
+        errorTitle="Invalid Authorization Request"
+        errorMessage="Missing authorization request token. Please restart authorization from the application."
         actionHref={`/${locale}/profile`}
         actionText="Back to Profile"
       />
     );
   }
 
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: clientId },
-    include: { app: true },
-  });
+  // Verify and decode the JWT-secured authorization request
+  const authReq = await verifyAuthRequest(authRequest);
 
-  if (!clientApp || !clientApp.enabled) {
+  if (!authReq) {
     return (
       <OAuthErrorStep
-        errorTitle="Unauthorized Client"
-        errorMessage="The application requesting authorization could not be found or has been disabled."
-        actionHref={`/${locale}/profile`}
-        actionText="Back to Profile"
-      />
-    );
-  }
-
-  const registeredUris = parseRedirectUris(clientApp.redirect_uris);
-  if (!registeredUris.includes(redirectUri)) {
-    return (
-      <OAuthErrorStep
-        errorTitle="Invalid Redirect URI"
-        errorMessage="The redirect URI provided is not registered for this application."
+        errorTitle="Expired or Invalid Request"
+        errorMessage="This authorization session has expired or is invalid. Please return to the application and try again."
         actionHref={`/${locale}/profile`}
         actionText="Back to Profile"
       />
@@ -107,21 +75,18 @@ async function ConsentDynamicContent({
 
   return (
     <ConsentClient
-      appName={clientApp.app.name}
-      appDescription={clientApp.app.description}
-      appIcon={clientApp.app.icon}
-      appWebsite={clientApp.app.website}
+      appName={authReq.appName}
+      appDescription={authReq.appDescription}
+      appIcon={authReq.appIcon}
+      appWebsite={authReq.appWebsite}
       userEmail={session.user.email || ""}
-      userName={`${session.user.first_name} ${session.user.last_name}`.trim() || session.user.username}
+      userName={
+        `${session.user.first_name || ""} ${session.user.last_name || ""}`.trim() ||
+        session.user.username
+      }
       userAvatar={session.user.avatar}
-      clientId={clientId}
-      redirectUri={redirectUri}
-      state={state}
-      codeChallenge={codeChallenge}
-      codeChallengeMethod={codeChallengeMethod}
-      scope={scope}
-      nonce={nonce}
-      locale={locale}
+      scope={authReq.scope}
+      authRequestToken={authRequest}
     />
   );
 }
@@ -133,7 +98,7 @@ export default async function ConsentPage({
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-lg mx-auto p-8 bg-background/80 backdrop-blur-2xl border border-primary/20 rounded-3xl flex flex-col items-center justify-center min-h-[420px] animate-pulse">
+        <div className="w-full max-w-lg mx-auto p-8 bg-background/80 backdrop-blur-2xl border border-primary/20 rounded-3xl flex flex-col items-center justify-center min-h-105 animate-pulse">
           <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
           <div className="h-4 w-40 bg-muted rounded mb-2" />
           <div className="h-3 w-56 bg-muted/60 rounded" />

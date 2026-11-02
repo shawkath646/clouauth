@@ -7,7 +7,7 @@ import {
 import { COOKIE_SESSION_TOKEN_NAME } from "@/constants/session.constants";
 import { getUserSessionByToken } from "@/lib/session";
 import { decryptSymmetric } from "@/lib/encryption";
-import { refreshDriveAccountToken } from "@/lib/inter-services/drives";
+import { refreshDriveAccountToken } from "@/lib/oauth/drives";
 import prisma from "@/lib/prisma";
 import { handleError } from "@/utils/error";
 
@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
 
 async function handleConnectedDrives(request: NextRequest) {
   try {
-    // 1. Verify calling application's Bearer JWT token
     const authResult = await verifyInterServiceAuth(request);
     if (!authResult.authorized) {
       return withInterServiceCors(

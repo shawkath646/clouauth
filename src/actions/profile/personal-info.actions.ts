@@ -225,7 +225,9 @@ export async function updateProfilePreferences(data: z.infer<typeof preferencesS
     const updateData: Partial<DBUserPreference> = {};
     if (validatedData.theme) {
       updateData.theme = validatedData.theme;
-      (await cookies()).set("theme_pref", validatedData.theme, { path: "/", httpOnly: false, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+      const cookieStore = await cookies();
+      cookieStore.set("theme_pref", validatedData.theme, { path: "/", httpOnly: false, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+      cookieStore.set("theme", validatedData.theme, { path: "/", httpOnly: false, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
     }
     if (validatedData.language) {
       updateData.language = validatedData.language;

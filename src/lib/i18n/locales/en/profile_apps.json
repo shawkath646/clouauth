@@ -60,5 +60,22 @@
     "deleteSuccess": "Application removed successfully!",
     "deleteError": "Failed to delete application.",
     "error": "Error"
+  },
+  "connectedApps": {
+    "title": "Connected Applications",
+    "desc1": "Applications that have access to your",
+    "desc2": "account via OAuth 2.0 / OpenID Connect.",
+    "noApps": "No Connected Applications",
+    "noAppsDesc": "You haven't authorized any third-party applications yet.",
+    "scopes": "Permissions",
+    "connectedOn": "Connected on",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "removeModalTitle": "Remove Application Access",
+    "removeModalDesc1": "Are you sure you want to remove access for",
+    "removeModalDesc2": "? This will immediately revoke all active tokens. The application will no longer be able to access your profile data unless you authorize it again.",
+    "cancel": "Cancel",
+    "removeSuccess": "Application access removed successfully!",
+    "removeError": "Failed to remove application access."
   }
 }

@@ -1,25 +1,33 @@
+import "server-only";
+
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import {
   createSession,
   createTempSession,
   deleteTempSession,
   getUserSession,
+  signOut,
 } from "@/lib/session";
-import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { VerificationMethod } from "@/types/auth.types";
+import { resolveUserAvatar } from "@/lib/avatar";
+import { recordSecurityActivity } from "@/lib/security-activity";
+import type { VerificationMethod } from "@/types/auth.types";
+import type { DBUser } from "@/types/user.types";
 import {
   MAX_ATTEMPTS,
   LOCKOUT_DURATION_MS,
   verificationMethodMap,
   USER_WITH_AUTH_INCLUDE,
+  oauthAccountKey,
   upsertOAuthAccount,
+  getOAuthAccountOwnerId,
   generateUniqueUsername,
   requireUserSession,
-  getWebAuthnConfig,
+  getAvailableMethods,
+  isUniqueConstraintError,
 } from "./helpers";
-import { resolveUserAvatar } from "@/lib/avatar";
-import { recordSecurityActivity } from "@/lib/security-activity";
 
 export { MAX_ATTEMPTS, LOCKOUT_DURATION_MS, verificationMethodMap };
 
@@ -33,14 +41,14 @@ export type SignInReturn =
   | AccountDisabledReturn<true>
   | AccountDisabledReturn<false>
   | {
-      tempSessionId: string;
-      action:
-        | "METHOD_SELECTION"
-        | "VERIFICATION_PASSKEY"
-        | "VERIFICATION_CODE"
-        | "VERIFICATION_PHONE";
-      methods: VerificationMethod[];
-    }
+    tempSessionId: string;
+    action:
+    | "METHOD_SELECTION"
+    | "VERIFICATION_PASSKEY"
+    | "VERIFICATION_CODE"
+    | "VERIFICATION_PHONE";
+    methods: VerificationMethod[];
+  }
   | { action: "LOGIN_SUCCESS" };
 
 export type FinalSignInUser = {
@@ -85,29 +93,63 @@ export interface ExternalAuthProfile {
   expiresAt?: number | null;
 }
 
+type ActivityDetails = { event?: string; title?: string; description?: string };
+
+type ResolvedUser =
+  | { user: UserWithAuthRelations; error?: never }
+  | { user?: never; error: string };
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+function describeSignIn(authMethod?: string): Required<ActivityDetails> {
+  if (authMethod?.startsWith("oauth:")) {
+    const provider = capitalize(authMethod.slice("oauth:".length));
+    return {
+      event: "LOGIN_OAUTH",
+      title: `Signed in with ${provider}`,
+      description: `OAuth sign-in using ${provider}`,
+    };
+  }
+
+  switch (authMethod) {
+    case "one_tap":
+    case "google_one_tap":
+      return {
+        event: "LOGIN_GOOGLE_ONE_TAP",
+        title: "Signed in with Google One Tap",
+        description: "Fast sign-in with Google One Tap",
+      };
+    case "passkey":
+      return {
+        event: "LOGIN_PASSKEY",
+        title: "Signed in with Passkey",
+        description: "Biometric / security key authentication",
+      };
+    default:
+      return {
+        event: "LOGIN_PASSWORD",
+        title: "Signed in successfully",
+        description: "Signed in with password",
+      };
+  }
+}
+
 export async function processFinalSignIn(
   user: FinalSignInUser,
   rememberMe: boolean,
   tempSessionId?: string,
-  activityDetails?: { event?: string; title?: string; description?: string }
+  activityDetails?: ActivityDetails
 ): Promise<SignInReturn> {
-  if (user.account_status && !user.account_status.is_active) {
-    if (user.account_status.self_enable) {
-      const sessionId =
-        tempSessionId ||
-        (
-          await createTempSession(user.id, {
-            rememberMe,
-            flowType: "reenable",
-          })
-        ).id;
-      return {
-        action: "ACCOUNT_DISABLED",
-        selfEnable: true,
-        tempSessionId: sessionId,
-      };
+  const status = user.account_status;
+
+  if (status && !status.is_active) {
+    if (!status.self_enable) {
+      return { action: "ACCOUNT_DISABLED", selfEnable: false };
     }
-    return { action: "ACCOUNT_DISABLED", selfEnable: false };
+    const sessionId =
+      tempSessionId ||
+      (await createTempSession(user.id, { rememberMe, flowType: "reenable" })).id;
+    return { action: "ACCOUNT_DISABLED", selfEnable: true, tempSessionId: sessionId };
   }
 
   await createSession(user.id, rememberMe);
@@ -119,18 +161,14 @@ export async function processFinalSignIn(
     description: activityDetails?.description || "New session established",
   });
 
-  if (user.preferences) {
+  if (user.preferences?.theme) {
     const cookieStore = await cookies();
-    const secureCookie = process.env.NODE_ENV === "production";
-
-    if (user.preferences.theme) {
-      cookieStore.set("theme_pref", user.preferences.theme, {
-        path: "/",
-        httpOnly: false,
-        sameSite: "lax",
-        secure: secureCookie,
-      });
-    }
+    cookieStore.set("theme_pref", user.preferences.theme, {
+      path: "/",
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
   }
 
   revalidatePath("/", "layout");
@@ -142,67 +180,24 @@ export async function evaluateAuthStepOrSignIn(
   rememberMe: boolean,
   authMethod?: string
 ): Promise<SignInReturn> {
-  // 1. Hard-disabled account check (cannot self-enable)
-  if (
-    user.account_status &&
-    !user.account_status.is_active &&
-    !user.account_status.self_enable
-  ) {
+  const status = user.account_status;
+  const isDisabled = status ? !status.is_active : false;
+
+  if (isDisabled && !status?.self_enable) {
     return { action: "ACCOUNT_DISABLED", selfEnable: false };
   }
 
-  // 2. 2FA check (always enforced BEFORE session creation or self-service account reactivation)
-  if (user.two_factor) {
-    const methods: VerificationMethod[] = [];
-    const tf = user.two_factor;
-    const { rpID } = await getWebAuthnConfig();
-    const validPasskeys = tf.passkeys?.filter(
-      (p) => !p.rp_id || p.rp_id === rpID
-    );
-    if (validPasskeys && validPasskeys.length > 0)
-      methods.push(verificationMethodMap.passkeys);
-    if (tf.totp && (tf.totp.enabled ?? true))
-      methods.push(verificationMethodMap.totp);
-    if (tf.email || tf.email_id) methods.push(verificationMethodMap.email);
-
-    // Supplementary Email 2FA Method: only provide if the user has a verified email
-    if (methods.length > 0 && !methods.some((m) => m.id === "email")) {
-      const hasVerifiedEmail = Boolean(
-        user.emails && user.emails.some((e) => e.verified)
-      );
-      if (hasVerifiedEmail) {
-        methods.push(verificationMethodMap.email);
-      } else {
-        const foundVerifiedEmail = await prisma.userEmail.findFirst({
-          where: { user_id: user.id, verified: true },
-          select: { id: true },
-        });
-        if (foundVerifiedEmail) {
-          methods.push(verificationMethodMap.email);
-        }
-      }
-    }
-
-    if (methods.length > 0) {
-      const tempSession = await createTempSession(user.id, {
-        rememberMe,
-        authMethod,
-        flowType: "2fa",
-      });
-      return {
-        action: "METHOD_SELECTION",
-        tempSessionId: tempSession.id,
-        methods,
-      };
-    }
+  const methods = await getAvailableMethods(user);
+  if (methods.length > 0) {
+    const tempSession = await createTempSession(user.id, {
+      rememberMe,
+      authMethod,
+      flowType: "2fa",
+    });
+    return { action: "METHOD_SELECTION", tempSessionId: tempSession.id, methods };
   }
 
-  // 3. Soft-disabled account check (self-enable permitted after 2FA or when no 2FA is configured)
-  if (
-    user.account_status &&
-    !user.account_status.is_active &&
-    user.account_status.self_enable
-  ) {
+  if (isDisabled) {
     const tempSession = await createTempSession(user.id, {
       rememberMe,
       authMethod,
@@ -215,34 +210,7 @@ export async function evaluateAuthStepOrSignIn(
     };
   }
 
-  // 4. Complete sign in
-  let title = "Signed in successfully";
-  let description = "Signed in with password";
-  let event = "LOGIN_PASSWORD";
-
-  if (authMethod) {
-    if (authMethod.startsWith("oauth:")) {
-      const provider = authMethod.replace("oauth:", "");
-      const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-      event = "LOGIN_OAUTH";
-      title = `Signed in with ${providerName}`;
-      description = `OAuth sign-in using ${providerName}`;
-    } else if (authMethod === "one_tap" || authMethod === "google_one_tap") {
-      event = "LOGIN_GOOGLE_ONE_TAP";
-      title = "Signed in with Google One Tap";
-      description = "Fast sign-in with Google One Tap";
-    } else if (authMethod === "passkey") {
-      event = "LOGIN_PASSKEY";
-      title = "Signed in with Passkey";
-      description = "Biometric / security key authentication";
-    }
-  }
-
-  return await processFinalSignIn(user, rememberMe, undefined, {
-    event,
-    title,
-    description,
-  });
+  return processFinalSignIn(user, rememberMe, undefined, describeSignIn(authMethod));
 }
 
 async function syncOAuthAvatarIfPlaceholder(
@@ -258,11 +226,145 @@ async function syncOAuthAvatarIfPlaceholder(
     user.last_name || ""
   );
   if (resolved && !resolved.endsWith(".svg")) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { avatar: resolved },
-    });
+    await prisma.user.update({ where: { id: user.id }, data: { avatar: resolved } });
     user.avatar = resolved;
+  }
+}
+
+function scheduleAvatarSync(
+  user: UserWithAuthRelations,
+  avatarUrl: string | null | undefined
+) {
+  after(() => syncOAuthAvatarIfPlaceholder(user, avatarUrl).catch(() => { }));
+}
+
+async function linkExternalAccount(
+  userId: string,
+  profile: ExternalAuthProfile
+): Promise<SignInReturn> {
+  const ownerId = await getOAuthAccountOwnerId(profile);
+  if (ownerId && ownerId !== userId) {
+    return {
+      action: "ERROR",
+      error: "This account is already linked to another user.",
+    };
+  }
+
+  await upsertOAuthAccount(userId, profile);
+
+  const providerName = capitalize(profile.provider);
+  await recordSecurityActivity({
+    userId,
+    event: "OAUTH_CONNECTED",
+    title: `Connected ${providerName}`,
+    description: `Linked ${providerName} account for sign-in and integration`,
+  });
+
+  return { action: "LOGIN_SUCCESS" };
+}
+
+async function findExistingExternalUser(
+  profile: ExternalAuthProfile
+): Promise<ResolvedUser | null> {
+  const linked = await prisma.oAuthAccount.findUnique({
+    where: oauthAccountKey(profile),
+    include: { user: { include: USER_WITH_AUTH_INCLUDE } },
+  });
+
+  if (linked?.user) {
+    await upsertOAuthAccount(linked.user.id, profile);
+    scheduleAvatarSync(linked.user, profile.avatar);
+    return { user: linked.user };
+  }
+
+  if (!profile.email) return null;
+
+  const existingEmail = await prisma.userEmail.findUnique({
+    where: { address: profile.email.toLowerCase().trim() },
+    include: { user: { include: USER_WITH_AUTH_INCLUDE } },
+  });
+  if (!existingEmail) return null;
+
+  if (!profile.emailVerified) {
+    return {
+      error:
+        "Your email address is not verified with the provider. Please verify your email with the identity provider first or sign in using your credentials.",
+    };
+  }
+
+  if (!existingEmail.verified) {
+    return {
+      error:
+        "An account with this email exists but is not verified. Please sign in with your credentials first.",
+    };
+  }
+
+  await upsertOAuthAccount(existingEmail.user.id, profile);
+  scheduleAvatarSync(existingEmail.user, profile.avatar);
+  return { user: existingEmail.user };
+}
+
+async function createExternalUser(profile: ExternalAuthProfile): Promise<DBUser> {
+  const email = profile.email?.toLowerCase().trim();
+  const username = await generateUniqueUsername(email || profile.providerUserId);
+
+  const rawName = (profile.name || "").trim();
+  const nameParts = rawName ? rawName.split(/\s+/) : [];
+  let firstName = "User";
+  let lastName = "";
+
+  if (nameParts.length === 1) {
+    firstName = nameParts[0];
+  } else if (nameParts.length > 1) {
+    lastName = nameParts[nameParts.length - 1];
+    firstName = nameParts.slice(0, -1).join(" ");
+  }
+
+  const avatar = await resolveUserAvatar(profile.avatar, firstName, lastName);
+
+  return prisma.user.create({
+    data: {
+      username,
+      first_name: firstName,
+      last_name: lastName,
+      avatar,
+      account_status: { create: { is_active: true } },
+      preferences: { create: { theme: "system", language: "en", timezone: "UTC" } },
+      emails: email
+        ? {
+          create: {
+            address: email,
+            verified: Boolean(profile.emailVerified),
+            is_primary: true,
+            verified_on: profile.emailVerified ? new Date() : undefined,
+          },
+        }
+        : undefined,
+      oauth_accounts: {
+        create: {
+          provider: profile.provider.toLowerCase(),
+          provider_user_id: profile.providerUserId,
+          access_token: profile.accessToken,
+          refresh_token: profile.refreshToken,
+          expires_at: profile.expiresAt,
+        },
+      },
+    },
+    include: USER_WITH_AUTH_INCLUDE,
+  });
+}
+
+async function provisionExternalUser(
+  profile: ExternalAuthProfile
+): Promise<ResolvedUser> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return { user: await createExternalUser(profile) };
+    } catch (error) {
+      if (!isUniqueConstraintError(error) || attempt >= 2) throw error;
+      const existing = await findExistingExternalUser(profile);
+      if (existing) return existing;
+    }
   }
 }
 
@@ -271,163 +373,45 @@ export async function authenticateExternalUser(
   options: { rememberMe?: boolean; authMethod?: string } = {}
 ): Promise<SignInReturn> {
   const rememberMe = options.rememberMe ?? false;
-  const authMethod =
-    options.authMethod ?? `oauth:${profile.provider.toLowerCase()}`;
+  const authMethod = options.authMethod ?? `oauth:${profile.provider.toLowerCase()}`;
   const isOneTap = authMethod === "one_tap" || authMethod === "google_one_tap";
-  // Account linking only applies when a user is explicitly performing an account-linking flow while logged in,
-  // never during an unauthenticated sign-in flow like One Tap (avoids an unnecessary blocking DB query).
+
   const currentSession = isOneTap ? null : await getUserSession();
-
-  if (currentSession && !isOneTap) {
-    await upsertOAuthAccount(currentSession.user.id, profile);
-    const providerName =
-      profile.provider.charAt(0).toUpperCase() + profile.provider.slice(1);
-    await recordSecurityActivity({
-      userId: currentSession.user.id,
-      event: "OAUTH_CONNECTED",
-      title: `Connected ${providerName}`,
-      description: `Linked ${providerName} account for sign-in and integration`,
-    });
-    return { action: "LOGIN_SUCCESS" };
+  if (currentSession) {
+    return linkExternalAccount(currentSession.user.id, profile);
   }
 
-  const existingOAuthAccount = await prisma.oAuthAccount.findUnique({
-    where: {
-      provider_provider_user_id: {
-        provider: profile.provider.toLowerCase(),
-        provider_user_id: profile.providerUserId,
-      },
-    },
-    include: {
-      user: {
-        include: USER_WITH_AUTH_INCLUDE,
-      },
-    },
-  });
+  const resolved =
+    (await findExistingExternalUser(profile)) ??
+    (await provisionExternalUser(profile));
 
-  let targetUser: UserWithAuthRelations | undefined =
-    existingOAuthAccount?.user ?? undefined;
+  if (!resolved.user) return { action: "ERROR", error: resolved.error };
 
-  // Refresh OAuth tokens and expiry on re-login for existing connected accounts
-  if (existingOAuthAccount && targetUser) {
-    await upsertOAuthAccount(targetUser.id, profile);
-    await syncOAuthAvatarIfPlaceholder(targetUser, profile.avatar);
-  }
-
-  // 3. Match by email if not found by provider_user_id
-  if (!targetUser && profile.email) {
-    const emailNormalized = profile.email.toLowerCase().trim();
-    const existingEmail = await prisma.userEmail.findUnique({
-      where: { address: emailNormalized },
-      include: {
-        user: {
-          include: USER_WITH_AUTH_INCLUDE,
-        },
-      },
-    });
-
-    if (existingEmail) {
-      if (!profile.emailVerified) {
-        return {
-          action: "ERROR",
-          error:
-            "Your email address is not verified with the provider. Please verify your email with the identity provider first or sign in using your credentials.",
-        };
-      }
-
-      if (!existingEmail.verified) {
-        return {
-          action: "ERROR",
-          error:
-            "An account with this email exists but is not verified. Please sign in with your credentials first.",
-        };
-      }
-
-      // Link external OAuth account to existing verified user
-      await upsertOAuthAccount(existingEmail.user.id, profile);
-      targetUser = existingEmail.user;
-      await syncOAuthAvatarIfPlaceholder(targetUser, profile.avatar);
-    }
-  }
-
-  // 4. Provision new user if not found
-  if (!targetUser) {
-    const emailNormalized = profile.email?.toLowerCase().trim();
-    const username = await generateUniqueUsername(
-      emailNormalized || profile.providerUserId
-    );
-
-    const nameParts = (profile.name || "").trim().split(" ");
-    const firstName = nameParts[0] || "User";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
-    const avatar = await resolveUserAvatar(profile.avatar, firstName, lastName);
-
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        first_name: firstName,
-        last_name: lastName,
-        avatar,
-        account_status: {
-          create: {
-            is_active: true,
-          },
-        },
-        preferences: {
-          create: {
-            theme: "system",
-            language: "en",
-            timezone: "UTC",
-          },
-        },
-        emails: emailNormalized
-          ? {
-              create: {
-                address: emailNormalized,
-                verified: Boolean(profile.emailVerified),
-                is_primary: true,
-                verified_on: profile.emailVerified ? new Date() : undefined,
-              },
-            }
-          : undefined,
-        oauth_accounts: {
-          create: {
-            provider: profile.provider.toLowerCase(),
-            provider_user_id: profile.providerUserId,
-            access_token: profile.accessToken,
-            refresh_token: profile.refreshToken,
-            expires_at: profile.expiresAt,
-          },
-        },
-      },
-      include: USER_WITH_AUTH_INCLUDE,
-    });
-
-    targetUser = newUser;
-  }
-
-  // 5. Evaluate auth step (account status, 2FA) or complete sign in
-  return await evaluateAuthStepOrSignIn(targetUser, rememberMe, authMethod);
+  return evaluateAuthStepOrSignIn(resolved.user, rememberMe, authMethod);
 }
 
 export async function finalizeSignIn(
   userId: string,
   tempSessionId: string,
-  activityDetails?: { event?: string; title?: string; description?: string }
+  activityDetails?: ActivityDetails
 ): Promise<SignInReturn> {
-  const ts = await prisma.tempSession.findUnique({
+  const tempSession = await prisma.tempSession.findUnique({
     where: { id: tempSessionId },
   });
 
-  if (!ts || ts.user_id !== userId || ts.expires_on < new Date()) {
+  if (
+    !tempSession ||
+    tempSession.user_id !== userId ||
+    tempSession.expires_on < new Date() ||
+    tempSession.flow_type === "sudo"
+  ) {
     return {
       action: "ERROR",
       error: "Session expired or invalid. Please sign in again.",
     };
   }
 
-  if (!ts.two_step_processed) {
+  if (!tempSession.two_step_processed) {
     return { action: "ERROR", error: "Two-step verification incomplete." };
   }
 
@@ -438,18 +422,13 @@ export async function finalizeSignIn(
 
   if (!user) return { action: "ERROR", error: "User not found." };
 
-  // If account is disabled and self-enable is allowed, transition the verified tempSession to "reenable"
   if (user.account_status && !user.account_status.is_active) {
     if (user.account_status.self_enable) {
       await prisma.tempSession.update({
         where: { id: tempSessionId },
         data: { flow_type: "reenable" },
       });
-      return {
-        action: "ACCOUNT_DISABLED",
-        selfEnable: true,
-        tempSessionId,
-      };
+      return { action: "ACCOUNT_DISABLED", selfEnable: true, tempSessionId };
     }
     await deleteTempSession(tempSessionId);
     return { action: "ACCOUNT_DISABLED", selfEnable: false };
@@ -458,7 +437,7 @@ export async function finalizeSignIn(
   await deleteTempSession(tempSessionId);
   return processFinalSignIn(
     user,
-    ts.remember_me,
+    tempSession.remember_me,
     undefined,
     activityDetails || {
       event: "LOGIN_2FA",
@@ -470,17 +449,19 @@ export async function finalizeSignIn(
 
 export async function signOutAll(userId: string) {
   const session = await requireUserSession();
-  if (session.user.id !== userId) {
-    throw new Error("Unauthorized");
-  }
+  if (session.user.id !== userId) throw new Error("Unauthorized");
+
   await prisma.userSession.updateMany({
     where: { user_id: userId, revoked_on: null },
     data: { revoked_on: new Date() },
   });
+
   await recordSecurityActivity({
     userId,
     event: "ALL_SESSIONS_REVOKED",
     title: "All sessions signed out",
     description: "Signed out of all active devices and sessions",
   });
+
+  await signOut(session.session.id);
 }

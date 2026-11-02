@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { getLocalizedAlternates } from "@/utils/seo";
-import ForgotPasswordClient from "../forgot-password/forgot-password-client";
+import ForgotPasswordClient from "./forgot-password-client";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 

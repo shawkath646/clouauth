@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getSignInSchema, type SignInValues } from "@/schema/auth.schema";
@@ -28,9 +28,11 @@ import { BrandName } from "@/components/ui/brand-name";
 import { useReCaptcha } from "@/lib/recaptcha/client";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
+import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
 interface CredentialsStepProps {
   onNext: (result: SignInReturn) => void;
+  authRequest?: string | null;
   locale?: Locale;
   dict: Dictionary<"signin">;
   commonDict: Dictionary<"common">;
@@ -39,17 +41,17 @@ interface CredentialsStepProps {
 
 export default function CredentialsStep({
   onNext,
+  authRequest = null,
   locale = defaultLocale,
   dict,
   commonDict,
   schemaDict,
 }: CredentialsStepProps) {
   const searchParams = useSearchParams();
-  const returnTo =
-    searchParams.get("return_to") ||
-    (searchParams.get("client_id") && searchParams.get("redirect_uri")
-      ? `/${locale}/signin?${searchParams.toString()}`
-      : null);
+  const effectiveAuthRequest = authRequest || searchParams.get(AUTH_REQUEST_PARAM);
+  const returnTo = effectiveAuthRequest
+    ? `/${locale}/consent?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+    : searchParams.get("return_to");
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,8 +59,10 @@ export default function CredentialsStep({
 
   const { executeRecaptcha } = useReCaptcha();
 
-  const form = useForm<z.input<ReturnType<typeof getSignInSchema>>>({
-    resolver: zodResolver(getSignInSchema(schemaDict)),
+  const signInSchema = useMemo(() => getSignInSchema(schemaDict), [schemaDict]);
+
+  const form = useForm<z.input<typeof signInSchema>>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -66,7 +70,7 @@ export default function CredentialsStep({
     },
   });
 
-  async function onSubmit(data: z.input<ReturnType<typeof getSignInSchema>>) {
+  async function onSubmit(data: z.input<typeof signInSchema>) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
@@ -222,7 +226,11 @@ export default function CredentialsStep({
         <p className="mt-6 text-sm text-muted-foreground">
           {dict.noAccount}{" "}
           <Link
-            href={`/${locale}/signup`}
+            href={
+              effectiveAuthRequest
+                ? `/${locale}/signup?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+                : `/${locale}/signup`
+            }
             className="font-medium text-primary hover:underline"
           >
             {dict.createAccount}

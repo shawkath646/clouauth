@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Fingerprint, Plus, Pencil, Trash2, Loader2, ShieldCheck } from "lucide-react";
 import { startRegistration, browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { formatTime } from "@/utils/utils";
 import {
   triggerPasskeyRegistration,
   resolvePasskeyRegistration,
@@ -260,9 +261,9 @@ export function PasskeysManagement({ initialPasskeys = [] }: { initialPasskeys?:
                         <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Added {new Date(passkey.created_on).toLocaleDateString()} •{" "}
+                        Added {formatTime(passkey.created_on, { format: "date" })} •{" "}
                         {passkey.last_used_on
-                          ? `Last used ${new Date(passkey.last_used_on).toLocaleDateString()}`
+                          ? `Last used ${formatTime(passkey.last_used_on, { format: "date" })}`
                           : "Never used"}
                       </p>
                     </div>

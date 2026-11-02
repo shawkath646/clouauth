@@ -5,12 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { FullProfile } from "@/types/profile.types";
+import { formatTime } from "@/utils/utils";
 
 export function ProfileHeader({ profile }: { profile: FullProfile }) {
   const initials = `${profile.user.first_name[0] || ""}${profile.user.last_name[0] || ""}`.toUpperCase();
   const primaryEmail = profile.emails.find(e => e.is_primary)?.address || profile.emails[0]?.address;
   const isVerified = profile.emails.some(e => e.verified);
-  const joinDate = new Date(profile.user.created_on).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+  const joinDate = formatTime(profile.user.created_on, {
+    format: "month-year",
+    preferences: profile.preferences,
+  });
 
   return (
     <motion.div

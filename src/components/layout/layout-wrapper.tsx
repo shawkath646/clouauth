@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { ThemeCookieSync } from "@/components/theme/theme-cookie-sync";
 import { cn } from "@/utils/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { Locale } from "@/lib/i18n/config";
@@ -89,6 +90,7 @@ export default async function LayoutWrapper({ children, locale = "en" }: { child
                     defaultTheme="system"
                     enableSystem
                 >
+                    <ThemeCookieSync />
                     <ReCaptchaProvider siteKey={recaptchaSiteKey}>
                         {children}
                         <Suspense fallback={null}>

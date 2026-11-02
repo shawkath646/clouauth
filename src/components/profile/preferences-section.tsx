@@ -29,6 +29,8 @@ export function PreferencesSection({
   
   const handleThemeChange = async (newTheme: "light" | "dark" | "system") => {
     setTheme(newTheme);
+    document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `theme_pref=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
     await updateProfilePreferences({ theme: newTheme });
   };
   

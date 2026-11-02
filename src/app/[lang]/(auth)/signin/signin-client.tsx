@@ -8,31 +8,27 @@ import CredentialsStep from "./credentials-step";
 import VerificationMethodStep from "./verification-method-step";
 import CodeVerification from "./code-verification";
 import PasskeyVerification, { type PasskeyAuthOptions } from "./passkey-verification";
-import AgreementStep from "./agreement-step";
 import ReenableAccountStep from "./reenable-account-step";
 import SudoVerificationStep from "./sudo-verification-step";
 import { VerificationMethod } from "@/types/auth.types";
 import type { SudoMeta } from "@/actions/auth/verification";
 import { triggerVerificationMethod } from "@/actions/auth/verification.actions";
-import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
 import { toast } from "sonner";
 import { handleError } from "@/utils/error";
 import { SignInReturn } from "@/actions/auth/auth.actions";
-
+import { getSafeReturnTo } from "@/utils/url";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
+import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
-type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "AGREEMENT" | "REENABLE_ACCOUNT" | "SUDO_VERIFICATION";
+type Step = "CREDENTIALS" | "METHOD_SELECTION" | "VERIFICATION" | "REENABLE_ACCOUNT" | "SUDO_VERIFICATION";
 
 interface SigninClientProps {
   initialStep?: Step;
   initialTempSessionId?: string | null;
   initialMethods?: VerificationMethod[];
   sudoMeta?: SudoMeta | null;
-  appData?: {
-    name: string;
-    icon: string | null;
-  } | null;
+  authRequest?: string | null;
   locale?: Locale;
   dict: Dictionary<"signin">;
   commonDict: Dictionary<"common">;
@@ -44,7 +40,7 @@ export default function SigninClient({
   initialTempSessionId = null,
   initialMethods = [],
   sudoMeta = null,
-  appData,
+  authRequest = null,
   locale = defaultLocale,
   dict,
   commonDict,
@@ -58,9 +54,7 @@ export default function SigninClient({
   const [tempSessionId, setTempSessionId] = useState<string | null>(initialTempSessionId);
   const [availableMethods, setAvailableMethods] = useState<VerificationMethod[]>(initialMethods);
   const [passkeyOptions, setPasskeyOptions] = useState<PasskeyAuthOptions | null>(null);
-  const [isGranting, setIsGranting] = useState(false);
 
-  // Smooth loading / authenticating overlay state
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authMessage, setAuthMessage] = useState<string>("Signing you in...");
   const [isSuccess, setIsSuccess] = useState(false);
@@ -97,27 +91,23 @@ export default function SigninClient({
           setIsSuccess(true);
           setAuthMessage("Signed in! Redirecting...");
 
-          const clientId = searchParams.get("client_id");
-          const redirectUri = searchParams.get("redirect_uri");
-          const returnTo = searchParams.get("return_to");
+          const effectiveAuthRequest =
+            authRequest || searchParams.get(AUTH_REQUEST_PARAM);
 
-          if (clientId && redirectUri) {
-            router.refresh();
+          if (effectiveAuthRequest) {
+            router.push(
+              `/${locale}/consent?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
+            );
           } else {
-            const target =
-              returnTo &&
-              returnTo.startsWith("/") &&
-              !returnTo.startsWith("//") &&
-              !returnTo.startsWith("/signin")
-                ? returnTo
-                : `/${locale}/profile`;
-            window.location.href = target;
+            const returnTo = searchParams.get("return_to");
+            router.push(getSafeReturnTo(returnTo, locale));
           }
+          router.refresh();
           break;
         }
       }
     },
-    [router, searchParams]
+    [router, searchParams, locale, authRequest]
   );
 
   useEffect(() => {
@@ -153,57 +143,23 @@ export default function SigninClient({
 
     try {
       if (method.type === "code" || method.type === "totp") {
-        await triggerVerificationMethod(tempSessionId, method.type === "totp" ? "totp" : "email");
+        const res = await triggerVerificationMethod(tempSessionId, method.type === "totp" ? "totp" : "email");
+        if (!res.success) {
+          toast.error("Verification Error", { description: res.error || "Failed to trigger verification" });
+          return;
+        }
       } else if (method.type === "passkey") {
         const res = await triggerVerificationMethod(tempSessionId, "passkey");
-
-        if (res.success && res.payload) {
-          setPasskeyOptions(res.payload as PasskeyAuthOptions);
-        } else {
+        if (!res.success || !res.payload) {
           toast.error("Passkey Error", { description: res.error || "Failed to trigger passkey verification" });
           return;
         }
+        setPasskeyOptions(res.payload as PasskeyAuthOptions);
       }
 
       setCurrentStep("VERIFICATION");
     } catch (e) {
       toast.error("Error", { description: handleError(e, true) });
-    }
-  };
-
-  const handleAgreementComplete = async () => {
-    setIsGranting(true);
-    try {
-      const clientId = searchParams.get("client_id");
-      const redirectUri = searchParams.get("redirect_uri");
-
-      if (!clientId || !redirectUri) {
-        toast.error("Missing Parameters", { description: "Missing required OAuth parameters" });
-        setCurrentStep("CREDENTIALS");
-        return;
-      }
-
-      const result = await grantOAuthAccess(
-        clientId,
-        redirectUri,
-        searchParams.get("state"),
-        searchParams.get("code_challenge"),
-        searchParams.get("code_challenge_method"),
-        searchParams.get("scope"),
-        searchParams.get("nonce")
-      );
-
-      if (result.success && result.redirectUrl) {
-        router.push(result.redirectUrl);
-      } else {
-        toast.error("Authorization Failed", { description: result.error || "Failed to grant access" });
-        setCurrentStep("CREDENTIALS");
-      }
-    } catch (e: unknown) {
-      toast.error("Error", { description: handleError(e, true) });
-      setCurrentStep("CREDENTIALS");
-    } finally {
-      setIsGranting(false);
     }
   };
 
@@ -214,6 +170,7 @@ export default function SigninClient({
           <CredentialsStep
             key="credentials"
             onNext={processAction}
+            authRequest={authRequest}
             locale={locale}
             dict={dict}
             commonDict={commonDict}
@@ -258,34 +215,15 @@ export default function SigninClient({
             return null;
         }
 
-      case "AGREEMENT": {
-        const rawScopeParam = searchParams.get("scope");
-        const parsedScopes = rawScopeParam
-          ? rawScopeParam
-              .split(/[\s,]+/)
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : ["openid", "profile", "email"];
+      case "REENABLE_ACCOUNT":
         return (
-          <AgreementStep
-            key="agreement"
-            onAgree={handleAgreementComplete}
-            onCancel={() => setCurrentStep("CREDENTIALS")}
-            isLoading={isGranting}
-            appData={appData}
-            clientName={appData?.name}
-            dict={dict}
-            requestedScopes={
-              parsedScopes.length > 0
-                ? parsedScopes
-                : ["openid", "profile", "email"]
-            }
+          <ReenableAccountStep
+            key="reenable_account"
+            tempSessionId={tempSessionId}
+            onComplete={processAction}
+            locale={locale}
           />
         );
-      }
-
-      case "REENABLE_ACCOUNT":
-        return <ReenableAccountStep key="reenable_account" tempSessionId={tempSessionId} onComplete={processAction} />;
 
       case "SUDO_VERIFICATION":
         if (!tempSessionId || !sudoMeta) return null;
@@ -294,6 +232,7 @@ export default function SigninClient({
             key="sudo_verification"
             tempSessionId={tempSessionId}
             sudoMeta={sudoMeta}
+            locale={locale}
             onSuccess={(redirectUrl) => {
               setIsAuthenticating(true);
               setIsSuccess(true);

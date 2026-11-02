@@ -1,22 +1,18 @@
-import { getEnv } from "@/utils/utils";
-import { NextRequest, NextResponse } from "next/server";
+
+import { NextResponse } from "next/server";
 import { handleSsoPreflight, withSsoCors } from "@/lib/sso/cors";
-import { defaultLocale } from "@/lib/i18n/config";
+import { getEnv } from "@/utils/utils";
 
 export function OPTIONS() {
   return handleSsoPreflight();
 }
 
-export function GET(request: NextRequest) {
-  const baseURL = (
-    getEnv("NEXT_PUBLIC_BASE_URL", true) ||
-    getEnv("NEXT_PUBLIC_APP_URL", true) ||
-    request.nextUrl.origin
-  ).replace(/\/$/, "");
+export function GET() {
+  const baseURL = ( getEnv("NEXT_PUBLIC_BASE_URL", true)).replace(/\/$/, "");
 
   const oidc_config = {
     issuer: baseURL,
-    authorization_endpoint: `${baseURL}/${defaultLocale}/authorize`,
+    authorization_endpoint: `${baseURL}/api/authorize`,
     token_endpoint: `${baseURL}/api/oauth/token`,
     userinfo_endpoint: `${baseURL}/api/oauth/userinfo`,
     revocation_endpoint: `${baseURL}/api/oauth/revoke`,

@@ -26,9 +26,11 @@ export function ProfileLayoutClient({
   const { setTheme } = useTheme();
 
   useEffect(() => {
-    // Sync theme with user preferences instead of local storage
+    // Sync theme with user preferences from database
     if (profile.preferences?.theme) {
       setTheme(profile.preferences.theme);
+      document.cookie = `theme=${profile.preferences.theme}; path=/; max-age=31536000; SameSite=Lax`;
+      document.cookie = `theme_pref=${profile.preferences.theme}; path=/; max-age=31536000; SameSite=Lax`;
     }
   }, [profile.preferences?.theme, setTheme]);
 

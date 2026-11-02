@@ -37,5 +37,7 @@
   "scopeProfile": "Full name",
   "scopeEmail": "Email address",
   "scopePhone": "Phone number",
+  "scopeAddress": "우편 주소 접근",
+  "scopeOfflineAccess": "계정에 대한 오프라인 접근 유지",
   "scopeOpenid": "Basic identity"
 }

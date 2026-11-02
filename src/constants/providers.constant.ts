@@ -8,14 +8,14 @@ export const PROVIDERS_NAME = ["google", "github", "microsoft", "linkedin"] as c
 export type PROVIDERS = typeof PROVIDERS_NAME[number];
 
 export const SOCIAL_PROVIDERS = [
-  { id: "google", name: "Google", icon: googleIcon, invertDark: false },
-  { id: "github", name: "GitHub", icon: githubIcon, invertDark: true },
-  { id: "microsoft", name: "Microsoft", icon: microsoftIcon, invertDark: false },
-  { id: "linkedin", name: "LinkedIn", icon: linkedinIcon, invertDark: false },
+  { id: "google", name: "Google", icon: googleIcon, invertDark: false, disabled: false },
+  { id: "github", name: "GitHub", icon: githubIcon, invertDark: true, disabled: false },
+  { id: "microsoft", name: "Microsoft", icon: microsoftIcon, invertDark: false, disabled: false },
+  { id: "linkedin", name: "LinkedIn", icon: linkedinIcon, invertDark: false, disabled: true },
 ] as const;
 
 export const DRIVE_PROVIDERS = [
-  { id: "google_drive", name: "Google Drive" },
-  { id: "onedrive", name: "OneDrive" },
-  { id: "dropbox", name: "Dropbox" },
+  { id: "google_drive", name: "Google Drive", disabled: false },
+  { id: "onedrive", name: "OneDrive", disabled: false },
+  { id: "dropbox", name: "Dropbox", disabled: true },
 ] as const;

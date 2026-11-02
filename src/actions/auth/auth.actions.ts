@@ -1,15 +1,17 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyPassword, hashPassword, needsRehash } from "@/lib/security/hash";
 import { getSignInSchema, type SignInValues } from "@/schema/auth.schema";
 import { deleteTempSession, signOut } from "@/lib/session";
-import { cookies } from "next/headers";
 import { handleError } from "@/utils/error";
 import { getDictionary } from "@/lib/i18n/server";
 import { defaultLocale } from "@/lib/i18n/config";
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { verifyRecaptcha } from "@/lib/recaptcha/server";
 import {
   evaluateAuthStepOrSignIn,
   processFinalSignIn,
@@ -18,110 +20,90 @@ import {
 } from "./auth";
 import {
   checkLockout,
-  handleFailedAttempt,
+  reserveAttempt,
   resetFailedAttempts,
   requireValidTempSession,
+  getAvailableMethods,
+  getDummyPasswordHash,
   USER_WITH_AUTH_INCLUDE,
 } from "./helpers";
-import { verifyRecaptcha } from "@/lib/recaptcha/server";
 
 export type { SignInReturn, AccountDisabledReturn };
+
+const INVALID_CREDENTIALS =
+  "Invalid credentials! Please verify your username and password.";
+const LOCKED_MESSAGE = "Account locked due to too many failed attempts";
+
+const fail = (error: string): SignInReturn => ({ action: "ERROR", error });
 
 export async function signIn(
   data: SignInValues,
   recaptchaToken?: string
 ): Promise<SignInReturn> {
   try {
-    const recaptchaResult = await verifyRecaptcha(recaptchaToken, {
+    const recaptcha = await verifyRecaptcha(recaptchaToken, {
       expectedAction: "signin",
     });
-    if (!recaptchaResult.success) {
-      return {
-        action: "ERROR",
-        error:
-          recaptchaResult.error ||
-          "Security verification failed. Please try again.",
-      };
+    if (!recaptcha.success) {
+      return fail(
+        recaptcha.error || "Security verification failed. Please try again."
+      );
     }
 
     const schemaDict = await getDictionary("schema_auth", defaultLocale);
     const parsed = getSignInSchema(schemaDict).safeParse(data);
-
-    if (!parsed.success) {
-      return { action: "ERROR", error: "Invalid input data." };
-    }
+    if (!parsed.success) return fail("Invalid input data.");
 
     const { username, password, rememberMe } = parsed.data;
 
     const user = await prisma.user.findUnique({
       where: { username },
-      include: {
-        ...USER_WITH_AUTH_INCLUDE,
-        password: true,
-      },
+      include: { ...USER_WITH_AUTH_INCLUDE, password: true },
     });
 
-    const creds = user?.password;
-    if (!user || !creds) {
-      return {
-        action: "ERROR",
-        error:
-          "Invalid credentials! Please verify your username and password.",
-      };
+    const credentials = user?.password;
+    if (!user || !credentials) {
+      await verifyPassword(password, await getDummyPasswordHash());
+      return fail(INVALID_CREDENTIALS);
     }
 
-    const lockoutError = checkLockout(
-      creds.locked_until,
-      "Account locked due to too many failed attempts"
-    );
-    if (lockoutError) {
-      return { action: "ERROR", error: lockoutError };
+    const lockoutError = checkLockout(credentials.locked_until, LOCKED_MESSAGE);
+    if (lockoutError) return fail(lockoutError);
+
+    const blocked = await reserveAttempt("password", user.id, LOCKED_MESSAGE);
+    if (blocked) return fail(blocked);
+
+    if (!(await verifyPassword(password, credentials.password_hash))) {
+      return fail(INVALID_CREDENTIALS);
     }
 
-    const passwordMatch = await verifyPassword(password, creds.password_hash);
+    await resetFailedAttempts("password", user.id);
 
-    if (!passwordMatch) {
-      await handleFailedAttempt("password", user.id);
-      return {
-        action: "ERROR",
-        error:
-          "Invalid credentials! Please verify your username and password.",
-      };
-    }
-
-    if (creds.failed_attempts > 0 || creds.locked_until) {
-      await resetFailedAttempts("password", user.id);
-    }
-
-    // Transparent zero-downtime migration: upgrade legacy bcrypt hash to modern Argon2id
-    if (needsRehash(creds.password_hash)) {
-      hashPassword(password)
-        .then((newHash) => {
-          return prisma.passwordCredential.update({
-            where: { user_id: user.id },
-            data: { password_hash: newHash },
-          });
-        })
-        .catch(() => {});
+    if (needsRehash(credentials.password_hash)) {
+      after(() =>
+        hashPassword(password)
+          .then((password_hash) =>
+            prisma.passwordCredential.update({
+              where: { user_id: user.id },
+              data: { password_hash },
+            })
+          )
+          .catch(() => {})
+      );
     }
 
     return await evaluateAuthStepOrSignIn(user, rememberMe, "credentials");
   } catch (e: unknown) {
-    return { action: "ERROR", error: handleError(e, true) };
+    return fail(handleError(e, true));
   }
 }
 
-export async function enableAccount(
-  tempSessionId: string
-): Promise<SignInReturn> {
+export async function enableAccount(tempSessionId: string): Promise<SignInReturn> {
   try {
     const tempSession = await requireValidTempSession(tempSessionId);
 
     if (tempSession.flow_type !== "reenable") {
-      return {
-        action: "ERROR",
-        error: "Invalid session state for account reactivation.",
-      };
+      return fail("Invalid session state for account reactivation.");
     }
 
     const user = await prisma.user.findUnique({
@@ -131,16 +113,13 @@ export async function enableAccount(
 
     if (!user || !user.account_status?.self_enable) {
       await deleteTempSession(tempSessionId);
-      return { action: "ERROR", error: "Illegal operation detected!" };
+      return fail("Illegal operation detected!");
     }
 
-    // Verify that if 2FA is configured on this user, 2FA was already completed on this tempSession
-    const has2FA =
-      Boolean(user.two_factor?.passkeys?.length) ||
-      Boolean(user.two_factor?.totp?.enabled) ||
-      Boolean(user.two_factor?.email_id);
-
-    if (has2FA && !tempSession.two_step_processed) {
+    if (
+      !tempSession.two_step_processed &&
+      (await getAvailableMethods(user)).length > 0
+    ) {
       return await evaluateAuthStepOrSignIn(
         user,
         tempSession.remember_me,
@@ -156,13 +135,7 @@ export async function enableAccount(
     await deleteTempSession(tempSessionId);
 
     return await processFinalSignIn(
-      {
-        ...user,
-        account_status: {
-          ...user.account_status,
-          is_active: true,
-        },
-      },
+      { ...user, account_status: { ...user.account_status, is_active: true } },
       tempSession.remember_me,
       undefined,
       {
@@ -172,7 +145,7 @@ export async function enableAccount(
       }
     );
   } catch (e: unknown) {
-    return { action: "ERROR", error: handleError(e, true) };
+    return fail(handleError(e, true));
   }
 }
 

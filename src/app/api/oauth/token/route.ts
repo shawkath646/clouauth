@@ -390,6 +390,7 @@ async function handleAuthorizationCodeGrant(
   ) {
     if (
       !clientSecret ||
+      !clientApp.client_secret_hash ||
       !(await verifyClientSecret(clientSecret, clientApp.client_secret_hash))
     ) {
       return tokenError(401, "invalid_client", "Client authentication failed.");

@@ -1,9 +1,9 @@
 "use client"
 
-import * as React from "react"
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
-import { updateProfilePreferences } from "@/actions/profile/personal-info.actions"
+import { useTheme } from "next-themes";
+import { updateProfilePreferences } from "@/actions/profile/personal-info.actions";
+import { Moon, Sun } from "lucide-react";
+
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -13,7 +13,7 @@ export function ThemeToggle() {
     setTheme(nextTheme)
     document.cookie = `theme=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`
     document.cookie = `theme_pref=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`
-    updateProfilePreferences({ theme: nextTheme }).catch(() => {})
+    updateProfilePreferences({ theme: nextTheme }).catch(() => { })
   }
 
   return (

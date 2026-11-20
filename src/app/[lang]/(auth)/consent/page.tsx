@@ -7,6 +7,8 @@ import OAuthErrorStep from "../signin/oauth-error-step";
 import { ConsentClient } from "./consent-client";
 import { verifyAuthRequest } from "@/lib/oauth/auth-request";
 import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
+import prisma from "@/lib/prisma";
+import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -71,6 +73,26 @@ async function ConsentDynamicContent({
         actionText="Back to Profile"
       />
     );
+  }
+
+  // Auto-grant for first-party ecosystem apps without showing consent prompt
+  const clientApp = await prisma.oAuthClientConfig.findUnique({
+    where: { client_id: authReq.clientId },
+  });
+
+  if (clientApp?.is_first_party) {
+    const grantResult = await grantOAuthAccess(
+      authReq.clientId,
+      authReq.redirectUri,
+      authReq.state,
+      authReq.codeChallenge,
+      authReq.codeChallengeMethod,
+      authReq.scope,
+      authReq.nonce
+    );
+    if (grantResult.success && grantResult.redirectUrl) {
+      redirect(grantResult.redirectUrl);
+    }
   }
 
   return (

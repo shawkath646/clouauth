@@ -52,6 +52,8 @@ const createAppSchema = z.object({
   website: z.string().url("Website must be a valid URL").optional().nullable().or(z.literal("")),
   redirect_uris: z.array(redirectUriSchema).min(1, "At least one redirect URI is required"),
   scopes: z.array(z.string()).optional(),
+  client_type: z.enum(["confidential", "public"]).default("confidential"),
+  is_first_party: z.boolean().default(false),
 });
 
 const updateAppSchema = z.object({
@@ -61,6 +63,8 @@ const updateAppSchema = z.object({
   redirect_uris: z.array(redirectUriSchema).min(1, "At least one redirect URI is required").optional(),
   scopes: z.array(z.string()).optional(),
   enabled: z.boolean().optional(),
+  client_type: z.enum(["confidential", "public"]).optional(),
+  is_first_party: z.boolean().optional(),
 });
 
 /** Ensures the user owns the specified app, throwing or returning not found otherwise */
@@ -81,6 +85,8 @@ export async function createAppAction(data: {
   website?: string;
   redirect_uris: string[];
   scopes?: string[];
+  client_type?: "confidential" | "public";
+  is_first_party?: boolean;
 }): Promise<{
   success: boolean;
   app?: DeveloperApp;
@@ -99,9 +105,10 @@ export async function createAppAction(data: {
       return { success: false, error: parsed.error.issues[0]?.message || "Validation failed" };
     }
 
+    const isPublic = parsed.data.client_type === "public";
     const clientId = `cbl_${crypto.randomBytes(12).toString("hex")}`;
-    const clientSecret = `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
-    const clientSecretHash = await hashClientSecret(clientSecret);
+    const clientSecret = isPublic ? undefined : `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
+    const clientSecretHash = clientSecret ? await hashClientSecret(clientSecret) : null;
 
     const newApp = await prisma.userApp.create({
       data: {
@@ -113,11 +120,12 @@ export async function createAppAction(data: {
           create: {
             client_id: clientId,
             client_secret_hash: clientSecretHash,
-            client_type: "confidential",
+            client_type: parsed.data.client_type,
             redirect_uris: JSON.stringify(parsed.data.redirect_uris),
             scopes: JSON.stringify(parsed.data.scopes || ["openid", "profile", "email"]),
             pkce_required: true,
-            token_endpoint_auth_method: "client_secret_post",
+            token_endpoint_auth_method: isPublic ? "none" : "client_secret_post",
+            is_first_party: parsed.data.is_first_party ?? false,
           },
         },
       },
@@ -149,6 +157,8 @@ export async function updateAppAction(
     redirect_uris?: string[];
     scopes?: string[];
     enabled?: boolean;
+    client_type?: "confidential" | "public";
+    is_first_party?: boolean;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -167,6 +177,14 @@ export async function updateAppAction(
       return { success: false, error: "Application not found or unauthorized." };
     }
 
+    const targetClientType = parsed.data.client_type;
+    const targetTokenAuthMethod =
+      targetClientType !== undefined
+        ? targetClientType === "public"
+          ? "none"
+          : "client_secret_post"
+        : undefined;
+
     await prisma.userApp.update({
       where: { id: appId },
       data: {
@@ -176,6 +194,9 @@ export async function updateAppAction(
         oauth: {
           update: {
             enabled: parsed.data.enabled,
+            client_type: targetClientType,
+            token_endpoint_auth_method: targetTokenAuthMethod,
+            is_first_party: parsed.data.is_first_party,
             redirect_uris: parsed.data.redirect_uris ? JSON.stringify(parsed.data.redirect_uris) : undefined,
             scopes: parsed.data.scopes ? JSON.stringify(parsed.data.scopes) : undefined,
           },
@@ -238,6 +259,13 @@ export async function rotateAppSecretAction(appId: string): Promise<{
     const app = await requireUserApp(appId, sessionData.user.id);
     if (!app) {
       return { success: false, error: "Application not found or unauthorized." };
+    }
+
+    if (app.oauth?.client_type === "public") {
+      return {
+        success: false,
+        error: "Public clients (native/mobile/desktop) do not utilize client secrets.",
+      };
     }
 
     const newSecret = `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;

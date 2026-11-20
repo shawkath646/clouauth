@@ -182,6 +182,11 @@ export function ApplicationsSection({
                           {app.oauth.client_type}
                         </Badge>
                       )}
+                      {app.oauth?.is_first_party && (
+                        <Badge variant="secondary" className="text-xs font-medium">
+                          1st Party
+                        </Badge>
+                      )}
                     </div>
                     {app.description && (
                       <p className="text-sm text-muted-foreground line-clamp-1">
@@ -236,16 +241,18 @@ export function ApplicationsSection({
                     <span>{dict.edit}</span>
                   </Link>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRotateSecret(app)}
-                    disabled={isSubmitting}
-                    className="h-8 gap-1.5 text-xs rounded-full text-muted-foreground hover:text-foreground"
-                  >
-                    <RotateCw className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{dict.rotateSecret}</span>
-                  </Button>
+                  {app.oauth?.client_type !== "public" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRotateSecret(app)}
+                      disabled={isSubmitting}
+                      className="h-8 gap-1.5 text-xs rounded-full text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{dict.rotateSecret}</span>
+                    </Button>
+                  )}
 
                   <Button
                     variant="ghost"

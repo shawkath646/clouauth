@@ -73,6 +73,7 @@ export function ApplicationForm({
       name: initialData?.name || "",
       description: initialData?.description || "",
       website: initialData?.website || "",
+      client_type: (initialData?.oauth?.client_type as "confidential" | "public") || "confidential",
       redirect_uris: initialData?.oauth?.redirect_uris.map((uri) => ({ value: uri })) || [{ value: "" }],
       scopes: initialData?.oauth?.scopes || ["openid", "profile", "email"],
     },
@@ -119,6 +120,8 @@ export function ApplicationForm({
           website: data.website || undefined,
           redirect_uris: uris,
           scopes: data.scopes,
+          client_type: data.client_type,
+          is_first_party: false, // Default false when added from UI
         });
 
         if (!res.success || !res.app) {
@@ -142,6 +145,7 @@ export function ApplicationForm({
           website: data.website || undefined,
           redirect_uris: uris,
           scopes: data.scopes,
+          client_type: data.client_type,
         });
 
         if (!res.success) {
@@ -318,6 +322,39 @@ export function ApplicationForm({
           <div className="space-y-6 border-b border-border/50 pb-8">
             <h3 className="text-lg font-medium">{appsDict.oauthTitle}</h3>
             
+            {/* Client Type */}
+            <div className="space-y-3">
+              <Label>Application Type <span className="text-destructive">*</span></Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  onClick={() => form.setValue("client_type", "confidential")}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                    form.watch("client_type") === "confidential"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border/60 hover:bg-muted/30"
+                  }`}
+                >
+                  <div className="font-medium text-sm">Confidential (Web / Server)</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Backend services and server-side web apps. Generates a client secret.
+                  </div>
+                </div>
+                <div
+                  onClick={() => form.setValue("client_type", "public")}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                    form.watch("client_type") === "public"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border/60 hover:bg-muted/30"
+                  }`}
+                >
+                  <div className="font-medium text-sm">Public (Native / Desktop / Mobile)</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Client-side, mobile, or daemon apps. Enforces PKCE with no client secret.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>{appsDict.redirectUris} <span className="text-destructive">*</span></Label>

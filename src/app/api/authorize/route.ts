@@ -116,6 +116,22 @@ export async function GET(request: NextRequest) {
   const prompt = getStringParam(searchParams.get("prompt"));
 
   if (session && prompt !== "consent") {
+    // 1. First-party ecosystem apps auto-grant immediately without prompt
+    if (clientApp.is_first_party) {
+      const grantResult = await grantOAuthAccess(
+        clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+        codeChallengeMethod,
+        scope,
+        nonce
+      );
+      if (grantResult.success && grantResult.redirectUrl) {
+        return NextResponse.redirect(grantResult.redirectUrl);
+      }
+    }
+
     const existingConsent = await prisma.oAuthConsent.findUnique({
       where: {
         user_id_client_id: {

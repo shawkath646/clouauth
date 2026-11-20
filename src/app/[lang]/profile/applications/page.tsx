@@ -1,12 +1,14 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { ApplicationsSection } from "@/components/profile/applications-section";
 import { ConnectedApplicationsSection } from "@/components/profile/connected-applications-section";
+import { ApplicationsSkeleton } from "@/components/profile/profile-skeletons";
 import { getUserAppsAction } from "@/actions/profile/apps";
 import { getConnectedAppsAction } from "@/actions/profile/connected-apps.actions";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Applications - Account Settings",
@@ -16,7 +18,6 @@ async function ApplicationsContent({ lang }: { lang: string }) {
   const locale = resolveLocale(lang);
   const dict = await getDictionary("profile_apps", locale);
 
-  await connection();
   const [developerAppsRes, connectedAppsRes] = await Promise.all([
     getUserAppsAction(),
     getConnectedAppsAction(),
@@ -48,11 +49,7 @@ export default async function ApplicationsPage({
 }) {
   const { lang } = await params;
   return (
-    <Suspense
-      fallback={
-        <div className="h-64 w-full rounded-2xl bg-card/50 border border-border/40 animate-pulse" />
-      }
-    >
+    <Suspense fallback={<ApplicationsSkeleton />}>
       <ApplicationsContent lang={lang} />
     </Suspense>
   );

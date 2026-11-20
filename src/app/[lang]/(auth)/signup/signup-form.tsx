@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { motion } from "framer-motion";
 import SignUpPromotion from "./signup-promotion";
 import { signUp } from "@/actions/auth/signup.actions";
@@ -78,7 +79,7 @@ export default function SignUpForm({
             `/${locale}/consent?${AUTH_REQUEST_PARAM}=${encodeURIComponent(effectiveAuthRequest)}`
           );
         } else {
-          router.push(response.redirectUrl || `/${locale}/profile`);
+          router.push((response.redirectUrl || `/${locale}/profile`) as Route);
         }
       } else {
         setErrorMsg(response.error || "Failed to create account.");

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { cleanupExpiredSessions } from "@/lib/session";
 import { handleError } from "@/utils/error";
+import { getEnv } from "@/utils/env.server";
 import crypto from "crypto";
 
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
+    const cronSecret = getEnv("CRON_SECRET", true);
 
     if (!cronSecret || !authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,29 +24,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const now = new Date();
-
-    // Run cleanup operations across TempSession, UserSession, and RevokedToken in parallel
-    const [tempSessions, userSessions, revokedTokens] = await Promise.all([
-      prisma.tempSession.deleteMany({
-        where: { expires_on: { lt: now } },
-      }),
-      prisma.userSession.deleteMany({
-        where: {
-          OR: [{ expires_on: { lt: now } }, { revoked_on: { not: null } }],
-        },
-      }),
-      prisma.revokedToken.deleteMany({
-        where: { expires_at: { lt: now } },
-      }),
-    ]);
+    const deleted = await cleanupExpiredSessions();
 
     return NextResponse.json({
       success: true,
       deleted: {
-        tempSessions: tempSessions.count,
-        userSessions: userSessions.count,
-        revokedTokens: revokedTokens.count,
+        tempSessions: deleted.tempSessions,
+        userSessions: deleted.userSessions,
+        revokedTokens: deleted.revokedTokens,
       },
     });
   } catch (e: unknown) {

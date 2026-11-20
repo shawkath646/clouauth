@@ -8,8 +8,8 @@ import { useTheme } from "next-themes";
 import { updateProfilePreferences } from "@/actions/profile/personal-info.actions";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
-import iconLight from "@/assets/icon_light.png";
-import iconDark from "@/assets/icon_dark.png";
+import iconLight from "@/assets/icon_light.svg";
+import iconDark from "@/assets/icon_dark.svg";
 
 export interface NavigationProps {
   locale?: Locale;

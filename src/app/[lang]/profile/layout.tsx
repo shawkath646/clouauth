@@ -1,17 +1,21 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { connection } from "next/server";
 import { BackgroundStars } from "@/components/landing/background-stars";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 import { getFullProfile } from "@/actions/profile/get-profile";
 import { ProfileLayoutClient } from "@/components/profile/profile-layout-client";
 import { SignOutButton } from "@/components/profile/sign-out-button";
+import {
+  ProfileHeaderSkeleton,
+  ProfileSidebarSkeleton,
+} from "@/components/profile/profile-skeletons";
 import { Shield } from "lucide-react";
-import iconLight from "@/assets/icon_light.png";
-import iconDark from "@/assets/icon_dark.png";
+import iconLight from "@/assets/icon_light.svg";
+import iconDark from "@/assets/icon_dark.svg";
 import type { Locale } from "@/lib/i18n/config";
 import { Dictionaries } from "@/types/i18n.types";
 
@@ -65,17 +69,19 @@ function ProfileLayoutSkeleton({
   children: React.ReactNode;
 }) {
   return (
-    <div className="max-w-7xl mx-auto py-4 sm:py-8">
+    <main className="max-w-7xl mx-auto py-4 sm:py-8">
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
         <aside className="hidden lg:block w-64 shrink-0">
-          <div className="h-64 w-full rounded-2xl bg-card/40 border border-primary/10 animate-pulse" />
+          <div className="sticky top-28">
+            <ProfileSidebarSkeleton />
+          </div>
         </aside>
         <section className="flex-1 min-w-0">
-          <div className="h-28 w-full rounded-2xl bg-card/40 border border-primary/10 animate-pulse mb-8" />
+          <ProfileHeaderSkeleton />
           {children}
         </section>
       </div>
-    </div>
+    </main>
   );
 }
 

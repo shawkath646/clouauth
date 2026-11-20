@@ -7,7 +7,12 @@ export function handleError(
     contextOrReturnRaw?: string | boolean
 ): string {
     if (isErrorObject(error) && typeof error.digest === "string") {
-        if (error.digest.startsWith("NEXT_") || error.digest === "DYNAMIC_SERVER_USAGE") {
+        if (
+            error.digest.startsWith("NEXT_") ||
+            error.digest.startsWith("BAILOUT_") ||
+            error.digest === "DYNAMIC_SERVER_USAGE" ||
+            error.digest === "HANGING_PROMISE_REJECTION"
+        ) {
             throw error;
         }
     }

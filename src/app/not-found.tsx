@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import Image from "next/image";
 import Link from "next/link";
+import type { Route } from "next";
 import { buttonVariants } from "@/components/ui/button";
 import LayoutWrapper from "@/components/layout/layout-wrapper";
+import iconLight from "@/assets/icon_light.svg";
+import iconDark from "@/assets/icon_dark.svg";
 
 export const metadata: Metadata = {
   title: "Page Not Found",
@@ -22,9 +25,9 @@ export default function NotFound() {
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
         {/* Logo - Premium Corner Placement */}
         <div className="absolute top-8 left-6 z-50 md:top-10 md:left-10 opacity-50">
-          <Link href="/" className="group block">
+          <Link href={"/" as Route} className="group block">
             <Image
-              src={`${getEnv("R2_PUBLIC_URL")}/branding/icon_light.png`}
+              src={iconLight}
               alt="clouburstlab"
               width={180}
               height={24}
@@ -32,7 +35,7 @@ export default function NotFound() {
               className="w-44 h-auto transition-transform duration-500 group-hover:scale-105 dark:hidden object-contain"
             />
             <Image
-              src={`${getEnv("R2_PUBLIC_URL")}/branding/icon_dark.png`}
+              src={iconDark}
               alt="clouburstlab"
               width={180}
               height={24}
@@ -94,22 +97,24 @@ export default function NotFound() {
           {/* Buttons */}
           <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center w-full sm:w-auto">
             <Link
-              href="/"
+              href={"/" as Route}
               className={buttonVariants({
                 className: "h-10 w-full sm:w-auto rounded-full px-8 transition-all shadow-lg shadow-primary/20",
               })}
             >
               Return Home
             </Link>
-            <Link
+            <a
               href={DEV_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className={buttonVariants({
                 variant: "outline",
                 className: "h-10 w-full sm:w-auto rounded-full px-8 transition-all bg-background/50 backdrop-blur-sm",
               })}
             >
               Contact Developer
-            </Link>
+            </a>
           </div>
 
         </div>

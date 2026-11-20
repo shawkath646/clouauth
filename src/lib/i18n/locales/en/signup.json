@@ -14,5 +14,9 @@
   "signIn": "Sign in",
   "pitchTitle1": "One account.",
   "pitchTitle2": "All seamless access.",
-  "pitchSubtitle": "Join the clouburstlab ecosystem and unlock a suite of powerful tools designed for modern professionals."
+  "pitchSubtitle": "Join the clouburstlab ecosystem and unlock a suite of powerful tools designed for modern professionals.",
+  "meta": {
+    "title": "Create Your Account",
+    "description": "Create your free clouburstlab account. Get a unified identity for OIDC and OAuth 2.0 apps, manage passkeys, and secure your account with 2FA."
+  }
 }

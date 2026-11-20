@@ -1,161 +1,124 @@
+import "server-only";
 import { Style, Avatar } from "@dicebear/core";
 import initialsDef from "@dicebear/styles/initials.json";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
-
-function getRequiredEnv(name: string): string {
-    const value = process.env[name];
-
-    if (!value || value.trim() === "") {
-        throw new Error(`Missing required environment variable: ${name}`);
-    }
-
-    return value;
-}
-
-const R2_ENDPOINT_URL = getRequiredEnv("R2_ENDPOINT_URL");
-const R2_ACCESS_KEY_ID = getRequiredEnv("R2_ACCESS_KEY_ID");
-const R2_SECRET_ACCESS_KEY = getRequiredEnv("R2_SECRET_ACCESS_KEY");
-export const R2_BUCKET_NAME = getRequiredEnv("R2_BUCKET_NAME");
-export const R2_PUBLIC_URL = getRequiredEnv("R2_PUBLIC_URL");
-
-export const s3Client = new S3Client({
-    region: "auto",
-    endpoint: R2_ENDPOINT_URL,
-    credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
-    },
-});
+import { uploadToStorage } from "@/lib/storage";
 
 export async function generateAndUploadAvatar(
-    firstName: string,
-    lastName: string
+  firstName: string,
+  lastName: string
 ): Promise<string> {
-    const seed = `${firstName} ${lastName}`;
+  const seed = `${firstName} ${lastName}`;
 
-    const gradients = [
-        ["2563EB", "60A5FA"], // Blue
-        ["7C3AED", "A855F7"], // Purple
-        ["059669", "34D399"], // Emerald
-        ["DC2626", "FB7185"], // Red/Pink
-        ["EA580C", "FB923C"], // Orange
-        ["0891B2", "22D3EE"], // Cyan
-        ["4F46E5", "818CF8"], // Indigo
-        ["BE185D", "F472B6"], // Rose
-        ["15803D", "4ADE80"], // Green
-        ["9333EA", "C084FC"], // Violet
-    ];
+  const gradients = [
+    ["2563EB", "60A5FA"], // Blue
+    ["7C3AED", "A855F7"], // Purple
+    ["059669", "34D399"], // Emerald
+    ["DC2626", "FB7185"], // Red/Pink
+    ["EA580C", "FB923C"], // Orange
+    ["0891B2", "22D3EE"], // Cyan
+    ["4F46E5", "818CF8"], // Indigo
+    ["BE185D", "F472B6"], // Rose
+    ["15803D", "4ADE80"], // Green
+    ["9333EA", "C084FC"], // Violet
+  ];
 
-    const hash = crypto.createHash("sha256").update(seed).digest();
-    const backgroundColor = gradients[hash[0] % gradients.length];
+  const hash = crypto.createHash("sha256").update(seed).digest();
+  const backgroundColor = gradients[hash[0] % gradients.length];
 
-    const avatar = new Avatar(new Style(initialsDef), {
-        seed,
-        size: 512,
-        borderRadius: 50,
-        scale: 0.82,
-        fontWeight: 700,
-        textColor: ["FFFFFF"],
-        backgroundColor,
-        backgroundColorFill: ["linear"]
-    });
+  const avatar = new Avatar(new Style(initialsDef), {
+    seed,
+    size: 512,
+    borderRadius: 50,
+    scale: 0.82,
+    fontWeight: 700,
+    textColor: ["FFFFFF"],
+    backgroundColor,
+    backgroundColorFill: ["linear"],
+  });
 
-    const svg = avatar.toString();
-    const buffer = Buffer.from(svg);
+  const svg = avatar.toString();
+  const buffer = Buffer.from(svg);
+  const path = `avatars/${crypto.randomUUID()}.svg`;
 
-    const filename = `user_avatar/${crypto.randomUUID()}.svg`;
-
-    await s3Client.send(
-        new PutObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: filename,
-            Body: buffer,
-            ContentType: "image/svg+xml",
-        })
-    );
-
-    return `${R2_PUBLIC_URL}/${filename}`;
+  return await uploadToStorage({
+    path,
+    buffer,
+    contentType: "image/svg+xml",
+  });
 }
 
-export async function uploadExternalAvatar(externalUrl: string): Promise<string | null> {
-    try {
-        const { validateImageMagicBytes } = await import("@/utils/image-validator");
-        let buffer: Buffer;
+export async function uploadExternalAvatar(
+  externalUrl: string
+): Promise<string | null> {
+  try {
+    const { validateImageMagicBytes } = await import("@/utils/image.server");
+    let buffer: Buffer;
 
-        // Check if the input is a base64 Data URI
-        if (externalUrl.startsWith("data:")) {
-            const parts = externalUrl.split(",");
-            if (parts.length !== 2) return null;
+    if (externalUrl.startsWith("data:")) {
+      const parts = externalUrl.split(",");
+      if (parts.length !== 2) return null;
+      buffer = Buffer.from(parts[1], "base64");
+    } else {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
 
-            // Extract the raw base64 string and decode it
-            buffer = Buffer.from(parts[1], "base64");
-        } else {
-            // Proceed with standard HTTP/HTTPS fetch
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+      const res = await fetch(externalUrl, {
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept:
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+      });
+      clearTimeout(timeout);
 
-            const res = await fetch(externalUrl, {
-                signal: controller.signal,
-                cache: "no-store",
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                },
-            });
-            clearTimeout(timeout);
-
-            if (!res.ok) return null;
-
-            const arrayBuffer = await res.arrayBuffer();
-            buffer = Buffer.from(arrayBuffer);
-        }
-
-        if (buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
-            return null;
-        }
-
-        // Magic bytes validation inherently verifies the structure of the decoded base64 buffer
-        const validated = validateImageMagicBytes(buffer);
-        if (!validated) return null;
-
-        const filename = `user_avatar/${crypto.randomUUID()}.${validated.ext}`;
-
-        await s3Client.send(
-            new PutObjectCommand({
-                Bucket: R2_BUCKET_NAME,
-                Key: filename,
-                Body: buffer,
-                ContentType: validated.mime,
-            })
-        );
-
-        return `${R2_PUBLIC_URL}/${filename}`;
-    } catch {
-        return null;
+      if (!res.ok) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
     }
+
+    if (buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
+      return null;
+    }
+
+    const validated = validateImageMagicBytes(buffer);
+    if (!validated) return null;
+
+    const path = `avatars/${crypto.randomUUID()}.${validated.ext}`;
+
+    return await uploadToStorage({
+      path,
+      buffer,
+      contentType: validated.mime,
+    });
+  } catch {
+    return null;
+  }
 }
 
 export async function resolveUserAvatar(
-    externalAvatarUrl: string | null | undefined,
-    firstName: string,
-    lastName: string
+  externalAvatarUrl: string | null | undefined,
+  firstName: string,
+  lastName: string
 ): Promise<string> {
-    const cleanUrl = externalAvatarUrl?.trim();
-    if (cleanUrl) {
-        try {
-            const uploadedUrl = await uploadExternalAvatar(cleanUrl);
-            if (uploadedUrl) {
-                return uploadedUrl;
-            }
-        } catch {
-            // Ignore error and proceed to fallback
-        }
-    }
-
+  const cleanUrl = externalAvatarUrl?.trim();
+  if (cleanUrl) {
     try {
-        return await generateAndUploadAvatar(firstName, lastName);
+      const uploadedUrl = await uploadExternalAvatar(cleanUrl);
+      if (uploadedUrl) {
+        return uploadedUrl;
+      }
     } catch {
-        return cleanUrl || "";
+      // Ignore error and proceed to fallback
     }
+  }
+
+  try {
+    return await generateAndUploadAvatar(firstName, lastName);
+  } catch {
+    return cleanUrl || "";
+  }
 }

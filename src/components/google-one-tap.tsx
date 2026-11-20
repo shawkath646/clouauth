@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useEffect, useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter, useParams } from "next/navigation";
+import type { Route } from "next";
 import { toast } from "sonner";
 import { signInWithGoogleOneTap } from "@/actions/auth/google-one-tap.actions";
 import { handleError } from "@/utils/error";
@@ -147,7 +148,7 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
       if (path === "/signin") {
         window.history.replaceState(null, "", url);
       } else {
-        router.push(url);
+        router.push(url as Route);
       }
     },
     [router, prefix, path]
@@ -192,7 +193,7 @@ export default function GoogleOneTap({ gClientId, isLoggedIn = false }: GoogleOn
                 !returnTo.startsWith("/\\") &&
                 !returnTo.startsWith(`${prefix}/signin`);
               router.refresh();
-              router.push(safe ? returnTo : `${prefix}/profile`);
+              router.push((safe ? returnTo : `${prefix}/profile`) as Route);
             }
             return;
           }

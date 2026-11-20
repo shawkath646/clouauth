@@ -1,18 +1,31 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 import { getUserSession } from "@/lib/session";
 import OAuthErrorStep from "../signin/oauth-error-step";
 import { ConsentClient } from "./consent-client";
+import { ConsentCardSkeleton } from "@/components/profile/profile-skeletons";
 import { verifyAuthRequest } from "@/lib/oauth/auth-request";
 import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
-import prisma from "@/lib/prisma";
+import { findOAuthClient } from "@/lib/oauth/clients";
 import { grantOAuthAccess } from "@/actions/oauth/oauth.actions";
+
+export const instant = false;
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
+
+export const metadata: Metadata = {
+  title: "Authorize Application",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface ConsentPageProps {
   params: Promise<{ lang: string }>;
@@ -46,7 +59,7 @@ async function ConsentDynamicContent({
     const signInUrl = authRequest
       ? `/${locale}/signin?${AUTH_REQUEST_PARAM}=${encodeURIComponent(authRequest)}`
       : `/${locale}/signin`;
-    redirect(signInUrl);
+    redirect(signInUrl as Route);
   }
 
   // If auth_request parameter is missing
@@ -76,9 +89,7 @@ async function ConsentDynamicContent({
   }
 
   // Auto-grant for first-party ecosystem apps without showing consent prompt
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: authReq.clientId },
-  });
+  const clientApp = await findOAuthClient(authReq.clientId);
 
   if (clientApp?.is_first_party) {
     const grantResult = await grantOAuthAccess(
@@ -91,7 +102,7 @@ async function ConsentDynamicContent({
       authReq.nonce
     );
     if (grantResult.success && grantResult.redirectUrl) {
-      redirect(grantResult.redirectUrl);
+      redirect(grantResult.redirectUrl as Route);
     }
   }
 
@@ -118,15 +129,7 @@ export default async function ConsentPage({
   searchParams,
 }: ConsentPageProps) {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full max-w-lg mx-auto p-8 bg-background/80 backdrop-blur-2xl border border-primary/20 rounded-3xl flex flex-col items-center justify-center min-h-105 animate-pulse">
-          <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
-          <div className="h-4 w-40 bg-muted rounded mb-2" />
-          <div className="h-3 w-56 bg-muted/60 rounded" />
-        </div>
-      }
-    >
+    <Suspense fallback={<ConsentCardSkeleton />}>
       <ConsentDynamicContent
         paramsPromise={params}
         searchParamsPromise={searchParams}

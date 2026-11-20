@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getExtendedProfile } from "@/actions/profile/get-profile";
 import { EditNameForm } from "@/components/profile/edit/edit-name-form";
 import { EditUsernameForm } from "@/components/profile/edit/edit-username-form";
@@ -7,8 +6,11 @@ import { EditBioForm } from "@/components/profile/edit/edit-bio-form";
 import { EditAddressForm } from "@/components/profile/edit/edit-address-form";
 import { EditAvatarForm } from "@/components/profile/edit/edit-avatar-form";
 import { EditPronounsForm } from "@/components/profile/edit/edit-pronouns-form";
+import { ManagementFormSkeleton } from "@/components/profile/profile-skeletons";
 import { redirect, notFound } from "next/navigation";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+
+export const instant = false;
 
 interface ProfileEditPageProps {
   params: Promise<{ lang: string }>;
@@ -27,7 +29,6 @@ async function ProfileEditDynamicContent({
     getDictionary("profile_personal", locale),
   ]);
 
-  await connection();
   const [res, resolvedParams] = await Promise.all([
     getExtendedProfile(),
     searchParams,
@@ -99,15 +100,9 @@ export default function ProfileEditPage({
 }: ProfileEditPageProps) {
   return (
     <div className="space-y-6 w-full">
-      <main className="w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl border border-border/50 shadow-sm">
-        <Suspense
-          fallback={
-            <div className="h-72 w-full rounded-xl bg-muted/20 animate-pulse" />
-          }
-        >
-          <ProfileEditDynamicContent params={params} searchParams={searchParams} />
-        </Suspense>
-      </main>
+      <Suspense fallback={<ManagementFormSkeleton />}>
+        <ProfileEditDynamicContent params={params} searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { jwtVerify, importJWK, JWTPayload } from "jose";
-import prisma from "@/lib/prisma";
+import { isTokenRevoked } from "@/lib/session";
+import { findOAuthClient } from "@/lib/oauth/clients";
 import { getActivePublicJwks } from "@/lib/sso/signing-keys";
-import { getEnv } from "@/utils/utils";
+import { jwtSecret as secret } from "@/utils/jwt.server";
+import { getEnv } from "@/utils/env.server";
 
 export interface InterServiceAuthResult {
   authorized: boolean;
@@ -16,7 +18,7 @@ export interface InterServiceAuthResult {
   payload?: JWTPayload;
 }
 
-const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
+
 const ALLOWED_TOKEN_TYPES = new Set([
   "client_credentials",
   "internal_service",
@@ -52,7 +54,7 @@ export async function verifyInterServiceAuth(
   let signedByInternalSecret = false;
 
   // 1. Try verifying with dedicated INTERNAL_SERVICE_SECRET if configured
-  const internalSecret = process.env.INTERNAL_SERVICE_SECRET;
+  const internalSecret = getEnv("INTERNAL_SERVICE_SECRET", true);
   if (internalSecret) {
     try {
       const verified = await jwtVerify(
@@ -124,8 +126,8 @@ export async function verifyInterServiceAuth(
   // 4. Enforce JTI revocation check
   const jti = verifiedPayload.jti;
   if (jti) {
-    const revoked = await prisma.revokedToken.findUnique({ where: { jti } });
-    if (revoked) {
+    const isRevoked = await isTokenRevoked(jti);
+    if (isRevoked) {
       return {
         authorized: false,
         error: "Bearer token has been revoked.",
@@ -173,10 +175,7 @@ export async function verifyInterServiceAuth(
   }
 
   // 7. Check if the token belongs to a registered application in OAuthClientConfig
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: clientId },
-    include: { app: true },
-  });
+  const clientApp = await findOAuthClient(clientId);
 
   if (clientApp) {
     if (!clientApp.enabled) {
@@ -213,7 +212,7 @@ export async function verifyInterServiceAuth(
       isInternalService: hasInternalScope,
       clientId: clientApp.client_id,
       appId: clientApp.app_id,
-      appName: clientApp.app.name,
+      appName: clientApp.app?.name || clientApp.client_id,
       scopes,
       payload: verifiedPayload,
     };

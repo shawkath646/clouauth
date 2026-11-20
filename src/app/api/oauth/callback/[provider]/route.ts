@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
-import { getUserSession } from "@/lib/session";
+import {
+  getUserSession,
+  getTempSession,
+  updateSession,
+  deleteTempSession,
+} from "@/lib/session";
+import { getLinkedOAuthAccounts } from "@/lib/credentials";
 import { handleError } from "@/utils/error";
 import { encryptSymmetric } from "@/lib/encryption";
 import crypto from "crypto";
-import prisma from "@/lib/prisma";
 import { authenticateExternalUser } from "@/actions/auth/auth";
 import { getSafeReturnTo } from "@/utils/url";
 
@@ -56,14 +61,7 @@ export async function GET(
     // Sudo Re-authentication Handler
     const sudoTid = request.cookies.get("oauth_sudo_tid")?.value;
     if (sudoTid) {
-      const tempSession = await prisma.tempSession.findUnique({
-        where: { id: sudoTid },
-        include: {
-          user: {
-            include: { oauth_accounts: true },
-          },
-        },
-      });
+      const tempSession = await getTempSession(sudoTid);
 
       if (!tempSession || tempSession.expires_on < new Date() || tempSession.flow_type !== "sudo") {
         return errorRedirect("Verification session expired. Please try again.");
@@ -73,8 +71,10 @@ export async function GET(
         return errorRedirect("Unauthorized session for step-up verification.");
       }
 
+      const oauthAccounts = await getLinkedOAuthAccounts(tempSession.user_id);
+
       // Verify that the returned OAuth profile id matches the user's linked account for this provider
-      const linkedAccount = tempSession.user.oauth_accounts.find(
+      const linkedAccount = oauthAccounts.find(
         (acc) =>
           acc.provider.toLowerCase() === effectiveProvider.toLowerCase() ||
           acc.provider.toLowerCase() === provider.toLowerCase()
@@ -85,14 +85,11 @@ export async function GET(
       }
 
       // Valid Sudo verification: update active session last_authenticated_on
-      await prisma.userSession.update({
-        where: { id: session.session.id },
-        data: { last_authenticated_on: new Date() },
+      await updateSession(session.session.id, {
+        last_authenticated_on: new Date(),
       });
 
-      await prisma.tempSession.delete({
-        where: { id: sudoTid },
-      }).catch(() => {});
+      await deleteTempSession(sudoTid).catch(() => {});
 
       let returnTo = "/profile";
       if (tempSession.payload) {

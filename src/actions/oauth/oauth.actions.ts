@@ -2,21 +2,27 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import { SignJWT } from "jose";
 import crypto from "crypto";
 import { OAuthProviderFactory } from "@/lib/oauth/factory";
 import { handleError } from "@/utils/error";
-import { getSecureCookieOptions } from "@/utils/utils";
+import { getSecureCookieOptions } from "@/utils/cookie.server";
+import { getEnv } from "@/utils/env.server";
 import { requireUserSession } from "@/actions/auth/helpers";
-import prisma from "@/lib/prisma";
+import { findOAuthClient, upsertOAuthConsent } from "@/lib/oauth/clients";
+import {
+  getPasswordCredential,
+  getUserPasskeys,
+  getLinkedOAuthAccounts,
+  deleteLinkedOAuthAccountsByProvider,
+} from "@/lib/credentials";
 import { revalidatePath } from "next/cache";
 import { recordSecurityActivity } from "@/lib/security-activity";
 import { parseClientScopes, parseRedirectUris } from "@/lib/oauth/scope-utils";
 import { getSafeReturnTo } from "@/utils/url";
 import { verifyAuthRequest } from "@/lib/oauth/auth-request";
-import { getEnv } from "@/utils/utils";
-
-const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
+import { jwtSecret as secret } from "@/utils/jwt.server";
 
 export async function grantOAuthAccess(
   client_id: string,
@@ -38,10 +44,7 @@ export async function grantOAuthAccess(
     }
 
     // 1. Validate Client Application and Status
-    const clientApp = await prisma.oAuthClientConfig.findUnique({
-      where: { client_id },
-      include: { app: true },
-    });
+    const clientApp = await findOAuthClient(client_id);
 
     if (!clientApp || !clientApp.enabled) {
       return {
@@ -111,25 +114,7 @@ export async function grantOAuthAccess(
       .sign(secret);
 
     // Persist OAuth consent for the user and client application
-    await prisma.oAuthConsent.upsert({
-      where: {
-        user_id_client_id: {
-          user_id: session.user.id,
-          client_id,
-        },
-      },
-      create: {
-        user_id: session.user.id,
-        client_id,
-        scopes: finalScope,
-        revoked_at: null,
-      },
-      update: {
-        scopes: finalScope,
-        revoked_at: null,
-        updated_at: new Date(),
-      },
-    });
+    await upsertOAuthConsent(session.user.id, client_id, finalScope);
 
     // Build the redirect URL (RFC 6749 & RFC 9207 Issuer Identification)
     const url = new URL(redirect_uri);
@@ -138,8 +123,8 @@ export async function grantOAuthAccess(
       url.searchParams.set("state", state);
     }
     const baseURL = (
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
+      getEnv("NEXT_PUBLIC_BASE_URL", true) ||
+      getEnv("NEXT_PUBLIC_APP_URL", true) ||
       "https://auth.clouburstlab.com"
     ).replace(/\/$/, "");
     url.searchParams.set("iss", baseURL);
@@ -164,10 +149,7 @@ export async function confirmConsentAction(authRequestToken: string) {
       };
     }
 
-    const clientApp = await prisma.oAuthClientConfig.findUnique({
-      where: { client_id: authReq.clientId },
-      include: { app: true },
-    });
+    const clientApp = await findOAuthClient(authReq.clientId);
 
     if (!clientApp || !clientApp.enabled) {
       return {
@@ -221,38 +203,21 @@ export async function confirmConsentAction(authRequestToken: string) {
       url.searchParams.set("state", authReq.state);
     }
     const baseURL = (
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
+      getEnv("NEXT_PUBLIC_BASE_URL", true) ||
+      getEnv("NEXT_PUBLIC_APP_URL", true) ||
       "https://auth.clouburstlab.com"
     ).replace(/\/$/, "");
     url.searchParams.set("iss", baseURL);
 
     // Persist OAuth consent for the user and client application
-    await prisma.oAuthConsent.upsert({
-      where: {
-        user_id_client_id: {
-          user_id: session.user.id,
-          client_id: authReq.clientId,
-        },
-      },
-      create: {
-        user_id: session.user.id,
-        client_id: authReq.clientId,
-        scopes: finalScope,
-        revoked_at: null,
-      },
-      update: {
-        scopes: finalScope,
-        revoked_at: null,
-        updated_at: new Date(),
-      },
-    });
+    await upsertOAuthConsent(session.user.id, authReq.clientId, finalScope);
 
+    const appName = clientApp.app?.name || "Application";
     await recordSecurityActivity({
       userId: session.user.id,
       event: "OAUTH_CONSENT_GRANTED",
-      title: `Authorized ${clientApp.app.name}`,
-      description: `Granted OAuth access to ${clientApp.app.name} with scopes: ${finalScope}`,
+      title: `Authorized ${appName}`,
+      description: `Granted OAuth access to ${appName} with scopes: ${finalScope}`,
     });
 
     redirectUrl = url.toString();
@@ -271,7 +236,7 @@ export async function confirmConsentAction(authRequestToken: string) {
   }
 
   if (redirectUrl) {
-    redirect(redirectUrl);
+    redirect(redirectUrl as Route);
   }
 }
 
@@ -291,13 +256,13 @@ export async function denyConsentAction(authRequestToken: string) {
     url.searchParams.set("state", authReq.state);
   }
   const baseURL = (
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
+    getEnv("NEXT_PUBLIC_BASE_URL", true) ||
+    getEnv("NEXT_PUBLIC_APP_URL", true) ||
     "https://auth.clouburstlab.com"
   ).replace(/\/$/, "");
   url.searchParams.set("iss", baseURL);
 
-  redirect(url.toString());
+  redirect(url.toString() as Route);
 }
 
 async function redirectToProvider(
@@ -357,7 +322,7 @@ async function redirectToProvider(
   const oauthProvider = OAuthProviderFactory.getProvider(normalizedProvider);
   const authUrl = oauthProvider.getAuthorizationUrl(state);
 
-  redirect(authUrl);
+  redirect(authUrl as Route);
 }
 
 export async function initializeOAuthProvider(provider: string) {
@@ -365,7 +330,7 @@ export async function initializeOAuthProvider(provider: string) {
     await requireUserSession();
     const normalized = provider.toLowerCase();
     if (normalized === "linkedin" || normalized === "dropbox") {
-      redirect(`/profile/connected?error=${encodeURIComponent("This provider is currently not configured.")}`);
+      redirect(`/profile/connected?error=${encodeURIComponent("This provider is currently not configured.")}` as Route);
     }
     return await redirectToProvider(provider, "/profile/connected");
   } catch (e: unknown) {
@@ -379,7 +344,7 @@ export async function initializeOAuthProvider(provider: string) {
       throw e;
     }
     const em = handleError(e, true);
-    redirect(`/profile/connected?error=${encodeURIComponent(em)}`);
+    redirect(`/profile/connected?error=${encodeURIComponent(em)}` as Route);
   }
 }
 
@@ -400,32 +365,22 @@ export async function disconnectOAuthAccount(provider: string) {
     );
 
     if (!isDrive) {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-          password: true,
-          oauth_accounts: true,
-          two_factor: {
-            include: {
-              passkeys: true,
-            },
-          },
-        },
-      });
+      const [password, passkeys, oauthAccounts] = await Promise.all([
+        getPasswordCredential(session.user.id),
+        getUserPasskeys(session.user.id),
+        getLinkedOAuthAccounts(session.user.id),
+      ]);
 
       const otherSocialAccounts =
-        user?.oauth_accounts.filter(
+        oauthAccounts.filter(
           (acc) =>
             acc.provider.toLowerCase() !== normalizedProvider &&
             !["google_drive", "onedrive", "dropbox"].includes(
               acc.provider.toLowerCase()
             )
         ).length || 0;
-      const hasPassword = Boolean(user?.password);
-      const hasPasskey = Boolean(
-        user?.two_factor?.passkeys?.length &&
-          user.two_factor.passkeys.length > 0
-      );
+      const hasPassword = Boolean(password);
+      const hasPasskey = passkeys.length > 0;
 
       if (!hasPassword && !hasPasskey && otherSocialAccounts === 0) {
         return {
@@ -436,12 +391,10 @@ export async function disconnectOAuthAccount(provider: string) {
       }
     }
 
-    await prisma.oAuthAccount.deleteMany({
-      where: {
-        user_id: session.user.id,
-        provider: normalizedProvider,
-      },
-    });
+    await deleteLinkedOAuthAccountsByProvider(
+      session.user.id,
+      normalizedProvider
+    );
 
     const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
     await recordSecurityActivity({

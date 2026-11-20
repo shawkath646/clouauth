@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import type { Route } from "next";
 import React from "react";
 
 interface SignInErrorStepProps {
@@ -8,7 +9,7 @@ interface SignInErrorStepProps {
   errorMessage: string;
   note?: React.ReactNode;
   actionText?: string;
-  actionHref?: string;
+  actionHref?: Route | string;
 }
 
 export default function SignInErrorStep({
@@ -16,7 +17,7 @@ export default function SignInErrorStep({
   errorMessage,
   note,
   actionText = "Continue to Standard Sign In",
-  actionHref = "/signin",
+  actionHref = "/signin" as Route,
 }: SignInErrorStepProps) {
   return (
     <div className="w-full flex items-center justify-center min-h-100">
@@ -43,7 +44,7 @@ export default function SignInErrorStep({
             variant="outline"
             className="w-full rounded-xl h-11 border-primary/20 hover:bg-primary/5 cursor-pointer"
           >
-            <Link href={actionHref}>
+            <Link href={actionHref as Route}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {actionText}
             </Link>

@@ -102,5 +102,9 @@
   },
   "oidcCategory": "OAuth / OIDC",
   "bridgeCategory": "跨服务桥接",
-  "example": "请求示例"
+  "example": "请求示例",
+  "meta": {
+    "title": "API 文档与 OIDC 发现服务",
+    "description": "由 clouburstlab 提供的 ClouAuth 身份提供商的官方 API 参考、OIDC 发现及微服务桥接技术文档。"
+  }
 }

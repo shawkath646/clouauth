@@ -8,7 +8,7 @@ import { COOKIE_SESSION_TOKEN_NAME } from "@/constants/session.constants";
 import { getUserSessionByToken } from "@/lib/session";
 import { decryptSymmetric } from "@/lib/encryption";
 import { refreshDriveAccountToken } from "@/lib/oauth/drives";
-import prisma from "@/lib/prisma";
+import { getLinkedOAuthAccounts } from "@/lib/credentials";
 import { handleError } from "@/utils/error";
 
 export function OPTIONS(request: NextRequest) {
@@ -113,9 +113,7 @@ async function handleConnectedDrives(request: NextRequest) {
     const shouldForceRefresh =
       request.nextUrl.searchParams.get("refresh") === "true";
 
-    const allAccounts = await prisma.oAuthAccount.findMany({
-      where: { user_id: userId },
-    });
+    const allAccounts = await getLinkedOAuthAccounts(userId);
 
     const driveProviders = new Set([
       "google_drive",
@@ -147,7 +145,7 @@ async function handleConnectedDrives(request: NextRequest) {
             rawAccessToken = decryptSymmetric(acc.access_token);
           }
         } catch {
-          rawAccessToken = acc.access_token;
+          rawAccessToken = acc.access_token || null;
         }
 
         try {
@@ -155,7 +153,7 @@ async function handleConnectedDrives(request: NextRequest) {
             rawRefreshToken = decryptSymmetric(acc.refresh_token);
           }
         } catch {
-          rawRefreshToken = acc.refresh_token;
+          rawRefreshToken = acc.refresh_token || null;
         }
 
         let expiresAt = acc.expires_at || null;
@@ -193,7 +191,7 @@ async function handleConnectedDrives(request: NextRequest) {
           expires_at: expiresAt,
           expires_in: expiresIn,
           is_expired: isExpired,
-          created_on: acc.created_on.toISOString(),
+          created_on: new Date(acc.created_on).toISOString(),
         };
       })
     );

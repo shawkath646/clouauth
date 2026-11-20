@@ -1,6 +1,6 @@
-import { connection } from "next/server";
 import { Suspense } from "react";
-import { getEnv } from "@/utils/utils";
+import type { Metadata } from "next";
+import { getEnv } from "@/utils/env.server";
 import { Navigation } from "@/components/landing/navigation";
 import { Hero } from "@/components/landing/hero";
 import { TrustSection } from "@/components/landing/trust-section";
@@ -12,14 +12,47 @@ import { CallToAction } from "@/components/landing/call-to-action";
 import { Footer } from "@/components/layout/footer";
 import { getMinimalProfile } from "@/actions/profile/get-profile";
 import JsonLd from "@/components/json-ld";
-import { getDictionary, resolveLocale } from "@/lib/i18n/server";
+import { getDictionary, getStaticTranslations, resolveLocale } from "@/lib/i18n/server";
 import { locales, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
+import { getLocalizedAlternates } from "@/utils/seo";
+
+export const instant = false;
 
 const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL");
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = resolveLocale(lang);
+  const { t } = await getStaticTranslations("landing", locale);
+
+  const title = t("meta.title");
+  const description = t("meta.description");
+
+  return {
+    title,
+    description,
+    alternates: getLocalizedAlternates("", locale),
+    openGraph: {
+      title: `${title} — clouburstlab`,
+      description,
+      url: `${BASE_URL}/${locale}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — clouburstlab`,
+      description,
+    },
+  };
 }
 
 /**
@@ -32,7 +65,6 @@ async function DynamicHero({
   locale: Locale;
   dict: Dictionary<"landing">["hero"];
 }) {
-  await connection();
   const profileResult = await getMinimalProfile();
   const profile =
     profileResult.success && profileResult.data ? profileResult.data : null;
@@ -49,7 +81,6 @@ async function DynamicCallToAction({
   locale: Locale;
   dict: Dictionary<"landing">["callToAction"];
 }) {
-  await connection();
   const profileResult = await getMinimalProfile();
   const isLoggedIn = Boolean(profileResult.success && profileResult.data);
   return <CallToAction isLoggedIn={isLoggedIn} locale={locale} dict={dict} />;

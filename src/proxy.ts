@@ -6,7 +6,7 @@ import {
   getUserSessionByToken,
   getUserSessionByRefreshToken,
 } from "@/lib/session";
-import { getSecureCookieOptions } from "@/utils/utils";
+import { getSecureCookieOptions } from "@/utils/cookie.server";
 import type { SessionData } from "@/types/session.types";
 import {
   COOKIE_REFRESH_TOKEN_NAME,

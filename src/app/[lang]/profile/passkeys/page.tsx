@@ -1,10 +1,12 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { PasskeysManagement } from "@/components/profile/views/passkeys-management";
+import { ManagementFormSkeleton } from "@/components/profile/profile-skeletons";
 import { getUserPasskeys } from "@/actions/auth/passkey.actions";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { resolveLocale } from "@/lib/i18n/server";
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Passkeys & Security Keys - clouburstlab",
@@ -14,7 +16,6 @@ export const metadata: Metadata = {
 
 async function PasskeysContent({ lang }: { lang: string }) {
   const locale = resolveLocale(lang);
-  await connection();
   const result = await getUserPasskeys();
 
   if (!result.success) {
@@ -32,11 +33,7 @@ export default async function PasskeysPage({
   const { lang } = await params;
   return (
     <div className="space-y-6">
-      <Suspense
-        fallback={
-          <div className="h-64 w-full rounded-2xl bg-card/50 border border-border/40 animate-pulse" />
-        }
-      >
+      <Suspense fallback={<ManagementFormSkeleton />}>
         <PasskeysContent lang={lang} />
       </Suspense>
     </div>

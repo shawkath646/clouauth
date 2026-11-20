@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Fingerprint, Plus, Pencil, Trash2, Loader2, ShieldCheck } from "lucide-react";
 import { startRegistration, browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 import {
   triggerPasskeyRegistration,
   resolvePasskeyRegistration,

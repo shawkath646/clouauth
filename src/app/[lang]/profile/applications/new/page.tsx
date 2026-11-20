@@ -1,9 +1,11 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { ApplicationForm } from "@/components/profile/applications/application-form";
+import { ManagementFormSkeleton } from "@/components/profile/profile-skeletons";
 import { getUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+
+export const instant = false;
 
 async function AddApplicationContent({ lang }: { lang: string }) {
   const locale = resolveLocale(lang);
@@ -12,7 +14,6 @@ async function AddApplicationContent({ lang }: { lang: string }) {
     getDictionary("profile_apps", locale),
   ]);
 
-  await connection();
   const session = await getUserSession();
 
   if (!session) {
@@ -38,11 +39,7 @@ export default async function AddApplicationPage({
   const { lang } = await params;
   return (
     <div className="space-y-6 w-full">
-      <Suspense
-        fallback={
-          <div className="h-96 w-full rounded-2xl bg-card/50 border border-border/40 animate-pulse" />
-        }
-      >
+      <Suspense fallback={<ManagementFormSkeleton />}>
         <AddApplicationContent lang={lang} />
       </Suspense>
     </div>

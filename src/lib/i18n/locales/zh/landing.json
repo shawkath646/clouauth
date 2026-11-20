@@ -147,5 +147,9 @@
     },
     "copyright": "© {{year}} clouburstlab。保留所有权利。",
     "developedBy": "开发由"
+  },
+  "meta": {
+    "title": "统一身份认证与单点登录平台",
+    "description": "面向 clouburstlab 生态的安全身份验证、Passkey 与单点登录。为现代应用提供完全兼容 OIDC 与 OAuth 2.0 的身份提供商。"
   }
 }

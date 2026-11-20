@@ -1,13 +1,14 @@
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT, importJWK } from "jose";
-import prisma from "@/lib/prisma";
+import { findOAuthClient, getOAuthConsent } from "@/lib/oauth/clients";
 import {
   createOAuthSession,
   createClientCredentialsSession,
+  revokeToken,
 } from "@/lib/session";
 import { handleError } from "@/utils/error";
-import { getSecret } from "@/lib/jwt-secret";
+import { getSecret } from "@/utils/jwt.server";
 import {
   getOrCreateActiveSigningKey,
   decryptSigningPrivateKey,
@@ -36,22 +37,7 @@ async function consumeJtiAtomically(
   jti: string,
   expiresAt: Date
 ): Promise<boolean> {
-  try {
-    await prisma.revokedToken.create({
-      data: { jti, expires_at: expiresAt },
-    });
-    return true;
-  } catch (err: unknown) {
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      (err as { code: string }).code === "P2002"
-    ) {
-      return false;
-    }
-    throw err;
-  }
+  return await revokeToken(jti, expiresAt);
 }
 
 /** Generates an RS256 OIDC-compliant ID token */
@@ -184,10 +170,7 @@ async function handleClientCredentialsGrant(params: TokenRequestParams) {
     );
   }
 
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: clientId },
-    include: { app: true },
-  });
+  const clientApp = await findOAuthClient(clientId);
 
   if (!clientApp?.enabled) {
     return tokenError(401, "invalid_client", "Client not found or disabled.");
@@ -268,9 +251,7 @@ async function handleRefreshTokenGrant(
     );
   }
 
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: tokenClientId },
-  });
+  const clientApp = await findOAuthClient(tokenClientId);
 
   if (!clientApp?.enabled) {
     return tokenError(
@@ -280,14 +261,10 @@ async function handleRefreshTokenGrant(
     );
   }
 
-  const consent = await prisma.oAuthConsent.findUnique({
-    where: {
-      user_id_client_id: {
-        user_id: String(payload.sub),
-        client_id: tokenClientId,
-      },
-    },
-  });
+  const consent = await getOAuthConsent(
+    String(payload.sub),
+    tokenClientId
+  );
 
   if (!consent || consent.revoked_at) {
     return tokenError(
@@ -375,9 +352,7 @@ async function handleAuthorizationCodeGrant(
     );
   }
 
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: clientId },
-  });
+  const clientApp = await findOAuthClient(clientId);
 
   if (!clientApp?.enabled) {
     return tokenError(401, "invalid_client", "Application is invalid or disabled.");

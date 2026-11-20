@@ -92,5 +92,9 @@
         "intro": "Las aplicaciones internas en *.clouburstlab.com pueden verificar sesiones de usuario y obtener credenciales descifradas de Google Drive, OneDrive y Dropbox mediante la API del puente."
       }
     }
+  },
+  "meta": {
+    "title": "Guía de Integración para Desarrolladores",
+    "description": "Tutorial paso a paso para registrar aplicaciones, integrar OAuth 2.0 con PKCE y conectar con el puente interno con ClouAuth por clouburstlab."
   }
 }

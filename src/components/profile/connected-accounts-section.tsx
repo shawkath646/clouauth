@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import type { Route } from "next";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -42,12 +43,12 @@ export function ConnectedAccountsSection({
 
     if (success) {
       toast.success("Account connected successfully!");
-      router.replace(pathname);
+      router.replace(pathname as Route);
     } else if (error) {
       toast.error("Connection failed", {
         description: decodeURIComponent(error).replace(/_/g, " "),
       });
-      router.replace(pathname);
+      router.replace(pathname as Route);
     }
   }, [searchParams, router, pathname]);
 

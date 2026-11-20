@@ -1,12 +1,11 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { getUser, updateUser } from "@/lib/users";
 import { getUserSession } from "@/lib/session";
-import { revalidatePath } from "next/cache";
-import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
-import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { uploadToStorage, deleteFromStorage } from "@/lib/storage";
 import { handleError } from "@/utils/error";
-import { validateImageMagicBytes } from "@/utils/image-validator";
+import { validateImageMagicBytes } from "@/utils/image.server";
 
 export async function uploadCustomAvatar(formData: FormData) {
   try {
@@ -31,58 +30,37 @@ export async function uploadCustomAvatar(formData: FormData) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    
+
     const validatedImage = validateImageMagicBytes(buffer);
     if (!validatedImage) {
-      return { success: false, error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed." };
+      return {
+        success: false,
+        error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed.",
+      };
     }
 
-    // Fetch current user to get old avatar
-    const user = await prisma.user.findUnique({
-      where: { id: sessionData.user.id },
-      select: { avatar: true }
+    // Clean up old avatar from storage if present
+    const user = await getUser(sessionData.user.id);
+    if (user && user.avatar) {
+      await deleteFromStorage(user.avatar);
+    }
+
+    const path = `avatars/${sessionData.user.id}.${validatedImage.ext}`;
+    const publicUrl = await uploadToStorage({
+      path,
+      buffer,
+      contentType: validatedImage.mime,
     });
 
-    if (user && user.avatar && user.avatar.startsWith(R2_PUBLIC_URL)) {
-      // Extract key from old url
-      const oldUrl = new URL(user.avatar);
-      // Remove the leading slash from pathname
-      const oldKey = oldUrl.pathname.substring(1); 
-      
-      try {
-        await s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: oldKey,
-          })
-        );
-      } catch {
-        // Ignore deletion errors
-      }
-    }
+    const avatarUrl = `${publicUrl}?v=${Date.now()}`;
 
-    const filename = `user_avatar/${sessionData.user.id}.${validatedImage.ext}`;
-
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: filename,
-        Body: buffer,
-        ContentType: validatedImage.mime,
-      })
-    );
-
-    // Append timestamp to break browser cache
-    const avatarUrl = `${R2_PUBLIC_URL}/${filename}?v=${Date.now()}`;
-
-    await prisma.user.update({
-      where: { id: sessionData.user.id },
-      data: {
-        avatar: avatarUrl,
-      },
+    await updateUser(sessionData.user.id, {
+      avatar: avatarUrl,
     });
 
     revalidatePath("/profile");
+    revalidateTag(`public-profile:${sessionData.user.username.toLowerCase()}`, "default");
+    revalidateTag("public-profiles", "default");
     return { success: true, data: { avatarUrl } };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute uploadCustomAvatar");

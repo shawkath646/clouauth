@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { defaultLocale, locales } from "@/lib/i18n/config";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 const routes = [
   { path: "", priority: 1.0, changeFrequency: "monthly" as const },

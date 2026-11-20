@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { findUserByEmail, createUserWithAccount } from "@/lib/users";
 import { hashPassword } from "@/lib/security/hash";
 import { getSignUpSchema, type SignUpValues } from "@/schema/auth.schema";
 import { createSession } from "@/lib/session";
@@ -31,9 +31,7 @@ export async function signUp(data: SignUpValues, recaptchaToken?: string) {
     const { firstName, lastName, email, password } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
 
-    const existingEmail = await prisma.userEmail.findUnique({
-      where: { address: normalizedEmail },
-    });
+    const existingEmail = await findUserByEmail(normalizedEmail);
     if (existingEmail) {
       return { success: false, error: "Email already exists." };
     }
@@ -42,30 +40,13 @@ export async function signUp(data: SignUpValues, recaptchaToken?: string) {
     const avatarUrl = await generateAndUploadAvatar(firstName, lastName);
     const username = await generateUniqueUsername(normalizedEmail);
 
-    const user = await prisma.user.create({
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        username,
-        avatar: avatarUrl,
-        account_status: {
-          create: {
-            is_active: true,
-          },
-        },
-        emails: {
-          create: {
-            address: normalizedEmail,
-            is_primary: true,
-            verified: false,
-          },
-        },
-        password: {
-          create: {
-            password_hash: passwordHash,
-          },
-        },
-      },
+    const user = await createUserWithAccount({
+      first_name: firstName,
+      last_name: lastName,
+      username,
+      avatar: avatarUrl,
+      email: normalizedEmail,
+      password_hash: passwordHash,
     });
 
     // TODO: Consider enforcing email verification before granting session access

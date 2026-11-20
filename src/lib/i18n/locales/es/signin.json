@@ -39,5 +39,9 @@
   "scopePhone": "Phone number",
   "scopeAddress": "Acceder a su dirección postal",
   "scopeOfflineAccess": "Mantener acceso sin conexión a su cuenta",
-  "scopeOpenid": "Basic identity"
+  "scopeOpenid": "Basic identity",
+  "meta": {
+    "title": "Iniciar Sesión en su Cuenta",
+    "description": "Inicie sesión de forma segura en su cuenta de clouburstlab con passkeys, 2FA o proveedores sociales. Administre sus aplicaciones conectadas."
+  }
 }

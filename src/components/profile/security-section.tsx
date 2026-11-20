@@ -33,7 +33,8 @@ import type { FullProfile, DBSecurityActivity } from "@/types/profile.types";
 import { getRecentSecurityActivitiesAction } from "@/actions/profile/security-activity.actions";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
-import { cn, formatTime } from "@/utils/utils";
+import { cn } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 function getActivityIcon(event: string, device?: string | null) {
   const ev = event.toLowerCase();

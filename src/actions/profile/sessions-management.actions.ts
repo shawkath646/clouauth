@@ -1,7 +1,12 @@
 "use server";
 
-import prisma from "@/lib/prisma";
-import { getUserSession, revokeSession, signOut } from "@/lib/session";
+import {
+  getUserSession,
+  findSessionById,
+  getUserSessions,
+  revokeSession,
+  signOut,
+} from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { handleError } from "@/utils/error";
 import { recordSecurityActivity } from "@/lib/security-activity";
@@ -11,9 +16,7 @@ export async function revokeUserSessionAction(sessionId: string): Promise<{ succ
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    const targetSession = await prisma.userSession.findUnique({
-      where: { id: sessionId },
-    });
+    const targetSession = await findSessionById(sessionId);
 
     if (!targetSession || targetSession.user_id !== sessionData.user.id) {
       return { success: false, error: "Session not found or unauthorized" };
@@ -22,7 +25,7 @@ export async function revokeUserSessionAction(sessionId: string): Promise<{ succ
     const isCurrent = sessionId === sessionData.session.id;
 
     if (isCurrent) {
-      await signOut(sessionId);
+      await signOut();
     } else {
       await revokeSession(sessionId);
     }
@@ -48,16 +51,12 @@ export async function revokeAllUserSessionsAction(includeCurrent: boolean = fals
     const sessionData = await getUserSession();
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
-    await prisma.userSession.updateMany({
-      where: {
-        user_id: sessionData.user.id,
-        revoked_on: null,
-        ...(includeCurrent ? {} : { id: { not: sessionData.session.id } }),
-      },
-      data: {
-        revoked_on: new Date(),
-      },
-    });
+    const sessions = await getUserSessions(sessionData.user.id);
+    for (const s of sessions) {
+      if (includeCurrent || s.id !== sessionData.session.id) {
+        await revokeSession(s.id);
+      }
+    }
 
     await recordSecurityActivity({
       userId: sessionData.user.id,

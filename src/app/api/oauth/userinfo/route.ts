@@ -53,7 +53,11 @@ async function handleUserInfo(request: NextRequest) {
       claims.given_name = user.first_name || undefined;
       claims.family_name = user.last_name || undefined;
       claims.preferred_username = user.username || undefined;
-      claims.picture = user.avatar || undefined;
+      claims.picture = user.avatar
+        ? user.avatar.startsWith("/")
+          ? `${request.nextUrl.origin}${user.avatar}`
+          : user.avatar
+        : undefined;
       claims.updated_at = user.updated_on ? Math.floor(new Date(user.updated_on).getTime() / 1000) : undefined;
     }
 

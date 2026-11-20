@@ -4,11 +4,12 @@ import { BackgroundStars } from "@/components/landing/background-stars";
 import JsonLd from "@/components/json-ld";
 import { Metadata } from "next";
 import { getServerTranslations, getStaticTranslations, getDictionary, resolveLocale } from "@/lib/i18n/server";
-import { defaultLocale, locales, type Locale } from "@/lib/i18n/config";
+import { locales } from "@/lib/i18n/config";
 import { ShieldCheck, HardDrive, Lock, ExternalLink, Mail, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { getLocalizedAlternates } from "@/utils/seo";
+
+export const instant = false;
 
 type PrivacyDict = {
   meta: {
@@ -219,7 +220,7 @@ export default async function PrivacyPage({
             </p>
             {privacy.sections.googleCompliance.policyUrl && (
               <div className="pt-2">
-                <Link
+                <a
                   href={privacy.sections.googleCompliance.policyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -227,7 +228,7 @@ export default async function PrivacyPage({
                 >
                   <span>{privacy.sections.googleCompliance.policyLinkText}</span>
                   <ExternalLink className="w-4 h-4" />
-                </Link>
+                </a>
               </div>
             )}
             {Array.isArray(privacy.sections.googleCompliance.specifics) && (

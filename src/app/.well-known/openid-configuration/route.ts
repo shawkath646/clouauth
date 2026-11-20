@@ -1,14 +1,14 @@
 
 import { NextResponse } from "next/server";
 import { handleSsoPreflight, withSsoCors } from "@/lib/sso/cors";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 export function OPTIONS() {
   return handleSsoPreflight();
 }
 
 export function GET() {
-  const baseURL = ( getEnv("NEXT_PUBLIC_BASE_URL", true)).replace(/\/$/, "");
+  const baseURL = getEnv("NEXT_PUBLIC_BASE_URL", true).replace(/\/$/, "");
 
   const oidc_config = {
     issuer: baseURL,

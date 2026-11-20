@@ -39,3 +39,14 @@ export interface DBAddress {
     country: string;
     is_default: boolean;
 }
+
+export interface DBUserPhone {
+    id: string;
+    user_id: string;
+    country_code: string;
+    number: string;
+    verified: boolean;
+    is_primary: boolean;
+    added_on: Date | string;
+    verified_on?: Date | string | null;
+}

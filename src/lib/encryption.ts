@@ -1,7 +1,7 @@
 
 import "server-only";
 import crypto from "crypto";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;

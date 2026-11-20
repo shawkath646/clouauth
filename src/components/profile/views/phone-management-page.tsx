@@ -8,7 +8,7 @@ import { removeTwoFactorMethodAction } from "@/actions/profile/security-info.act
 import { toast } from "sonner";
 import type { Dictionary } from "@/types/i18n.types";
 import { Label } from "@/components/ui/label";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';

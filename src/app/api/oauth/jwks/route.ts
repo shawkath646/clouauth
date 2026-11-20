@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { handleError } from "@/utils/error";
 import { getActivePublicJwks } from "@/lib/sso/signing-keys";
 import { handleSsoPreflight, withSsoCors } from "@/lib/sso/cors";
@@ -8,6 +8,7 @@ export function OPTIONS() {
 }
 
 export async function GET() {
+  await connection();
   try {
     const jwks = await getActivePublicJwks();
 

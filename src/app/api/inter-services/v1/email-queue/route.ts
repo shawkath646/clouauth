@@ -10,9 +10,11 @@ import {
   markEmailQueueComplete,
   markEmailQueueFailed,
   retryQueuedEmail,
+  updateEmailQueueStatus,
+  deleteEmailQueueItems,
+  purgeCompletedEmails,
   type TemplateId,
 } from "@/lib/email";
-import prisma from "@/lib/prisma";
 import { handleError } from "@/utils/error";
 
 export function OPTIONS(request: NextRequest) {
@@ -325,15 +327,12 @@ export async function PATCH(request: NextRequest) {
 
     const isComplete =
       typeof body.is_complete === "boolean" ? body.is_complete : true;
-    const res = await prisma.emailQueue.updateMany({
-      where: { id: { in: ids } },
-      data: { isComplete },
-    });
+    const updatedCount = await updateEmailQueueStatus(ids, isComplete);
 
     return withInterServiceCors(
       NextResponse.json({
         success: true,
-        updated_count: res.count,
+        updated_count: updatedCount,
         marked_ids: ids,
         is_complete: isComplete,
       }),
@@ -361,13 +360,11 @@ export async function DELETE(request: NextRequest) {
     const status = searchParams.get("status");
 
     if (status === "completed") {
-      const res = await prisma.emailQueue.deleteMany({
-        where: { isComplete: true },
-      });
+      const deletedCount = await purgeCompletedEmails();
       return withInterServiceCors(
         NextResponse.json({
           success: true,
-          deleted_count: res.count,
+          deleted_count: deletedCount,
           message: "All completed email queue records purged.",
         }),
         request
@@ -395,14 +392,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const res = await prisma.emailQueue.deleteMany({
-      where: { id: { in: ids } },
-    });
+    const deletedCount = await deleteEmailQueueItems(ids);
 
     return withInterServiceCors(
       NextResponse.json({
         success: true,
-        deleted_count: res.count,
+        deleted_count: deletedCount,
         deleted_ids: ids,
       }),
       request

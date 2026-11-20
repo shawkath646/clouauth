@@ -48,6 +48,7 @@ export interface DBPasskeyCredential {
     public_key: string;
     sign_count: number;
     device_name?: string;
+    rp_id?: string | null;
     created_on: string;
     last_used_on?: string;
 }

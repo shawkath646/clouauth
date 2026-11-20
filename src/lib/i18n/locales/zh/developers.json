@@ -92,5 +92,9 @@
         "intro": "*.clouburstlab.com 域内的内部应用程序可以利用桥接 API 无缝验证活动用户会话，并检索解密后的 Google Drive、OneDrive 和 Dropbox 凭据。"
       }
     }
+  },
+  "meta": {
+    "title": "开发者集成指南",
+    "description": "关于注册应用程序、集成带 PKCE 的 OAuth 2.0 以及通过 clouburstlab 旗下的 ClouAuth 连接内部应用桥接的分步教程。"
   }
 }

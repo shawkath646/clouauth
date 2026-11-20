@@ -1,11 +1,11 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { setTotpMethod } from "@/lib/credentials";
 import { generateSecret, generateURI, verify } from "otplib";
 import QRCode from "qrcode";
 import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { encryptSymmetric } from "@/lib/encryption";
 import { requireUserSession } from "./helpers";
 import { recordSecurityActivity } from "@/lib/security-activity";
@@ -34,32 +34,14 @@ export async function verifyAndEnableTotpAction(secret: string, token: string) {
       return { success: false, error: "Invalid verification code" };
     }
 
-    // Ensure the TwoFactor record exists
-    const twoFactor = await prisma.twoFactor.upsert({
-      where: { user_id: sessionData.user.id },
-      update: {},
-      create: { user_id: sessionData.user.id },
-    });
-
     const encryptedSecret = encryptSymmetric(secret);
 
-    await prisma.totpMethod.upsert({
-      where: { two_factor_id: twoFactor.user_id },
-      update: {
-        enabled: true,
-        secret: encryptedSecret,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-      },
-      create: {
-        two_factor_id: twoFactor.user_id,
-        enabled: true,
-        secret: encryptedSecret,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-      },
+    await setTotpMethod(sessionData.user.id, {
+      enabled: true,
+      secret: encryptedSecret,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
     });
 
     await recordSecurityActivity({

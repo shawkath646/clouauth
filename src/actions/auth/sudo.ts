@@ -1,9 +1,12 @@
 import "server-only";
 
-import crypto from "crypto";
-import prisma from "@/lib/prisma";
-import { getUserSession } from "@/lib/session";
+import {
+  getUserSession,
+  createTempSession,
+  updateSession,
+} from "@/lib/session";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import { getSafeReturnTo } from "@/utils/url";
 
 // 15-minute Sudo grace window
@@ -30,24 +33,10 @@ export async function createSudoTempSession(
   userId: string,
   returnTo: string = "/profile"
 ): Promise<string> {
-  // Clean up any stale sudo temp sessions for this user
-  await prisma.tempSession.deleteMany({
-    where: {
-      user_id: userId,
-      flow_type: "sudo",
-    },
-  });
-
-  const highEntropyId = crypto.randomBytes(32).toString("hex");
-
-  const tempSession = await prisma.tempSession.create({
-    data: {
-      id: highEntropyId,
-      user_id: userId,
-      flow_type: "sudo",
-      expires_on: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes TTL
-      payload: JSON.stringify({ return_to: getSafeReturnTo(returnTo, "en") }),
-    },
+  const tempSession = await createTempSession(userId, {
+    flowType: "sudo",
+    expiresOn: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes TTL
+    payload: JSON.stringify({ return_to: getSafeReturnTo(returnTo, "en") }),
   });
 
   return tempSession.id;
@@ -60,9 +49,8 @@ export async function createSudoTempSession(
 export async function markSessionSudoAuthenticated(
   sessionId: string
 ): Promise<void> {
-  await prisma.userSession.update({
-    where: { id: sessionId },
-    data: { last_authenticated_on: new Date() },
+  await updateSession(sessionId, {
+    last_authenticated_on: new Date(),
   });
 }
 
@@ -77,13 +65,13 @@ export async function requireSudoPage(returnTo: string, locale?: string) {
   const signInPath = `${langPrefix}/signin`;
 
   if (!sessionData?.session) {
-    redirect(`${signInPath}?return_to=${encodeURIComponent(returnTo)}`);
+    redirect(`${signInPath}?return_to=${encodeURIComponent(returnTo)}` as Route);
   }
 
   const active = await isSudoActive();
   if (!active) {
     const tid = await createSudoTempSession(sessionData.user.id, returnTo);
-    redirect(`${signInPath}?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`);
+    redirect(`${signInPath}?tid=${tid}&return_to=${encodeURIComponent(returnTo)}` as Route);
   }
 
   return sessionData;
@@ -101,36 +89,39 @@ export type CheckSudoResult =
       authorized: false;
       sessionData?: never;
       error: string;
-      sudoRequired?: boolean;
-      redirectUrl?: string;
+      sudoRequired: boolean;
+      redirectUrl: string;
     };
 
 /**
- * Action Guard for sensitive Server Action mutations (e.g. updatePasswordAction, deleteAccount).
- * Returns { authorized: false, sudoRequired: true, redirectUrl } if expired.
+ * Action Guard for sensitive Server Actions (e.g. changing password, disabling account).
  */
 export async function checkSudoAction(
-  returnTo: string,
-  locale?: string
+  returnTo: string = "/profile"
 ): Promise<CheckSudoResult> {
   const sessionData = await getUserSession();
   if (!sessionData?.session) {
-    return { authorized: false, error: "Unauthorized" };
+    return {
+      authorized: false,
+      error: "Authentication required",
+      sudoRequired: false,
+      redirectUrl: `/signin?return_to=${encodeURIComponent(returnTo)}`,
+    };
   }
 
   const active = await isSudoActive();
   if (!active) {
     const tid = await createSudoTempSession(sessionData.user.id, returnTo);
-    const segments = returnTo.split("/").filter(Boolean);
-    const langPrefix = locale ? `/${locale}` : (segments[0] && ['en', 'bn', 'ko', 'es', 'ar', 'zh'].includes(segments[0])) ? `/${segments[0]}` : "";
-    const signInPath = `${langPrefix}/signin`;
     return {
       authorized: false,
+      error: "Sudo re-authentication required",
       sudoRequired: true,
-      redirectUrl: `${signInPath}?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`,
-      error: "Re-authentication required. Please confirm your identity.",
+      redirectUrl: `/signin?tid=${tid}&return_to=${encodeURIComponent(returnTo)}`,
     };
   }
 
-  return { authorized: true, sessionData };
+  return {
+    authorized: true,
+    sessionData,
+  };
 }

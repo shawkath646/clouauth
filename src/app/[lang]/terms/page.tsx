@@ -10,6 +10,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { getLocalizedAlternates } from "@/utils/seo";
 
+export const instant = false;
+
 type TermsDict = {
   meta: {
     title: string;

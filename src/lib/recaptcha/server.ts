@@ -1,5 +1,5 @@
 import "server-only";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 const GOOGLE_RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 const DEFAULT_MIN_SCORE = 0.5;
@@ -39,8 +39,8 @@ export async function verifyRecaptcha(
   token: string | null | undefined,
   options: VerifyRecaptchaOptions = {}
 ): Promise<VerifyRecaptchaResult> {
-  const isDev = process.env.NODE_ENV !== "production";
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY || getEnv("RECAPTCHA_SECRET_KEY", true);
+  const isDev = getEnv("NODE_ENV", true) !== "production";
+  const secretKey = getEnv("RECAPTCHA_SECRET_KEY", true);
   const minScore = options.minScore ?? DEFAULT_MIN_SCORE;
 
   // Development bypass: if no secret key is set, do not block local development

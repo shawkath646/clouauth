@@ -1,9 +1,7 @@
 import "server-only";
 
 import { SignJWT, jwtVerify } from "jose";
-import { getEnv } from "@/utils/utils";
-
-const secret = new TextEncoder().encode(getEnv("JWT_SECRET"));
+import { jwtSecret as secret } from "@/utils/jwt.server";
 
 export interface AuthRequestPayload {
   clientId: string;

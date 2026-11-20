@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import CredentialsStep from "./credentials-step";
@@ -237,7 +238,7 @@ export default function SigninClient({
               setIsAuthenticating(true);
               setIsSuccess(true);
               setAuthMessage("Identity verified! Redirecting...");
-              router.replace(redirectUrl);
+              router.replace(redirectUrl as Route);
             }}
           />
         );

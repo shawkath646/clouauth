@@ -6,7 +6,13 @@ import {
 } from "@/lib/inter-services/cors";
 import { COOKIE_SESSION_TOKEN_NAME } from "@/constants/session.constants";
 import { getUserSessionByToken } from "@/lib/session";
-import prisma from "@/lib/prisma";
+import {
+  getUser,
+  getUserEmails,
+  getUserPreferences,
+  getUserAddresses,
+  getUserPhones,
+} from "@/lib/users";
 import { handleError } from "@/utils/error";
 
 export function OPTIONS(request: NextRequest) {
@@ -94,16 +100,8 @@ async function handleUserSession(request: NextRequest) {
       scopeSet.add("avatar");
     }
 
-    // 4. Query user data from Prisma based on requested scopes
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        emails: { where: { is_primary: true } },
-        preferences: scopeSet.has("preferences"),
-        addresses: scopeSet.has("addresses"),
-        phones: scopeSet.has("phone") || scopeSet.has("phones"),
-      },
-    });
+    // 4. Query user data based on requested scopes
+    const user = await getUser(userId);
 
     if (!user) {
       return withInterServiceCors(
@@ -119,8 +117,15 @@ async function handleUserSession(request: NextRequest) {
       );
     }
 
+    const [emails, preferences, addresses, phones] = await Promise.all([
+      getUserEmails(userId),
+      scopeSet.has("preferences") ? getUserPreferences(userId) : null,
+      scopeSet.has("addresses") ? getUserAddresses(userId) : null,
+      scopeSet.has("phone") || scopeSet.has("phones") ? getUserPhones(userId) : null,
+    ]);
+
     // 5. Build filtered user object according to requested scope
-    const primaryEmail = user.emails?.[0];
+    const primaryEmail = emails.find((e) => e.is_primary) || emails[0];
     const userData: Record<string, unknown> = {
       id: user.id, // ID is always included
     };
@@ -139,7 +144,11 @@ async function handleUserSession(request: NextRequest) {
       userData.email_verified = Boolean(primaryEmail?.verified);
     }
     if (scopeSet.has("avatar") || scopeSet.has("picture") || scopeSet.has("image")) {
-      userData.avatar = user.avatar;
+      userData.avatar = user.avatar
+        ? user.avatar.startsWith("/")
+          ? `${request.nextUrl.origin}${user.avatar}`
+          : user.avatar
+        : null;
     }
     if (scopeSet.has("bio")) {
       userData.bio = user.bio;
@@ -156,18 +165,18 @@ async function handleUserSession(request: NextRequest) {
     if (scopeSet.has("updated_on") || scopeSet.has("updated_at")) {
       userData.updated_on = user.updated_on;
     }
-    if (scopeSet.has("preferences") && user.preferences) {
+    if (scopeSet.has("preferences") && preferences) {
       userData.preferences = {
-        theme: user.preferences.theme,
-        language: user.preferences.language,
-        timezone: user.preferences.timezone,
+        theme: preferences.theme,
+        language: preferences.language,
+        timezone: preferences.timezone,
       };
     }
-    if (scopeSet.has("addresses") && user.addresses) {
-      userData.addresses = user.addresses;
+    if (scopeSet.has("addresses") && addresses) {
+      userData.addresses = addresses;
     }
-    if ((scopeSet.has("phone") || scopeSet.has("phones")) && user.phones) {
-      userData.phones = user.phones.map((p) => ({
+    if ((scopeSet.has("phone") || scopeSet.has("phones")) && phones) {
+      userData.phones = phones.map((p) => ({
         number: p.number,
         country_code: p.country_code,
         verified: p.verified,

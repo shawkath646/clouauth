@@ -7,8 +7,8 @@ import { getDictionary, resolveLocale } from "@/lib/i18n/server";
 import { FooterLinks } from "@/components/layout/footer-links";
 import { ReCaptchaDisclaimer } from "@/lib/recaptcha/client";
 import { locales, type Locale } from "@/lib/i18n/config";
-import iconLight from "@/assets/icon_light.png";
-import iconDark from "@/assets/icon_dark.png";
+import iconLight from "@/assets/icon_light.svg";
+import iconDark from "@/assets/icon_dark.svg";
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));

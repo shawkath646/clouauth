@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { getSecret } from "@/lib/jwt-secret";
-import prisma from "@/lib/prisma";
+import { getSecret } from "@/utils/jwt.server";
+import { isTokenRevoked } from "@/lib/session";
 import { handleSsoPreflight, withSsoCors } from "@/lib/sso/cors";
 import { handleError } from "@/utils/error";
 
@@ -16,17 +16,14 @@ export function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     let token: string | null = null;
-    let tokenTypeHint: string | null = null;
 
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const form = await request.formData();
       token = (form.get("token") as string) || null;
-      tokenTypeHint = (form.get("token_type_hint") as string) || null;
     } else {
       const json = await request.json().catch(() => ({}));
       token = json?.token || null;
-      tokenTypeHint = json?.token_type_hint || null;
     }
 
     if (!token) {
@@ -45,10 +42,8 @@ export async function POST(request: NextRequest) {
 
       // Check if token was revoked
       if (payload.jti) {
-        const revoked = await prisma.revokedToken.findUnique({
-          where: { jti: payload.jti as string },
-        });
-        if (revoked) {
+        const isRevoked = await isTokenRevoked(payload.jti as string);
+        if (isRevoked) {
           return withSsoCors(NextResponse.json({ active: false }));
         }
       }

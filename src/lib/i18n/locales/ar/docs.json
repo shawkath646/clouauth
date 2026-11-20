@@ -102,5 +102,9 @@
   },
   "oidcCategory": "OAuth / OIDC",
   "bridgeCategory": "جسر ما بين الخدمات",
-  "example": "مثال على الطلب"
+  "example": "مثال على الطلب",
+  "meta": {
+    "title": "توثيق واجهة برمجة التطبيقات و OIDC",
+    "description": "المرجع الرسمي لواجهة برمجة التطبيقات، واكتشاف OIDC، وتوثيق جسر الخدمات المتبادلة لموفر الهوية ClouAuth من clouburstlab."
+  }
 }

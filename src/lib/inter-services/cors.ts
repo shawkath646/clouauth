@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getEnv } from "@/utils/env.server";
 
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
@@ -14,14 +15,14 @@ export function isAllowedOrigin(origin: string | null): boolean {
 
     // 2. Development origins: localhost or 127.0.0.1
     if (
-      process.env.NODE_ENV !== "production" &&
+      getEnv("NODE_ENV", true) !== "production" &&
       (host === "localhost" || host === "127.0.0.1")
     ) {
       return true;
     }
 
     // 3. Additional custom configured origins
-    const customOrigins = (process.env.INTERNAL_ALLOWED_ORIGINS || "")
+    const customOrigins = getEnv("INTERNAL_ALLOWED_ORIGINS", true)
       .split(",")
       .map((o) => o.trim().toLowerCase())
       .filter(Boolean);

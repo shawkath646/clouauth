@@ -1,5 +1,11 @@
 import { cache } from "react";
-import prisma from "@/lib/prisma";
+import { cacheLife, cacheTag } from "next/cache";
+import {
+  getUserByUsername,
+  getUserPreferences,
+  getUserEmails,
+} from "@/lib/users";
+import { getUserApps } from "@/lib/oauth/clients";
 import type { ProfileVisibility } from "@/types/preferences.types";
 
 /** Used when a user has no preferences row. Set this to match your schema default. */
@@ -33,28 +39,45 @@ export type PublicProfileResult =
   | { status: "private"; userMeta: Pick<PublicProfileData, "username" | "first_name"> }
   | { status: "found"; profile: PublicProfileData };
 
-/** One DB read per request, shared by generateMetadata, the OG image and the page. */
-export const getProfileRecord = cache((username: string) =>
-  prisma.user.findUnique({
-    where: { username: username.trim() },
-    select: {
-      id: true,
-      username: true,
-      first_name: true,
-      last_name: true,
-      avatar: true,
-      bio: true,
-      pronouns: true,
-      created_on: true,
-      preferences: { select: { profile_visibility: true } },
-      emails: { where: { is_primary: true }, select: { verified: true } },
-      apps: {
-        select: { id: true, name: true, description: true, icon: true, website: true },
-        orderBy: { created_at: "desc" },
-      },
+/** One DB read per request, shared by generateMetadata, the OG image and the page. Cached across visitors. */
+export const getProfileRecord = cache(async (username: string) => {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("public-profiles", `public-profile:${username.toLowerCase().trim()}`);
+
+  const user = await getUserByUsername(username.trim());
+  if (!user) return null;
+
+  const [preferences, emails, apps] = await Promise.all([
+    getUserPreferences(user.id),
+    getUserEmails(user.id),
+    getUserApps(user.id),
+  ]);
+
+  return {
+    id: user.id,
+    username: user.username,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    avatar: user.avatar,
+    bio: user.bio ?? null,
+    pronouns: user.pronouns ?? null,
+    created_on: new Date(user.created_on),
+    preferences: {
+      profile_visibility: preferences.profile_visibility,
     },
-  })
-);
+    emails: emails
+      .filter((e) => e.is_primary)
+      .map((e) => ({ verified: e.verified })),
+    apps: apps.map((app) => ({
+      id: app.id,
+      name: app.name,
+      description: app.description,
+      icon: app.icon,
+      website: app.website,
+    })),
+  };
+});
 
 type ProfileRecord = NonNullable<Awaited<ReturnType<typeof getProfileRecord>>>;
 

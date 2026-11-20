@@ -4,6 +4,8 @@ import ForgotPasswordClient from "./forgot-password-client";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 
+export const instant = false;
+
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
@@ -12,6 +14,10 @@ export const metadata: Metadata = {
   title: "Account Recovery",
   description: "Recover your account securely via email recovery.",
   alternates: getLocalizedAlternates("/recovery"),
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function RecoveryPage({

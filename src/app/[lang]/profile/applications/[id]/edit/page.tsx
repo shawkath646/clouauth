@@ -1,11 +1,13 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { ApplicationForm } from "@/components/profile/applications/application-form";
+import { ManagementFormSkeleton } from "@/components/profile/profile-skeletons";
 import { getUserSession } from "@/lib/session";
 import { redirect, notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
+import { getAppById } from "@/lib/oauth/clients";
 import { formatDeveloperApp } from "@/actions/profile/apps";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+
+export const instant = false;
 
 interface EditApplicationPageProps {
   params: Promise<{ lang: string; id: string }>;
@@ -22,17 +24,13 @@ async function EditApplicationDynamicContent({
     getDictionary("profile_apps", locale),
   ]);
 
-  await connection();
   const session = await getUserSession();
 
   if (!session) {
     redirect(`/${locale}/signin`);
   }
 
-  const app = await prisma.userApp.findUnique({
-    where: { id },
-    include: { oauth: true },
-  });
+  const app = await getAppById(id);
 
   if (!app || app.author_id !== session.user.id) {
     notFound();
@@ -55,15 +53,9 @@ export default function EditApplicationPage({
 }: EditApplicationPageProps) {
   return (
     <div className="space-y-6 w-full">
-      <main className="w-full rounded-2xl p-6 sm:p-8 bg-background/70 dark:bg-card/80 backdrop-blur-xl border border-border/50 shadow-sm">
-        <Suspense
-          fallback={
-            <div className="h-96 w-full animate-pulse rounded-xl bg-muted/20" />
-          }
-        >
-          <EditApplicationDynamicContent params={params} />
-        </Suspense>
-      </main>
+      <Suspense fallback={<ManagementFormSkeleton />}>
+        <EditApplicationDynamicContent params={params} />
+      </Suspense>
     </div>
   );
 }

@@ -1,12 +1,15 @@
 import { Suspense } from "react";
-import { getEnv } from "@/utils/utils";
-import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+import { getEnv } from "@/utils/env.server";
+import { resolveLocale, getDictionary, getStaticTranslations } from "@/lib/i18n/server";
 import SignUpForm from "@/app/[lang]/(auth)/signup/signup-form";
+import { AuthCardSkeleton } from "@/components/profile/profile-skeletons";
 import JsonLd from "@/components/json-ld";
 import { Metadata } from "next";
 import { locales } from "@/lib/i18n/config";
 import { getLocalizedAlternates } from "@/utils/seo";
 import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
+
+export const instant = false;
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -23,20 +26,26 @@ export async function generateMetadata({
   const locale = resolveLocale(lang);
   const search = await searchParams;
   const hasAuthParams = Boolean(search?.[AUTH_REQUEST_PARAM] || search?.return_to);
+  const { t } = await getStaticTranslations("signup", locale);
+
+  const title = t("meta.title");
+  const description = t("meta.description");
 
   return {
-    title: "Create an Account",
-    description:
-      "Create your free clouburstlab account. Get a unified identity for OIDC and OAuth 2.0 " +
-      "applications, manage passkeys, and secure your account with two-factor authentication.",
+    title,
+    description,
     alternates: getLocalizedAlternates("/signup", locale),
     robots: hasAuthParams ? { index: false, follow: false } : undefined,
     openGraph: {
-      title: "Create an Account — clouburstlab",
-      description:
-        "Join clouburstlab — create a unified identity for all your applications. " +
-        "Free, secure, and OIDC 2.0 compliant.",
-      url: `/signup`,
+      title: `${title} — clouburstlab`,
+      description,
+      url: `/${locale}/signup`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — clouburstlab`,
+      description,
     },
   };
 }
@@ -122,15 +131,7 @@ export default async function SignUpPage({
           },
         }}
       />
-      <Suspense
-        fallback={
-          <div className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col items-center justify-center min-h-120 mx-auto animate-pulse">
-            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
-            <div className="h-4 w-32 bg-muted rounded mb-2" />
-            <div className="h-3 w-48 bg-muted/60 rounded" />
-          </div>
-        }
-      >
+      <Suspense fallback={<AuthCardSkeleton />}>
         <SignUpDynamicContent
           paramsPromise={params}
           searchParamsPromise={searchParams}

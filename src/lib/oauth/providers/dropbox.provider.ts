@@ -1,4 +1,4 @@
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { IOAuthProvider, OAuthTokens, OAuthUserProfile } from "../types";
 
 export class DropboxOAuthProvider implements IOAuthProvider {

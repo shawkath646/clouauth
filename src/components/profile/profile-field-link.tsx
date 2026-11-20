@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { ChevronRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface ProfileFieldLinkProps {
   label: string;
   value: string | React.ReactNode;
-  href?: string;
+  href?: Route | string;
   showSeparator?: boolean;
   badge?: React.ReactNode;
 }
@@ -42,7 +43,7 @@ export function ProfileFieldLink({
   return (
     <>
       {href ? (
-        <Link href={href} className={`${containerClasses} hover:bg-muted/10`}>
+        <Link href={href as Route} className={`${containerClasses} hover:bg-muted/10`}>
           {content}
         </Link>
       ) : (

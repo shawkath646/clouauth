@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import prisma from "@/lib/prisma";
+import { getUserByUsername, updateUserAccountStatus } from "@/lib/users";
+import { getPasswordCredential, updatePasswordCredential } from "@/lib/credentials";
 import { verifyPassword, hashPassword, needsRehash } from "@/lib/security/hash";
 import { getSignInSchema, type SignInValues } from "@/schema/auth.schema";
 import { deleteTempSession, signOut } from "@/lib/session";
@@ -15,6 +16,7 @@ import { verifyRecaptcha } from "@/lib/recaptcha/server";
 import {
   evaluateAuthStepOrSignIn,
   processFinalSignIn,
+  getUserWithAuthRelations,
   type SignInReturn,
   type AccountDisabledReturn,
 } from "./auth";
@@ -25,7 +27,6 @@ import {
   requireValidTempSession,
   getAvailableMethods,
   getDummyPasswordHash,
-  USER_WITH_AUTH_INCLUDE,
 } from "./helpers";
 
 export type { SignInReturn, AccountDisabledReturn };
@@ -56,18 +57,16 @@ export async function signIn(
 
     const { username, password, rememberMe } = parsed.data;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: { ...USER_WITH_AUTH_INCLUDE, password: true },
-    });
+    const user = await getUserByUsername(username);
+    const credentials = user ? await getPasswordCredential(user.id) : null;
+    const userWithAuth = user ? await getUserWithAuthRelations(user.id) : null;
 
-    const credentials = user?.password;
-    if (!user || !credentials) {
+    if (!user || !credentials || !userWithAuth) {
       await verifyPassword(password, await getDummyPasswordHash());
       return fail(INVALID_CREDENTIALS);
     }
 
-    const lockoutError = checkLockout(credentials.locked_until, LOCKED_MESSAGE);
+    const lockoutError = checkLockout(credentials.locked_until ? new Date(credentials.locked_until) : null, LOCKED_MESSAGE);
     if (lockoutError) return fail(lockoutError);
 
     const blocked = await reserveAttempt("password", user.id, LOCKED_MESSAGE);
@@ -83,16 +82,13 @@ export async function signIn(
       after(() =>
         hashPassword(password)
           .then((password_hash) =>
-            prisma.passwordCredential.update({
-              where: { user_id: user.id },
-              data: { password_hash },
-            })
+            updatePasswordCredential(user.id, { password_hash })
           )
           .catch(() => {})
       );
     }
 
-    return await evaluateAuthStepOrSignIn(user, rememberMe, "credentials");
+    return await evaluateAuthStepOrSignIn(userWithAuth, rememberMe, "credentials");
   } catch (e: unknown) {
     return fail(handleError(e, true));
   }
@@ -106,10 +102,7 @@ export async function enableAccount(tempSessionId: string): Promise<SignInReturn
       return fail("Invalid session state for account reactivation.");
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: tempSession.user_id },
-      include: USER_WITH_AUTH_INCLUDE,
-    });
+    const user = await getUserWithAuthRelations(tempSession.user_id);
 
     if (!user || !user.account_status?.self_enable) {
       await deleteTempSession(tempSessionId);
@@ -127,9 +120,10 @@ export async function enableAccount(tempSessionId: string): Promise<SignInReturn
       );
     }
 
-    await prisma.accountStatus.update({
-      where: { user_id: tempSession.user_id },
-      data: { is_active: true },
+    await updateUserAccountStatus(tempSession.user_id, {
+      is_active: true,
+      self_enable: false,
+      reason: null,
     });
 
     await deleteTempSession(tempSessionId);

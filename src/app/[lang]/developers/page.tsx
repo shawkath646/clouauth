@@ -7,26 +7,45 @@ import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Metadata } from "next";
 import Link from "next/link";
-import { getServerTranslations, getDictionary, resolveLocale } from "@/lib/i18n/server";
-import { defaultLocale, locales, type Locale } from "@/lib/i18n/config";
+import { getServerTranslations, getStaticTranslations, getDictionary, resolveLocale } from "@/lib/i18n/server";
+import { locales } from "@/lib/i18n/config";
 import { ArrowRight, ShieldCheck, Key, RefreshCw, HardDrive, Bot, ExternalLink } from "lucide-react";
-import { getEnv } from "@/utils/utils";
+import { getLocalizedAlternates } from "@/utils/seo";
+
+export const instant = false;
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
 
-export const metadata: Metadata = {
-  title: "Developer Integration Guide — ClouAuth",
-  description: "Step-by-step tutorial on registering applications, integrating OAuth 2.0 with PKCE, and connecting to the internal app bridge with ClouAuth by clouburstlab.",
-  alternates: {
-    canonical: "/developers",
-  },
-  openGraph: {
-    title: "Developer Integration Guide — clouburstlab",
-    description: "Step-by-step tutorial on registering applications, integrating OAuth 2.0 with PKCE, and connecting to the internal app bridge with ClouAuth by clouburstlab.",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = resolveLocale(lang);
+  const { t } = await getStaticTranslations("developers", locale);
+
+  const title = t("meta.title");
+  const description = t("meta.description");
+
+  return {
+    title,
+    description,
+    alternates: getLocalizedAlternates("/developers", locale),
+    openGraph: {
+      title: `${title} — clouburstlab`,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — clouburstlab`,
+      description,
+    },
+  };
+}
 
 export default async function DevelopersPage({
   params,
@@ -35,9 +54,8 @@ export default async function DevelopersPage({
 }) {
   const { lang } = await params;
   const locale = resolveLocale(lang);
-  const BASE_URL = getEnv("NEXT_PUBLIC_BASE_URL", true) || "https://auth.clouburstlab.com";
 
-  const [{ locale: resolvedLocale, t }, landingDict, commonDict] = await Promise.all([
+  const [{ t }, landingDict, commonDict] = await Promise.all([
     getServerTranslations("developers", locale),
     getDictionary("landing", locale),
     getDictionary("common", locale),

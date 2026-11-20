@@ -1,11 +1,10 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { getAppById, updateApp } from "@/lib/oauth/clients";
 import { getUserSession } from "@/lib/session";
-import { s3Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/avatar";
-import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { uploadToStorage, deleteFromStorage } from "@/lib/storage";
 import { handleError } from "@/utils/error";
-import { validateImageMagicBytes } from "@/utils/image-validator";
+import { validateImageMagicBytes } from "@/utils/image.server";
 
 export async function uploadAppIcon(formData: FormData, appId: string) {
   try {
@@ -13,10 +12,7 @@ export async function uploadAppIcon(formData: FormData, appId: string) {
     if (!sessionData) return { success: false, error: "Unauthorized" };
 
     // Verify ownership of the app
-    const app = await prisma.userApp.findUnique({
-      where: { id: appId },
-      select: { author_id: true, icon: true }
-    });
+    const app = await getAppById(appId);
 
     if (!app || app.author_id !== sessionData.user.id) {
       return { success: false, error: "Application not found or access denied" };
@@ -43,44 +39,26 @@ export async function uploadAppIcon(formData: FormData, appId: string) {
 
     const validatedImage = validateImageMagicBytes(buffer);
     if (!validatedImage) {
-      return { success: false, error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed." };
+      return {
+        success: false,
+        error: "Invalid image format. Only genuine JPEG, PNG, and WebP images are allowed.",
+      };
     }
 
-    // Delete old icon if exists
-    if (app.icon && app.icon.startsWith(R2_PUBLIC_URL)) {
-      const oldUrl = new URL(app.icon);
-      const oldKey = oldUrl.pathname.substring(1); 
-      
-      try {
-        await s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: oldKey,
-          })
-        );
-      } catch {
-        // Ignore deletion errors
-      }
+    // Delete old icon if stored
+    if (app.icon) {
+      await deleteFromStorage(app.icon);
     }
 
-    const filename = `app_icons/${appId}_${Date.now()}.${validatedImage.ext}`;
+    const path = `app_icons/${appId}_${Date.now()}.${validatedImage.ext}`;
+    const iconUrl = await uploadToStorage({
+      path,
+      buffer,
+      contentType: validatedImage.mime,
+    });
 
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: filename,
-        Body: buffer,
-        ContentType: validatedImage.mime,
-      })
-    );
-
-    const iconUrl = `${R2_PUBLIC_URL}/${filename}`;
-
-    await prisma.userApp.update({
-      where: { id: appId },
-      data: {
-        icon: iconUrl,
-      },
+    await updateApp(appId, {
+      icon: iconUrl,
     });
 
     return { success: true, data: { iconUrl } };

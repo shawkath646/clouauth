@@ -102,5 +102,9 @@
   },
   "oidcCategory": "OAuth / OIDC",
   "bridgeCategory": "서비스 간 브리지",
-  "example": "요청 예시"
+  "example": "요청 예시",
+  "meta": {
+    "title": "API 문서 및 OIDC 디스커버리",
+    "description": "clouburstlab의 ClouAuth ID 제공자(IdP)를 위한 공식 API 레퍼런스, OIDC 디스커버리 및 서비스 간 통신 브리지 기술 문서입니다."
+  }
 }

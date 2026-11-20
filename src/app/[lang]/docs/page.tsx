@@ -1,4 +1,4 @@
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { Navigation } from "@/components/landing/navigation";
 import { Footer } from "@/components/layout/footer";
 import JsonLd from "@/components/json-ld";
@@ -8,25 +8,45 @@ import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Metadata } from "next";
 import Link from "next/link";
-import { getServerTranslations, getDictionary, resolveLocale } from "@/lib/i18n/server";
+import { getServerTranslations, getStaticTranslations, getDictionary, resolveLocale } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 import { Bot, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { getLocalizedAlternates } from "@/utils/seo";
+
+export const instant = false;
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
 
-export const metadata: Metadata = {
-  title: "API Documentation & OIDC Discovery — ClouAuth",
-  description: "Official API reference, OIDC discovery, and inter-service bridge documentation for the ClouAuth identity provider by clouburstlab.",
-  alternates: {
-    canonical: "/docs",
-  },
-  openGraph: {
-    title: "API Documentation & OIDC Discovery — clouburstlab",
-    description: "Official API reference, OIDC discovery, and inter-service bridge documentation for the ClouAuth identity provider by clouburstlab.",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = resolveLocale(lang);
+  const { t } = await getStaticTranslations("docs", locale);
+
+  const title = t("meta.title");
+  const description = t("meta.description");
+
+  return {
+    title,
+    description,
+    alternates: getLocalizedAlternates("/docs", locale),
+    openGraph: {
+      title: `${title} — clouburstlab`,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — clouburstlab`,
+      description,
+    },
+  };
+}
 
 interface EndpointParam {
   name: string;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { SectionCard } from "@/components/profile/section-card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -67,7 +68,7 @@ export function DangerZoneSection({
     try {
       const res = await disableAccount();
       if (res.sudoRequired && res.redirectUrl) {
-        router.push(res.redirectUrl);
+        router.push(res.redirectUrl as Route);
         return;
       }
       if (res.success) {
@@ -102,7 +103,7 @@ export function DangerZoneSection({
       const res = await deleteAccount({ reason });
 
       if (res.sudoRequired && res.redirectUrl) {
-        router.push(res.redirectUrl);
+        router.push(res.redirectUrl as Route);
         return;
       }
 

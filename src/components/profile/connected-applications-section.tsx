@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { BrandName } from "@/components/ui/brand-name";
 import type { Dictionary } from "@/types/i18n.types";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 export interface ConnectedApplicationsSectionProps {
   initialApps: ConnectedApp[];

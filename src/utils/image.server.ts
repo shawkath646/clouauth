@@ -1,3 +1,5 @@
+import "server-only";
+
 export interface ValidatedImage {
   ext: "jpg" | "png" | "webp";
   mime: "image/jpeg" | "image/png" | "image/webp";
@@ -6,10 +8,18 @@ export interface ValidatedImage {
 /**
  * Validates image buffer magic bytes against strict image formats (JPEG, PNG, WebP).
  * Explicitly rejects SVGs or unrecognized formats.
+ * Works with Node.js Buffer and standard Uint8Array.
  */
-export function validateImageMagicBytes(buffer: Buffer): ValidatedImage | null {
+export function validateImageMagicBytes(
+  buffer: Buffer | Uint8Array
+): ValidatedImage | null {
   // JPEG: starts with FF D8 FF
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
     return { ext: "jpg", mime: "image/jpeg" };
   }
 
@@ -24,11 +34,17 @@ export function validateImageMagicBytes(buffer: Buffer): ValidatedImage | null {
     return { ext: "png", mime: "image/png" };
   }
 
-  // WebP: starts with RIFF....WEBP
+  // WebP: starts with RIFF....WEBP (RIFF = 0x52 0x49 0x46 0x46, WEBP = 0x57 0x45 0x42 0x50)
   if (
     buffer.length >= 12 &&
-    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
   ) {
     return { ext: "webp", mime: "image/webp" };
   }

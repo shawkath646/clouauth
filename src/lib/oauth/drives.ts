@@ -1,6 +1,6 @@
-import prisma from "@/lib/prisma";
+import { updateLinkedOAuthAccountTokens } from "@/lib/credentials";
 import { encryptSymmetric } from "@/lib/encryption";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 export interface RefreshedTokenResult {
   accessToken: string;
@@ -38,12 +38,9 @@ export async function refreshDriveAccountToken(
         ? Math.floor(Date.now() / 1000) + data.expires_in
         : undefined;
 
-      await prisma.oAuthAccount.update({
-        where: { id: accountId },
-        data: {
-          access_token: encryptSymmetric(data.access_token),
-          expires_at: expiresAt,
-        },
+      await updateLinkedOAuthAccountTokens(accountId, {
+        access_token: encryptSymmetric(data.access_token),
+        expires_at: expiresAt,
       });
 
       return {
@@ -80,13 +77,10 @@ export async function refreshDriveAccountToken(
 
       const newRefreshToken = data.refresh_token || decryptedRefreshToken;
 
-      await prisma.oAuthAccount.update({
-        where: { id: accountId },
-        data: {
-          access_token: encryptSymmetric(data.access_token),
-          refresh_token: encryptSymmetric(newRefreshToken),
-          expires_at: expiresAt,
-        },
+      await updateLinkedOAuthAccountTokens(accountId, {
+        access_token: encryptSymmetric(data.access_token),
+        refresh_token: encryptSymmetric(newRefreshToken),
+        expires_at: expiresAt,
       });
 
       return {
@@ -118,12 +112,9 @@ export async function refreshDriveAccountToken(
         ? Math.floor(Date.now() / 1000) + data.expires_in
         : undefined;
 
-      await prisma.oAuthAccount.update({
-        where: { id: accountId },
-        data: {
-          access_token: encryptSymmetric(data.access_token),
-          expires_at: expiresAt,
-        },
+      await updateLinkedOAuthAccountTokens(accountId, {
+        access_token: encryptSymmetric(data.access_token),
+        expires_at: expiresAt,
       });
 
       return {

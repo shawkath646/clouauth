@@ -182,7 +182,7 @@ export default function CredentialsStep({
                 )}
               />
               <Link
-                href={`/${locale}/forgot-password`}
+                href={`/${locale}/recovery`}
                 className="text-xs font-medium text-primary hover:underline"
               >
                 {dict.forgotPassword}

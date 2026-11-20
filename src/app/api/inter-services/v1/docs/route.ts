@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 
 export function OPTIONS() {
   return new NextResponse(null, {

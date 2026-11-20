@@ -1,9 +1,14 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import {
+  getAppById,
+  createApp,
+  updateApp,
+  deleteApp,
+} from "@/lib/oauth/clients";
 import { getUserSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import crypto from "crypto";
 import { hashClientSecret } from "@/lib/security/hash";
 import { type DeveloperApp, formatDeveloperApp } from "./apps";
@@ -69,10 +74,7 @@ const updateAppSchema = z.object({
 
 /** Ensures the user owns the specified app, throwing or returning not found otherwise */
 async function requireUserApp(appId: string, userId: string) {
-  const app = await prisma.userApp.findUnique({
-    where: { id: appId },
-    include: { oauth: true },
-  });
+  const app = await getAppById(appId);
   if (!app || app.author_id !== userId) {
     return null;
   }
@@ -110,31 +112,29 @@ export async function createAppAction(data: {
     const clientSecret = isPublic ? undefined : `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
     const clientSecretHash = clientSecret ? await hashClientSecret(clientSecret) : null;
 
-    const newApp = await prisma.userApp.create({
-      data: {
+    const { app: newApp, oauth } = await createApp(
+      sessionData.user.id,
+      {
         name: parsed.data.name,
         description: parsed.data.description || null,
         website: parsed.data.website || null,
-        author_id: sessionData.user.id,
-        oauth: {
-          create: {
-            client_id: clientId,
-            client_secret_hash: clientSecretHash,
-            client_type: parsed.data.client_type,
-            redirect_uris: JSON.stringify(parsed.data.redirect_uris),
-            scopes: JSON.stringify(parsed.data.scopes || ["openid", "profile", "email"]),
-            pkce_required: true,
-            token_endpoint_auth_method: isPublic ? "none" : "client_secret_post",
-            is_first_party: parsed.data.is_first_party ?? false,
-          },
-        },
       },
-      include: { oauth: true },
-    });
+      {
+        client_id: clientId,
+        client_secret_hash: clientSecretHash,
+        client_type: parsed.data.client_type,
+        redirect_uris: JSON.stringify(parsed.data.redirect_uris),
+        scopes: JSON.stringify(parsed.data.scopes || ["openid", "profile", "email"]),
+        pkce_required: true,
+        token_endpoint_auth_method: isPublic ? "none" : "client_secret_post",
+        is_first_party: parsed.data.is_first_party ?? false,
+      }
+    );
 
     revalidatePath("/profile");
+    revalidateTag("oauth-clients", "default");
 
-    const formattedApp = formatDeveloperApp(newApp);
+    const formattedApp = formatDeveloperApp({ ...newApp, oauth });
 
     return {
       success: true,
@@ -185,26 +185,23 @@ export async function updateAppAction(
           : "client_secret_post"
         : undefined;
 
-    await prisma.userApp.update({
-      where: { id: appId },
-      data: {
-        name: parsed.data.name,
-        description: parsed.data.description !== undefined ? parsed.data.description : undefined,
-        website: parsed.data.website !== undefined ? parsed.data.website : undefined,
-        oauth: {
-          update: {
-            enabled: parsed.data.enabled,
-            client_type: targetClientType,
-            token_endpoint_auth_method: targetTokenAuthMethod,
-            is_first_party: parsed.data.is_first_party,
-            redirect_uris: parsed.data.redirect_uris ? JSON.stringify(parsed.data.redirect_uris) : undefined,
-            scopes: parsed.data.scopes ? JSON.stringify(parsed.data.scopes) : undefined,
-          },
-        },
-      },
-    });
+    const appUpdates: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) appUpdates.name = parsed.data.name;
+    if (parsed.data.description !== undefined) appUpdates.description = parsed.data.description;
+    if (parsed.data.website !== undefined) appUpdates.website = parsed.data.website;
+
+    const clientUpdates: Record<string, unknown> = {};
+    if (parsed.data.enabled !== undefined) clientUpdates.enabled = parsed.data.enabled;
+    if (targetClientType !== undefined) clientUpdates.client_type = targetClientType;
+    if (targetTokenAuthMethod !== undefined) clientUpdates.token_endpoint_auth_method = targetTokenAuthMethod;
+    if (parsed.data.is_first_party !== undefined) clientUpdates.is_first_party = parsed.data.is_first_party;
+    if (parsed.data.redirect_uris !== undefined) clientUpdates.redirect_uris = JSON.stringify(parsed.data.redirect_uris);
+    if (parsed.data.scopes !== undefined) clientUpdates.scopes = JSON.stringify(parsed.data.scopes);
+
+    await updateApp(appId, appUpdates, clientUpdates);
 
     revalidatePath("/profile");
+    revalidateTag("oauth-clients", "default");
     return { success: true };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute updateAppAction");
@@ -224,11 +221,10 @@ export async function deleteAppAction(appId: string): Promise<{ success: boolean
       return { success: false, error: "Application not found or unauthorized." };
     }
 
-    await prisma.userApp.delete({
-      where: { id: appId },
-    });
+    await deleteApp(appId);
 
     revalidatePath("/profile");
+    revalidateTag("oauth-clients", "default");
     return { success: true };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute deleteAppAction");
@@ -271,14 +267,12 @@ export async function rotateAppSecretAction(appId: string): Promise<{
     const newSecret = `cbl_sec_${crypto.randomBytes(24).toString("hex")}`;
     const clientSecretHash = await hashClientSecret(newSecret);
 
-    await prisma.oAuthClientConfig.update({
-      where: { app_id: appId },
-      data: {
-        client_secret_hash: clientSecretHash,
-      },
+    await updateApp(appId, {}, {
+      client_secret_hash: clientSecretHash,
     });
 
     revalidatePath("/profile");
+    revalidateTag("oauth-clients", "default");
     return { success: true, newSecret };
   } catch (e: unknown) {
     const em = handleError(e, "Failed to execute rotateAppSecretAction");

@@ -1,9 +1,11 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getFullProfile } from "@/actions/profile/get-profile";
 import { RecoveryEmailManagementPage } from "@/components/profile/views/recovery-email-management-page";
+import { ManagementFormSkeleton } from "@/components/profile/profile-skeletons";
 import type { Metadata } from "next";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Recovery Email - clouburstlab",
@@ -17,7 +19,6 @@ async function RecoveryEmailContent({ lang }: { lang: string }) {
     getDictionary("profile_security", locale),
   ]);
 
-  await connection();
   const profileRes = await getFullProfile();
   const profile = profileRes.success ? profileRes.data : null;
   const recoveryEmailObj = profile?.emails?.find((e) => !e.is_primary);
@@ -42,11 +43,7 @@ export default async function RecoveryEmailPage({
   const { lang } = await params;
   return (
     <div className="space-y-6 w-full">
-      <Suspense
-        fallback={
-          <div className="h-64 w-full rounded-2xl bg-card/50 border border-border/40 animate-pulse" />
-        }
-      >
+      <Suspense fallback={<ManagementFormSkeleton />}>
         <RecoveryEmailContent lang={lang} />
       </Suspense>
     </div>

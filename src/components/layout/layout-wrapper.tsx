@@ -7,7 +7,7 @@ import { ThemeCookieSync } from "@/components/theme/theme-cookie-sync";
 import { cn } from "@/utils/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { Locale } from "@/lib/i18n/config";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import JsonLd from "@/components/json-ld";
 import GoogleOneTap from "@/components/google-one-tap";
 import { ReCaptchaProvider } from "@/lib/recaptcha/client";

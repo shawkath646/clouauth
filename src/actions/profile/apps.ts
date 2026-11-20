@@ -1,4 +1,5 @@
-import prisma from "@/lib/prisma";
+import { connection } from "next/server";
+import { getUserApps as getDbUserApps } from "@/lib/oauth/clients";
 import { getUserSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
 import { parseClientScopes, parseRedirectUris } from "@/lib/oauth/scope-utils";
@@ -40,7 +41,7 @@ export function formatDeveloperApp(app: {
   website: string | null;
   created_at: Date;
   updated_at: Date;
-  oauth: {
+  oauth?: {
     app_id: string;
     enabled: boolean;
     is_first_party: boolean;
@@ -63,8 +64,8 @@ export function formatDeveloperApp(app: {
     description: app.description,
     icon: app.icon,
     website: app.website,
-    created_at: app.created_at.toISOString(),
-    updated_at: app.updated_at.toISOString(),
+    created_at: new Date(app.created_at).toISOString(),
+    updated_at: new Date(app.updated_at).toISOString(),
     oauth: {
       app_id: oauth.app_id,
       enabled: oauth.enabled,
@@ -85,18 +86,14 @@ export async function getUserApps(): Promise<{
   apps?: DeveloperApp[];
   error?: string;
 }> {
+  await connection();
   try {
     const sessionData = await getUserSession();
     if (!sessionData) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const apps = await prisma.userApp.findMany({
-      where: { author_id: sessionData.user.id },
-      include: { oauth: true },
-      orderBy: { created_at: "desc" },
-    });
-
+    const apps = await getDbUserApps(sessionData.user.id);
     const formattedApps: DeveloperApp[] = apps.map(formatDeveloperApp);
 
     return { success: true, apps: formattedApps };

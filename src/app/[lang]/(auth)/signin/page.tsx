@@ -1,9 +1,10 @@
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { resolveLocale, getDictionary } from "@/lib/i18n/server";
+import { resolveLocale, getDictionary, getStaticTranslations } from "@/lib/i18n/server";
 import { locales } from "@/lib/i18n/config";
 import JsonLd from "@/components/json-ld";
+import { AuthCardSkeleton } from "@/components/profile/profile-skeletons";
 import SigninClient from "./signin-client";
 import { getUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -14,6 +15,8 @@ import { getSafeReturnTo } from "@/utils/url";
 import { getLocalizedAlternates } from "@/utils/seo";
 import { AUTH_REQUEST_PARAM } from "@/constants/oauth.constants";
 
+export const instant = false;
+
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -22,19 +25,28 @@ export function generateStaticParams() {
 export async function generateMetadata(props: PageProps<'/[lang]/signin'>): Promise<Metadata> {
   const { lang } = await props.params;
   const locale = resolveLocale(lang);
+  const search = await props.searchParams;
+  const hasAuthParams = Boolean(search?.[AUTH_REQUEST_PARAM] || search?.return_to);
+  const { t } = await getStaticTranslations("signin", locale);
+
+  const title = t("meta.title");
+  const description = t("meta.description");
 
   return {
-    title: "Sign In",
-    description:
-      "Sign in to your clouburstlab account. Access your dashboard, manage security settings, " +
-      "passkeys, and connected OAuth applications with our secure OIDC-compliant login.",
+    title,
+    description,
     alternates: getLocalizedAlternates("/signin", locale),
+    robots: hasAuthParams ? { index: false, follow: false } : undefined,
     openGraph: {
-      title: "Sign In — clouburstlab",
-      description:
-        "Securely sign in to clouburstlab — your centralized identity provider. " +
-        "Supports passkeys, 2FA, and social login via Google, GitHub, and Microsoft.",
-      url: `/signin`,
+      title: `${title} — clouburstlab`,
+      description,
+      url: `/${locale}/signin`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — clouburstlab`,
+      description,
     },
   };
 }
@@ -190,15 +202,7 @@ export default async function SignInPage({
         }}
       />
 
-      <Suspense
-        fallback={
-          <div className="w-full max-w-md p-5 sm:p-8 md:p-10 bg-background/70 dark:bg-card/40 backdrop-blur-xl border border-primary/20 dark:border-primary/10 shadow-2xl rounded-3xl flex flex-col items-center justify-center min-h-120 mx-auto animate-pulse">
-            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
-            <div className="h-4 w-32 bg-muted rounded mb-2" />
-            <div className="h-3 w-48 bg-muted/60 rounded" />
-          </div>
-        }
-      >
+      <Suspense fallback={<AuthCardSkeleton />}>
         <SignInDynamicContent
           paramsPromise={params}
           searchParamsPromise={searchParams}

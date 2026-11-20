@@ -14,5 +14,9 @@
   "signIn": "Iniciar sesión",
   "pitchTitle1": "Una cuenta.",
   "pitchTitle2": "Acceso total y fluido.",
-  "pitchSubtitle": "Únete al ecosistema clouburstlab y desbloquea un conjunto de herramientas potentes diseñadas para profesionales modernos."
+  "pitchSubtitle": "Únete al ecosistema clouburstlab y desbloquea un conjunto de herramientas potentes diseñadas para profesionales modernos.",
+  "meta": {
+    "title": "Crear una Cuenta Nueva",
+    "description": "Cree su cuenta gratuita de clouburstlab. Obtenga una identidad unificada para aplicaciones OIDC y OAuth 2.0 y proteja su cuenta con 2FA."
+  }
 }

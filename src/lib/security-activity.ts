@@ -1,5 +1,8 @@
-import prisma from "@/lib/prisma";
+import { FieldValue } from "firebase-admin/firestore";
+import { db } from "@/lib/firebase";
+import { toDate } from "@/utils/date-time";
 import { headers } from "next/headers";
+import type { DBSecurityActivity } from "@/types/profile.types";
 
 export interface RecordActivityOptions {
   userId: string;
@@ -97,19 +100,20 @@ export async function recordSecurityActivity(options: RecordActivityOptions): Pr
       device = parsed.label;
     }
 
-    await prisma.securityActivity.create({
-      data: {
-        user_id: options.userId,
-        event: options.event,
-        title: options.title,
-        description: options.description || null,
-        ip_address: ipAddress || null,
-        user_agent: userAgent || null,
-        device: device || null,
-        city: city || null,
-        country: country || null,
-        status: options.status || "success",
-      },
+    const docRef = db.collection("users").doc(options.userId).collection("security_activities").doc();
+    await docRef.set({
+      id: docRef.id,
+      user_id: options.userId,
+      event: options.event,
+      title: options.title,
+      description: options.description || null,
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+      device: device || null,
+      city: city || null,
+      country: country || null,
+      status: options.status || "success",
+      created_on: FieldValue.serverTimestamp(),
     });
   } catch (err) {
     // Non-blocking: Logging failure should never interrupt user auth flows
@@ -117,15 +121,37 @@ export async function recordSecurityActivity(options: RecordActivityOptions): Pr
   }
 }
 
-export async function getUserSecurityActivities(userId: string, limit = 20) {
+export async function getUserSecurityActivities(userId: string, limit = 20): Promise<DBSecurityActivity[]> {
   try {
-    return await prisma.securityActivity.findMany({
-      where: { user_id: userId },
-      orderBy: { created_on: "desc" },
-      take: limit,
+    const snap = await db
+      .collection("users")
+      .doc(userId)
+      .collection("security_activities")
+      .orderBy("created_on", "desc")
+      .limit(limit)
+      .get();
+
+    return snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        user_id: userId,
+        event: data.event,
+        title: data.title,
+        description: data.description ?? null,
+        ip_address: data.ip_address ?? null,
+        user_agent: data.user_agent ?? null,
+        device: data.device ?? null,
+        city: data.city ?? null,
+        country: data.country ?? null,
+        status: data.status ?? "success",
+        created_on: toDate(data.created_on),
+      };
     });
   } catch (err) {
     console.error("[SecurityActivity] Failed to fetch security activities:", err);
     return [];
   }
 }
+
+export const getRecentSecurityActivities = getUserSecurityActivities;

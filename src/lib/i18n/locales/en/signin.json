@@ -39,5 +39,9 @@
   "scopePhone": "Phone number",
   "scopeAddress": "Access your postal address",
   "scopeOfflineAccess": "Maintain offline access to your account",
-  "scopeOpenid": "Basic identity"
+  "scopeOpenid": "Basic identity",
+  "meta": {
+    "title": "Sign In to Your Account",
+    "description": "Sign in securely to your clouburstlab account with passkeys, 2FA, or social providers. Access your profile and manage connected applications."
+  }
 }

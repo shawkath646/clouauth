@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { cache } from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 import { defaultLocale, locales, type Locale, type Namespace } from './config';
 import type { Dictionary, TranslationKey } from '@/types/i18n.types';
 
@@ -124,6 +125,9 @@ export async function getDictionary<T extends Namespace>(
   namespace: T,
   locale: Locale
 ): Promise<Dictionary<T>> {
+  "use cache";
+  cacheLife("max");
+  cacheTag("i18n", `i18n:${locale}`, `i18n:${locale}:${namespace}`);
   return dictionaries[locale][namespace]() as Promise<Dictionary<T>>;
 }
 

@@ -11,7 +11,7 @@ import type { FullProfile } from "@/types/profile.types";
 import { revokeUserSessionAction, revokeAllUserSessionsAction } from "@/actions/profile/sessions-management.actions";
 import { toast } from "sonner";
 import { BrandName } from "@/components/ui/brand-name";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";

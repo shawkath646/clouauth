@@ -16,7 +16,7 @@ import { Loader2, Plus, Trash2, Upload, ImagePlus, Copy, Check, AlertCircle } fr
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import imageCompression from "browser-image-compression";
-import getCroppedImg from "@/utils/crop-image";
+import getCroppedImg from "@/utils/image.client";
 import { handleError } from "@/utils/error";
 import {
   Dialog,
@@ -80,6 +80,7 @@ export function ApplicationForm({
   });
 
   const currentScopes = useWatch({ control: form.control, name: "scopes" }) || [];
+  const clientType = useWatch({ control: form.control, name: "client_type" });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -329,7 +330,7 @@ export function ApplicationForm({
                 <div
                   onClick={() => form.setValue("client_type", "confidential")}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                    form.watch("client_type") === "confidential"
+                    clientType === "confidential"
                       ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                       : "border-border/60 hover:bg-muted/30"
                   }`}
@@ -342,7 +343,7 @@ export function ApplicationForm({
                 <div
                   onClick={() => form.setValue("client_type", "public")}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                    form.watch("client_type") === "public"
+                    clientType === "public"
                       ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                       : "border-border/60 hover:bg-muted/30"
                   }`}

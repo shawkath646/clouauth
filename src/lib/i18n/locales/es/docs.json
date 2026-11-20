@@ -102,5 +102,9 @@
     }
   },
   "oidcCategory": "OAuth / OIDC",
-  "bridgeCategory": "Puente Inter-Servicios"
+  "bridgeCategory": "Puente Inter-Servicios",
+  "meta": {
+    "title": "Documentación API y Descubrimiento OIDC",
+    "description": "Referencia oficial de API, descubrimiento OIDC y documentación de puente entre servicios para el proveedor de identidad ClouAuth por clouburstlab."
+  }
 }

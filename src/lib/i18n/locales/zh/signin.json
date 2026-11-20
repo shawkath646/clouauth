@@ -39,5 +39,9 @@
   "scopePhone": "Phone number",
   "scopeAddress": "访问您的邮政地址",
   "scopeOfflineAccess": "保持对您账户的离线访问权限",
-  "scopeOpenid": "Basic identity"
+  "scopeOpenid": "Basic identity",
+  "meta": {
+    "title": "登录您的账户",
+    "description": "使用 Passkey、双重认证 (2FA) 或第三方账户安全登录您的 clouburstlab 账户并管理已关联的应用程序。"
+  }
 }

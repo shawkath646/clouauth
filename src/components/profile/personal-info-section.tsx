@@ -11,7 +11,7 @@ import type { FullProfile } from "@/types/profile.types";
 import { DBAddress } from "@/types/user.types";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/types/i18n.types";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 export interface PersonalInfoSectionProps {
   profile: FullProfile;

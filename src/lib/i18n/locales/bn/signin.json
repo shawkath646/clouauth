@@ -39,5 +39,9 @@
   "scopePhone": "Phone number",
   "scopeAddress": "আপনার পোস্টাল ঠিকানা অ্যাক্সেস করুন",
   "scopeOfflineAccess": "আপনার অ্যাকাউন্টে অফলাইন অ্যাক্সেস বজায় রাখুন",
-  "scopeOpenid": "Basic identity"
+  "scopeOpenid": "Basic identity",
+  "meta": {
+    "title": "আপনার অ্যাকাউন্টে সাইন ইন করুন",
+    "description": "পাসকি, ২এফএ বা সোশ্যাল অ্যাকাউন্টের মাধ্যমে clouburstlab অ্যাকাউন্টে সুরক্ষিতভাবে সাইন ইন করুন এবং আপনার অ্যাপস পরিচালনা করুন।"
+  }
 }

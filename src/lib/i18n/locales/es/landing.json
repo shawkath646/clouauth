@@ -147,5 +147,9 @@
     },
     "copyright": "© {{year}} clouburstlab. Todos los derechos reservados.",
     "developedBy": "Desarrollado por"
+  },
+  "meta": {
+    "title": "Plataforma de Identidad y Acceso Único",
+    "description": "Autenticación segura, passkeys y SSO para el ecosistema clouburstlab. Proveedor de identidad compatible con OIDC y OAuth 2.0 para aplicaciones."
   }
 }

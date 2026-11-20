@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { ImageResponse } from "next/og";
 import { getPublicProfile, type PublicProfileResult } from "@/actions/profile/public-profile";
-import { getDisplayName } from "@/utils/profile";
+import { getDisplayName } from "@/utils/utils";
 
 export const alt = "clouburstlab Member Profile";
 export const size = { width: 1200, height: 630 };

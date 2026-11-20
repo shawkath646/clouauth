@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { FullProfile } from "@/types/profile.types";
-import { formatTime } from "@/utils/utils";
+import { formatTime } from "@/utils/date-time";
 
 export function ProfileHeader({ profile }: { profile: FullProfile }) {
   const initials = `${profile.user.first_name[0] || ""}${profile.user.last_name[0] || ""}`.toUpperCase();

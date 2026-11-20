@@ -6,13 +6,26 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import prisma from "@/lib/prisma";
+import { getUserEmails } from "@/lib/users";
+import {
+  getPasswordCredential,
+  getUserPasskeys,
+  findPasskeyByCredentialId,
+  updatePasskey,
+  getTotpMethod,
+} from "@/lib/credentials";
+import {
+  getUserSession,
+  getTempSession,
+  updateSession,
+  updateTempSession,
+  deleteTempSession,
+} from "@/lib/session";
 import { verifyPassword, hashCode, verifyCode } from "@/lib/security/hash";
 import { handleError } from "@/utils/error";
 import { sendEmail } from "@/lib/email";
 import { decryptSymmetric } from "@/lib/encryption";
 import { verifyRecaptcha } from "@/lib/recaptcha/server";
-import { getUserSession } from "@/lib/session";
 import { recordSecurityActivity } from "@/lib/security-activity";
 import type { DBTempSession } from "@/types/session.types";
 import { getWebAuthnConfig, checkLockout, reserveAttempt } from "./helpers";
@@ -57,11 +70,9 @@ async function requireSudoContext(tempSessionId: string): Promise<SudoContextRes
     return { ok: false, error: "Unauthorized. Please sign in again." };
   }
 
-  const tempSession = await prisma.tempSession.findUnique({
-    where: { id: tempSessionId },
-  });
+  const tempSession = await getTempSession(tempSessionId);
 
-  if (!tempSession || tempSession.expires_on < new Date() || tempSession.flow_type !== SUDO_FLOW) {
+  if (!tempSession || new Date(tempSession.expires_on) < new Date() || tempSession.flow_type !== SUDO_FLOW) {
     return { ok: false, error: "Verification session expired. Please try again." };
   }
 
@@ -89,66 +100,69 @@ async function completeSudoSuccess({
   tempSession,
   activeSession,
 }: SudoContext): Promise<SudoActionResult> {
-  await prisma.userSession.update({
-    where: { id: activeSession.session.id },
-    data: { last_authenticated_on: new Date() },
+  await updateSession(activeSession.session.id, {
+    last_authenticated_on: new Date(),
   });
 
-  await prisma.tempSession.deleteMany({ where: { id: tempSession.id } });
+  await deleteTempSession(tempSession.id);
 
   await recordSecurityActivity({
     userId: tempSession.user_id,
     event: "SUDO_VERIFIED",
-    title: "Elevated access granted",
-    description: "Sudo re-authentication confirmed for sensitive settings access",
+    title: "Sensitive action authorized",
+    description: "Successfully re-authenticated for privileged access",
   });
 
-  return { success: true, redirectUrl: resolveReturnTo(tempSession.payload) };
+  return {
+    success: true,
+    redirectUrl: resolveReturnTo(tempSession.payload),
+  };
 }
 
 async function withSudoContext(
   tempSessionId: string,
   recaptcha: RecaptchaOptions | undefined,
-  handler: (ctx: SudoContext) => Promise<SudoActionResult>
+  fn: (ctx: SudoContext) => Promise<SudoActionResult>
 ): Promise<SudoActionResult> {
   try {
     if (recaptcha) {
-      const recaptchaError = await checkRecaptcha(recaptcha);
-      if (recaptchaError) return fail(recaptchaError);
+      const error = await checkRecaptcha(recaptcha);
+      if (error) return fail(error);
     }
 
-    const ctx = await requireSudoContext(tempSessionId);
-    if (!ctx.ok) return fail(ctx.error);
+    const context = await requireSudoContext(tempSessionId);
+    if (!context.ok) return fail(context.error);
 
-    const lockout = checkLockout(ctx.tempSession.locked_until);
+    const lockout = checkLockout(context.tempSession.locked_until ? new Date(context.tempSession.locked_until) : null);
     if (lockout) return fail(lockout);
 
-    return await handler(ctx);
+    return await fn(context);
   } catch (e: unknown) {
     return fail(handleError(e, true));
   }
 }
 
-function runSudoVerification(
+async function runSudoVerification(
   tempSessionId: string,
   verifier: Verifier,
   recaptcha?: RecaptchaOptions
 ): Promise<SudoActionResult> {
   return withSudoContext(tempSessionId, recaptcha, async (ctx) => {
-    const blocked = await reserveAttempt("tempSession", ctx.tempSession.id);
-    if (blocked) return fail(blocked);
-
     const result = await verifier(ctx);
-    if (!result.ok) return fail(result.error || "Verification failed.");
+    if (!result.ok) {
+      const blocked = await reserveAttempt("tempSession", ctx.tempSession.id);
+      return fail(blocked || result.error || "Verification failed.");
+    }
 
-    return completeSudoSuccess(ctx);
+    return await completeSudoSuccess(ctx);
   });
 }
 
-function decodePublicKey(stored: string): Uint8Array<ArrayBuffer> {
-  const raw = stored.trim();
+function decodePublicKey(raw: string): Uint8Array<ArrayBuffer> {
   const encoding = raw.includes("-") || raw.includes("_") ? "base64url" : "base64";
-  return new Uint8Array(Buffer.from(raw, encoding));
+  const buf = Buffer.from(raw, encoding);
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return new Uint8Array(ab) as unknown as Uint8Array<ArrayBuffer>;
 }
 
 export async function resolveSudoPassword(
@@ -161,10 +175,7 @@ export async function resolveSudoPassword(
   return runSudoVerification(
     tempSessionId,
     async ({ tempSession }) => {
-      const credential = await prisma.passwordCredential.findUnique({
-        where: { user_id: tempSession.user_id },
-        select: { password_hash: true },
-      });
+      const credential = await getPasswordCredential(tempSession.user_id);
 
       if (!credential) {
         return { ok: false, error: "No password configured for this account." };
@@ -182,10 +193,7 @@ export async function getSudoPasskeyOptions(
 ): Promise<SudoActionResult> {
   return withSudoContext(tempSessionId, undefined, async ({ tempSession }) => {
     const [passkeys, { rpID }] = await Promise.all([
-      prisma.passkeyCredential.findMany({
-        where: { two_factor_id: tempSession.user_id },
-        select: { credential_id: true, rp_id: true },
-      }),
+      getUserPasskeys(tempSession.user_id),
       getWebAuthnConfig(),
     ]);
 
@@ -204,9 +212,8 @@ export async function getSudoPasskeyOptions(
       allowCredentials: matching.map((p) => ({ id: p.credential_id })),
     });
 
-    await prisma.tempSession.update({
-      where: { id: tempSession.id },
-      data: { challenge: options.challenge },
+    await updateTempSession(tempSession.id, {
+      challenge: options.challenge,
     });
 
     return { success: true, options };
@@ -223,17 +230,10 @@ export async function resolveSudoPasskey(
       return { ok: false, error: "No active challenge found. Please retry." };
     }
 
-    const { count } = await prisma.tempSession.updateMany({
-      where: { id: tempSession.id, challenge: expectedChallenge },
-      data: { challenge: null },
-    });
-    if (count !== 1) {
-      return { ok: false, error: "Challenge already used. Please retry." };
-    }
+    await updateTempSession(tempSession.id, { challenge: null });
 
-    const passkey = await prisma.passkeyCredential.findUnique({
-      where: { credential_id: payload.id },
-    });
+    const passkeyMatch = await findPasskeyByCredentialId(payload.id);
+    const passkey = passkeyMatch?.passkey;
     if (!passkey || passkey.two_factor_id !== tempSession.user_id) {
       return { ok: false, error: "Passkey not recognized for this account." };
     }
@@ -266,12 +266,9 @@ export async function resolveSudoPasskey(
       return { ok: false, error: "Passkey verification failed." };
     }
 
-    await prisma.passkeyCredential.update({
-      where: { id: passkey.id },
-      data: {
-        sign_count: verification.authenticationInfo.newCounter,
-        last_used_on: new Date(),
-      },
+    await updatePasskey(tempSession.user_id, passkey.id, {
+      sign_count: verification.authenticationInfo.newCounter,
+      last_used_on: new Date(),
     });
 
     return { ok: true };
@@ -286,10 +283,8 @@ export async function sendSudoEmailCode(
     tempSessionId,
     { action: "send_sudo_code", token: recaptchaToken },
     async ({ tempSession }) => {
-      const primaryEmail = await prisma.userEmail.findFirst({
-        where: { user_id: tempSession.user_id, is_primary: true },
-        select: { address: true },
-      });
+      const emails = await getUserEmails(tempSession.user_id);
+      const primaryEmail = emails.find((e) => e.is_primary) || emails[0];
 
       if (!primaryEmail) {
         return fail("No primary email found for this account.");
@@ -297,12 +292,9 @@ export async function sendSudoEmailCode(
 
       const rawCode = Array.from({ length: 6 }, () => crypto.randomInt(0, 10)).join("");
 
-      await prisma.tempSession.update({
-        where: { id: tempSession.id },
-        data: {
-          code_hash: await hashCode(rawCode),
-          destination: primaryEmail.address,
-        },
+      await updateTempSession(tempSession.id, {
+        code_hash: await hashCode(rawCode),
+        destination: primaryEmail.address,
       });
 
       await sendEmail("verification_code", {
@@ -346,11 +338,9 @@ export async function resolveSudoTotp(
   return runSudoVerification(
     tempSessionId,
     async ({ tempSession }) => {
-      const totp = await prisma.totpMethod.findUnique({
-        where: { two_factor_id: tempSession.user_id },
-      });
+      const totp = await getTotpMethod(tempSession.user_id);
 
-      if (!totp || !totp.enabled) {
+      if (!totp) {
         return { ok: false, error: "Authenticator app is not enabled." };
       }
 

@@ -2,6 +2,8 @@ import { PhoneManagementPage } from "@/components/profile/views/phone-management
 import type { Metadata } from "next";
 import { resolveLocale, getDictionary } from "@/lib/i18n/server";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Phone Numbers - clouburstlab",
   description: "Manage phone numbers for your account.",

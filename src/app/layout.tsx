@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import { getLocalizedAlternates } from "@/utils/seo";
 import "./globals.css";
 

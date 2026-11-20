@@ -1,42 +1,52 @@
-import prisma from "@/lib/prisma";
-import { getUserSession } from "@/lib/session";
+import "server-only";
+
+import { getUser, getUserEmails } from "@/lib/users";
+import {
+  getTwoFactor,
+  getPasswordCredential,
+  getLinkedOAuthAccounts,
+} from "@/lib/credentials";
+import { getUserSession, getTempSession } from "@/lib/session";
 import { handleError } from "@/utils/error";
-import { VerificationMethod } from "@/types/auth.types";
-import { verificationMethodMap, getWebAuthnConfig } from "./helpers";
+import type { VerificationMethod } from "@/types/auth.types";
+import {
+  verificationMethodMap,
+  getWebAuthnConfig,
+} from "./helpers";
 import { getSafeReturnTo } from "@/utils/url";
 
-export type SudoUserMeta = {
-  username: string;
-  displayName: string;
-  avatar: string | null;
-  initials: string;
-  email: string | null;
-};
+export type TempSessionStep =
+  | "CREDENTIALS"
+  | "METHOD_SELECTION"
+  | "REENABLE_ACCOUNT"
+  | "SUDO_VERIFICATION";
 
-export type SudoAvailableMethods = {
-  hasPassword: boolean;
-  connectedProviders: string[];
-  hasPasskey: boolean;
-  hasTotp: boolean;
-  hasEmailOtp: boolean;
-};
-
-export type SudoMeta = {
-  user: SudoUserMeta;
-  availableMethods: SudoAvailableMethods;
+export interface SudoMetadata {
+  user: {
+    username: string;
+    displayName: string;
+    avatar: string;
+    initials: string;
+    email: string | null;
+  };
+  availableMethods: {
+    hasPassword: boolean;
+    connectedProviders: string[];
+    hasPasskey: boolean;
+    hasTotp: boolean;
+    hasEmailOtp: boolean;
+  };
   returnTo: string;
-};
+}
+
+export type SudoMeta = SudoMetadata;
 
 export type ResolvedTempSessionStep = {
-  step:
-    | "CREDENTIALS"
-    | "METHOD_SELECTION"
-    | "REENABLE_ACCOUNT"
-    | "SUDO_VERIFICATION";
+  step: TempSessionStep;
   methods: VerificationMethod[];
   userId?: string;
+  sudoMeta?: SudoMetadata;
   error?: string;
-  sudoMeta?: SudoMeta;
 };
 
 export async function resolveTempSessionStep(
@@ -51,39 +61,9 @@ export async function resolveTempSessionStep(
       };
     }
 
-    const tempSession = await prisma.tempSession.findUnique({
-      where: { id: tempSessionId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            account_status: {
-              select: {
-                is_active: true,
-                self_enable: true,
-              },
-            },
-            emails: {
-              select: {
-                id: true,
-                address: true,
-                is_primary: true,
-                verified: true,
-              },
-            },
-            two_factor: {
-              select: {
-                passkeys: { select: { id: true, rp_id: true } },
-                totp: { select: { id: true, enabled: true } },
-                email_id: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const tempSession = await getTempSession(tempSessionId);
 
-    if (!tempSession || tempSession.expires_on < new Date()) {
+    if (!tempSession || new Date(tempSession.expires_on) < new Date()) {
       return {
         step: "CREDENTIALS",
         methods: [],
@@ -91,7 +71,15 @@ export async function resolveTempSessionStep(
       };
     }
 
-    // Handle Sudo Re-authentication Flow (strictly requires an active user session matching tempSession.user_id)
+    const user = await getUser(tempSession.user_id);
+    if (!user) {
+      return { step: "CREDENTIALS", methods: [], error: "User not found" };
+    }
+
+    const emails = await getUserEmails(user.id);
+    const twoFactor = await getTwoFactor(user.id);
+
+    // Handle Sudo Re-authentication Flow
     if (tempSession.flow_type === "sudo") {
       const activeSession = await getUserSession();
       if (!activeSession || activeSession.user.id !== tempSession.user_id) {
@@ -112,72 +100,51 @@ export async function resolveTempSessionStep(
         } catch {}
       }
 
-      const fullUser = await prisma.user.findUnique({
-        where: { id: tempSession.user_id },
-        include: {
-          password: true,
-          oauth_accounts: true,
-          emails: { where: { is_primary: true } },
-          two_factor: {
-            include: {
-              passkeys: true,
-              totp: true,
-            },
-          },
-        },
-      });
-
-      if (!fullUser) {
-        return { step: "CREDENTIALS", methods: [], error: "User not found" };
-      }
+      const [passwordCred, oauthAccounts] = await Promise.all([
+        getPasswordCredential(user.id),
+        getLinkedOAuthAccounts(user.id),
+      ]);
 
       const displayName =
-        `${fullUser.first_name || ""} ${fullUser.last_name || ""}`.trim() ||
-        fullUser.username;
+        `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+        user.username;
       const initials =
-        `${fullUser.first_name?.[0] || ""}${fullUser.last_name?.[0] || ""}`.toUpperCase() ||
+        `${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase() ||
         "U";
-      const primaryEmailObj = fullUser.emails[0];
+      const primaryEmailObj = emails.find((e) => e.is_primary) || emails[0];
       const primaryEmail = primaryEmailObj?.address || null;
       const connectedProviders = Array.from(
-        new Set(
-          fullUser.oauth_accounts.map((acc) => acc.provider.toLowerCase())
-        )
+        new Set(oauthAccounts.map((acc) => acc.provider.toLowerCase()))
       );
 
       const { rpID } = await getWebAuthnConfig();
       const validPasskeys =
-        fullUser.two_factor?.passkeys?.filter(
+        twoFactor.passkeys?.filter(
           (p) => !p.rp_id || p.rp_id === rpID
         ) || [];
 
       return {
         step: "SUDO_VERIFICATION",
         methods: [],
-        userId: fullUser.id,
+        userId: user.id,
         sudoMeta: {
           user: {
-            username: fullUser.username,
+            username: user.username,
             displayName,
-            avatar: fullUser.avatar,
+            avatar: user.avatar,
             initials,
             email: primaryEmail,
           },
           availableMethods: {
-            hasPassword: Boolean(fullUser.password),
+            hasPassword: Boolean(passwordCred),
             connectedProviders,
             hasPasskey: validPasskeys.length > 0,
-            hasTotp: Boolean(fullUser.two_factor?.totp?.enabled),
+            hasTotp: Boolean(twoFactor.totp_enabled),
             hasEmailOtp: Boolean(primaryEmail && primaryEmailObj?.verified),
           },
           returnTo,
         },
       };
-    }
-
-    const user = tempSession.user;
-    if (!user) {
-      return { step: "CREDENTIALS", methods: [], error: "User not found" };
     }
 
     // 1. Account disabled check: only show REENABLE_ACCOUNT if flow_type is explicitly "reenable"
@@ -194,31 +161,26 @@ export async function resolveTempSessionStep(
 
     // 2. 2FA verification methods check
     const methods: VerificationMethod[] = [];
-    const tf = user.two_factor;
 
-    if (tf) {
-      const { rpID } = await getWebAuthnConfig();
-      const validPasskeys = tf.passkeys?.filter(
-        (p) => !p.rp_id || p.rp_id === rpID
-      );
-      if (validPasskeys && validPasskeys.length > 0) {
-        methods.push(verificationMethodMap.passkeys);
-      }
-      if (tf.totp && (tf.totp.enabled ?? true)) {
-        methods.push(verificationMethodMap.totp);
-      }
-      if (tf.email_id) {
+    const { rpID } = await getWebAuthnConfig();
+    const validPasskeys = twoFactor.passkeys?.filter(
+      (p) => !p.rp_id || p.rp_id === rpID
+    );
+    if (validPasskeys && validPasskeys.length > 0) {
+      methods.push(verificationMethodMap.passkeys);
+    }
+    if (twoFactor.totp_enabled) {
+      methods.push(verificationMethodMap.totp);
+    }
+    if (twoFactor.email_id) {
+      methods.push(verificationMethodMap.email);
+    }
+
+    // Supplementary Email 2FA Method: only provide if the user has a verified email address
+    if (methods.length > 0 && !methods.some((m) => m.id === "email")) {
+      const hasVerifiedEmail = emails.some((e) => e.verified);
+      if (hasVerifiedEmail) {
         methods.push(verificationMethodMap.email);
-      }
-
-      // Supplementary Email 2FA Method: only provide if the user has a verified email address
-      if (methods.length > 0 && !methods.some((m) => m.id === "email")) {
-        const hasVerifiedEmail = Boolean(
-          user.emails && user.emails.some((e) => e.verified)
-        );
-        if (hasVerifiedEmail) {
-          methods.push(verificationMethodMap.email);
-        }
       }
     }
 

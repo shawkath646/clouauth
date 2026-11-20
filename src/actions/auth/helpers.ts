@@ -1,10 +1,21 @@
 import "server-only";
 
 import crypto from "crypto";
-import prisma from "@/lib/prisma";
-import { getUserSession, getTempSession } from "@/lib/session";
+import { getUserByUsername, getUserEmails } from "@/lib/users";
+import {
+  incrementFailedAttempts,
+  updatePasswordCredential,
+  resetFailedAttempts as resetPasswordFailedAttempts,
+  findLinkedOAuthAccount,
+  upsertLinkedOAuthAccount,
+} from "@/lib/credentials";
+import {
+  getUserSession,
+  getTempSession,
+  updateTempSession,
+} from "@/lib/session";
 import { hashPassword } from "@/lib/security/hash";
-import { getEnv } from "@/utils/utils";
+import { getEnv } from "@/utils/env.server";
 import type { VerificationMethod } from "@/types/auth.types";
 import type { DBTempSession } from "@/types/session.types";
 import type { ExternalAuthProfile, UserWithAuthRelations } from "./auth";
@@ -26,17 +37,8 @@ export const verificationMethodMap: Record<string, VerificationMethod> = {
 export const USER_WITH_AUTH_INCLUDE = {
   account_status: true,
   preferences: true,
-  emails: {
-    select: { id: true, address: true, is_primary: true, verified: true },
-  },
-  two_factor: {
-    select: {
-      passkeys: { select: { id: true, rp_id: true } },
-      totp: { select: { id: true, enabled: true } },
-      email: { select: { id: true } },
-      email_id: true,
-    },
-  },
+  emails: true,
+  two_factor: true,
 } as const;
 
 export function isUniqueConstraintError(error: unknown): boolean {
@@ -59,7 +61,7 @@ export async function requireValidTempSession(
   const tempSession = tempSessionId ? await getTempSession(tempSessionId) : null;
   if (
     !tempSession ||
-    tempSession.expires_on < new Date() ||
+    new Date(tempSession.expires_on) < new Date() ||
     tempSession.flow_type === SUDO_FLOW
   ) {
     throw new Error(SESSION_INVALID_MESSAGE);
@@ -71,10 +73,10 @@ export function checkLockout(
   lockedUntil: Date | null | undefined,
   messagePrefix = "Too many failed attempts"
 ): string | null {
-  if (!lockedUntil || lockedUntil <= new Date()) return null;
+  if (!lockedUntil || new Date(lockedUntil) <= new Date()) return null;
   const minutesLeft = Math.max(
     1,
-    Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
+    Math.ceil((new Date(lockedUntil).getTime() - Date.now()) / 60000)
   );
   return `${messagePrefix}. Try again in ${minutesLeft} ${
     minutesLeft === 1 ? "minute" : "minutes"
@@ -85,24 +87,24 @@ export async function handleFailedAttempt(
   target: AttemptTarget,
   id: string
 ): Promise<number> {
-  const data = { failed_attempts: { increment: 1 } };
-  const select = { failed_attempts: true } as const;
-
-  const { failed_attempts: attempts } =
-    target === "password"
-      ? await prisma.passwordCredential.update({ where: { user_id: id }, data, select })
-      : await prisma.tempSession.update({ where: { id }, data, select });
-
-  if (attempts >= MAX_ATTEMPTS) {
-    const lock = { locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS) };
-    if (target === "password") {
-      await prisma.passwordCredential.update({ where: { user_id: id }, data: lock });
-    } else {
-      await prisma.tempSession.update({ where: { id }, data: lock });
+  if (target === "password") {
+    const { failed_attempts } = await incrementFailedAttempts(id);
+    if (failed_attempts >= MAX_ATTEMPTS) {
+      await updatePasswordCredential(id, {
+        locked_until: new Date(Date.now() + LOCKOUT_DURATION_MS),
+      });
     }
+    return failed_attempts;
+  } else {
+    const current = await getTempSession(id);
+    const attempts = (current?.failed_attempts ?? 0) + 1;
+    const lock = attempts >= MAX_ATTEMPTS ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null;
+    await updateTempSession(id, {
+      failed_attempts: attempts,
+      locked_until: lock,
+    });
+    return attempts;
   }
-
-  return attempts;
 }
 
 export async function reserveAttempt(
@@ -119,11 +121,13 @@ export async function resetFailedAttempts(
   target: AttemptTarget,
   id: string
 ): Promise<void> {
-  const data = { failed_attempts: 0, locked_until: null };
   if (target === "password") {
-    await prisma.passwordCredential.update({ where: { user_id: id }, data });
+    await resetPasswordFailedAttempts(id);
   } else {
-    await prisma.tempSession.update({ where: { id }, data });
+    await updateTempSession(id, {
+      failed_attempts: 0,
+      locked_until: null,
+    });
   }
 }
 
@@ -131,15 +135,12 @@ export async function markTempSessionVerified(
   tempSessionId: string,
   clearCodeHash = false
 ) {
-  await prisma.tempSession.update({
-    where: { id: tempSessionId },
-    data: {
-      two_step_processed: true,
-      failed_attempts: 0,
-      locked_until: null,
-      challenge: null,
-      ...(clearCodeHash ? { code_hash: null } : {}),
-    },
+  await updateTempSession(tempSessionId, {
+    two_step_processed: true,
+    failed_attempts: 0,
+    locked_until: null,
+    challenge: null,
+    ...(clearCodeHash ? { code_hash: null } : {}),
   });
 }
 
@@ -153,42 +154,27 @@ export const oauthAccountKey = (profile: ExternalAuthProfile) => ({
 export async function getOAuthAccountOwnerId(
   profile: ExternalAuthProfile
 ): Promise<string | null> {
-  const account = await prisma.oAuthAccount.findUnique({
-    where: oauthAccountKey(profile),
-    select: { user_id: true },
-  });
-  return account?.user_id ?? null;
+  const res = await findLinkedOAuthAccount(profile.provider, profile.providerUserId);
+  return res?.userId ?? null;
 }
 
 export async function upsertOAuthAccount(
   userId: string,
   profile: ExternalAuthProfile
 ) {
-  const tokens = {
+  return upsertLinkedOAuthAccount(userId, {
+    provider: profile.provider.toLowerCase(),
+    provider_user_id: profile.providerUserId,
     access_token: profile.accessToken,
     refresh_token: profile.refreshToken,
     expires_at: profile.expiresAt,
-  };
-
-  return prisma.oAuthAccount.upsert({
-    where: oauthAccountKey(profile),
-    update: tokens,
-    create: {
-      user_id: userId,
-      provider: profile.provider.toLowerCase(),
-      provider_user_id: profile.providerUserId,
-      ...tokens,
-    },
   });
 }
 
 async function hasVerifiedEmail(user: UserWithAuthRelations): Promise<boolean> {
   if (user.emails?.some((email) => email.verified)) return true;
-  const found = await prisma.userEmail.findFirst({
-    where: { user_id: user.id, verified: true },
-    select: { id: true },
-  });
-  return Boolean(found);
+  const emails = await getUserEmails(user.id);
+  return emails.some((e) => e.verified);
 }
 
 export async function getAvailableMethods(
@@ -244,7 +230,7 @@ export async function getWebAuthnConfig() {
   const origins = new Set<string>([canonicalOrigin]);
   const rpIDs = new Set<string>([rpID, canonicalHost]);
 
-  if (process.env.NODE_ENV !== "production") {
+  if (getEnv("NODE_ENV", true) !== "production") {
     DEV_ORIGINS.forEach((origin) => origins.add(origin));
     DEV_RP_IDS.forEach((id) => rpIDs.add(id));
 
@@ -273,10 +259,7 @@ export async function generateUniqueUsername(
   let candidate = base;
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const existing = await prisma.user.findUnique({
-      where: { username: candidate },
-      select: { id: true },
-    });
+    const existing = await getUserByUsername(candidate);
     if (!existing) return candidate;
     candidate = `${base}_${randomSuffix(3)}`;
   }

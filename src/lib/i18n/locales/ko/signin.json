@@ -39,5 +39,9 @@
   "scopePhone": "Phone number",
   "scopeAddress": "우편 주소 접근",
   "scopeOfflineAccess": "계정에 대한 오프라인 접근 유지",
-  "scopeOpenid": "Basic identity"
+  "scopeOpenid": "Basic identity",
+  "meta": {
+    "title": "계정 로그인",
+    "description": "패스키, 2차 인증(2FA) 또는 소셜 계정을 사용하여 clouburstlab 계정에 안전하게 로그인하고 연결된 애플리케이션을 관리하세요."
+  }
 }

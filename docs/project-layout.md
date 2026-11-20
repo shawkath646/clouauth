@@ -1,6 +1,6 @@
 # 📁 Project & Codebase Layout
 
-ClouAuth is architected as a modern **Next.js 16 (React 19)** full-stack application using the App Router, TypeScript, Tailwind CSS v4, and Prisma Multi-File Schemas.
+ClouAuth is architected as a modern **Next.js 16 (React 19)** full-stack application leveraging the App Router, Cache Components, Partial Prefetching (PPR), TypeScript 7, Tailwind CSS v4, and Google Cloud Firestore.
 
 Below is an exhaustive breakdown of the project hierarchy, design patterns, and file organization.
 
@@ -11,9 +11,9 @@ Below is an exhaustive breakdown of the project hierarchy, design patterns, and 
 ```plaintext
 clou-auth/
 ├── .env.local                    # Local environment variables & secrets (untracked)
-├── next.config.ts                # Next.js compiler, CSP headers & image domains
-├── package.json                  # Dependencies & scripts
-├── postcss.config.mjs            # PostCSS configuration with Tailwind v4
+├── next.config.ts                # Next.js 16 configuration (cacheComponents, PPR, CSP)
+├── package.json                  # Dependencies, scripts, and engine metadata
+├── postcss.config.mjs            # PostCSS configuration with Tailwind v4 plugin
 ├── tsconfig.json                 # TypeScript strict configuration
 │
 ├── docs/                         # Project & architecture documentation
@@ -22,66 +22,69 @@ clou-auth/
 │   ├── env-configuration.md      # Complete environment variables guide
 │   ├── setup.md                  # Local installation & development guide
 │   ├── api.md                    # OIDC & OAuth 2.0 API specifications
-│   └── {861A2480-...}.png        # Homepage preview asset
-│
-├── prisma/                       # Database schema & migrations
-│   └── schema/                   # Modular multi-file Prisma schemas
-│       ├── base.prisma           # Datasource (SQL Server) & client generator
-│       ├── user.prisma           # User identity, emails, phones, addresses
-│       ├── auth.prisma           # Passwords, passkeys, TOTP, signing keys
-│       ├── session.prisma        # UserSession, TempSession, RevokedToken
-│       ├── app.prisma            # Developer OAuth applications & client configs
-│       ├── security_activity.prisma # Security event logging & audit records
-│       ├── audit.prisma          # System-wide administrative audit logs
-│       ├── preferences.prisma    # User preferences & notification toggles
-│       ├── queue.prisma          # Asynchronous transactional email queue
-│       └── graveyard.prisma      # Tombstone records for soft-deleted accounts
+│   └── openapi.yaml              # OpenAPI 3.1 machine-readable specification
 │
 ├── public/                       # Static public assets, icons, and logos
 │
 └── src/                          # Application source code
     ├── actions/                  # Server Actions (Mutations & Data Access)
-    │   ├── auth/                 # Authentication, credentials, passkeys, 2FA, sudo
-    │   ├── oauth/                # Social OAuth flow handlers (Google, GitHub, MS)
-    │   └── profile/              # Account settings, sessions, apps, avatar uploads
+    │   ├── auth/                 # Authentication, passkeys, 2FA, sudo step-up
+    │   ├── oauth/                # Social OAuth handlers (Google, GitHub, Microsoft)
+    │   └── profile/              # Account settings, user apps, avatar uploads
     │
     ├── app/                      # Next.js App Router (Routes & Route Handlers)
-    │   ├── (auth)/               # Progressive auth screens (signin, signup)
+    │   ├── [lang]/               # Localized UI Routes (en, bn, ko, es, ar, zh)
+    │   │   ├── (auth)/           # Progressive auth flows (signin, signup, consent, recovery)
+    │   │   ├── developers/       # Developer OAuth application portal
+    │   │   ├── docs/             # In-app interactive API & OIDC explorer
+    │   │   ├── p/[username]/     # Public profile viewer with dynamic SEO
+    │   │   ├── profile/          # User security dashboard, apps, sessions, preferences
+    │   │   ├── privacy/          # Localized privacy policy with Google compliance
+    │   │   ├── terms/            # Localized terms of service
+    │   │   ├── layout.tsx        # Localized layout wrapper with i18n static params
+    │   │   └── page.tsx          # Localized landing page with streaming Hero & CTA
     │   ├── .well-known/          # OpenID Connect standard discovery
-    │   ├── api/                  # RESTful API endpoints & OAuth Server
-    │   │   ├── auth/v1/          # Internal session & profile helpers
+    │   ├── api/                  # Headless REST APIs & OAuth Server
+    │   │   ├── auth/v1/          # Session cleanup and profile helpers
     │   │   ├── inter-services/v1/# Ecosystem service bridge (user-session, drives)
-    │   │   ├── oauth/callback/   # Upstream social provider redirect callbacks
-    │   │   └── sso/v1/           # OIDC / OAuth2 endpoints (jwks, token, userinfo, revoke)
-    │   ├── developers/           # Developer OAuth application portal
-    │   ├── docs/                 # In-app interactive API & OIDC explorer
-    │   ├── p/[username]/         # Public profile viewer
-    │   ├── profile/              # User settings & security dashboard
-    │   ├── layout.tsx            # Global root layout with theme & font providers
-    │   └── page.tsx              # Landing page with interactive feature showcase
+    │   │   └── oauth/            # OIDC endpoints (token, userinfo, jwks, revoke, introspect)
+    │   ├── opengraph-image.png   # Edge-rendered Open Graph visual card
+    │   ├── robots.ts             # Robots.txt metadata generator
+    │   ├── sitemap.ts            # Sitemap.xml multi-locale generator
+    │   └── layout.tsx            # Global root layout with theme providers & viewport
     │
     ├── components/               # React UI Components
-    │   ├── landing/              # Landing page sections (Hero, Trust, Features)
+    │   ├── landing/              # Landing page sections (Hero, Trust, FeatureGrid, Navigation)
+    │   ├── layout/               # Global shell, navigation, and localized footer
     │   ├── profile/              # Dashboard components, Sudo modal, Passkey manager
-    │   └── ui/                   # Reusable Shadcn / Radix / Base UI design primitives
+    │   │   └── profile-skeletons.tsx # Pixel-perfect responsive loading skeletons
+    │   └── ui/                   # Design primitives (Base UI, Radix UI, Button, Card, Badge)
     │
-    ├── constants/                # System-wide constants & session TTL configurations
-    ├── lib/                      # Core business logic, services & third-party clients
-    │   ├── avatar.ts             # Cloudflare R2 image upload & DiceBear fallback
-    │   ├── email.ts              # Email templates & transactional queue processor
-    │   ├── encryption.ts         # AES-256-GCM symmetric encryption utilities
-    │   ├── i18n/                 # Localization dictionaries and server loaders
-    │   ├── inter-services/       # Cross-service authorization guards
-    │   ├── prisma.ts             # Global Prisma Client instance
-    │   ├── recaptcha/            # Google reCAPTCHA v3 server-side validation
-    │   ├── security-activity.ts  # Audit logging helpers
+    ├── constants/                # System constants, OAuth scopes, and session TTLs
+    ├── lib/                      # Core business logic, cloud clients & services
+    │   ├── firebase.ts           # Google Cloud Firestore & Firebase Storage singleton
     │   ├── session.ts            # Opaque token management & session rotation engine
-    │   └── sso/                  # RSA RS256 key pair management & CORS middleware
+    │   ├── email.ts              # Transactional email dispatcher (Resend)
+    │   ├── encryption.ts         # AES-256-GCM symmetric encryption utilities
+    │   ├── i18n/                 # Localization configuration, server loaders, and dictionaries
+    │   │   ├── config.ts         # Locales (en, bn, ko, es, ar, zh) and namespaces
+    │   │   ├── server.ts         # Cached getDictionary and static getStaticTranslations
+    │   │   └── locales/          # 6 language directories with 16 namespace JSONs each
+    │   ├── oauth/                # OAuth client lookup, PKCE verification, and tokens
+    │   ├── recaptcha/            # Google reCAPTCHA v3 verification
+    │   ├── security-activity.ts  # Security event logging
+    │   └── sso/                  # RS256 RSA keypair rotation & JWKS caching
     │
-    ├── proxy.ts                  # Edge session validation, refresh & i18n proxy
-    ├── schema/                   # Zod schemas for validation across client & server
-    ├── types/                    # TypeScript interfaces & database entity types
-    └── utils/                    # Helper functions, error formatters, cookie options
+    ├── proxy.ts                  # Reverse proxy & middleware (session guard, i18n, CSP)
+    ├── schema/                   # Zod validation schemas shared across boundaries
+    ├── types/                    # TypeScript interfaces, database entities, and i18n types
+    └── utils/                    # Utility functions partitioned by client/server boundary
+        ├── utils.ts              # General polymorphic utilities (cn, clsx)
+        ├── utils.server.ts       # Server-only utilities
+        ├── utils.client.ts       # Client-only DOM & browser utilities
+        ├── env.server.ts         # Server-side environment variable getter
+        ├── seo.ts                # Canonical & multi-locale hreflang generator
+        └── error.ts              # Centralized error handler with Next.js signal passthrough
 ```
 
 ---
@@ -90,33 +93,24 @@ clou-auth/
 
 ### 1. `src/proxy.ts` (Proxy & Route Guard)
 The application proxy runs before requests reach page components or routes:
-- **Session Validation:** Inspects `session_token` and validates it against the active database session.
+- **Session Validation:** Inspects `session_token` and validates it against the active Firestore session.
 - **Transparent Refresh:** If `session_token` has expired but `refresh_token` is present, it transparently executes a rotation via `refreshSession()`, queues updated cookies onto the response, and injects updated cookies into downstream Server Components.
+- **Prefetch Safety:** Bypasses token rotation for prefetch requests to prevent single-use refresh tokens from being consumed during navigation prefetching.
 - **Protected Route Enforcement:** Intercepts unauthenticated navigation to `/profile/*` and issues a redirect with a sanitized `return_to` parameter.
 - **i18n Locale Resolution:** URL dynamic segment `/[lang]` based routing with SSG support (`generateStaticParams`). Explicit proxy bypass for `/api` and `/.well-known` endpoints.
 
 ### 2. `src/lib/session.ts` (Session Engine)
 Houses the core session and token lifecycle logic:
 - Creates compound cryptographically random tokens (`sessionId.randomHex`).
-- Implements SHA-256 token hashing so raw secrets never touch the database.
-- Manages **Refresh Token Rotation (RTR)** with replay attack mitigation and a 2-minute concurrent request grace period.
-- Performs timing-safe equality comparisons via `crypto.timingSafeEqual`.
-- Collects device fingerprinting (`clou_device_id`) and parses user-agent metadata.
+- Hashes secrets using SHA-256 before storing in Firestore.
+- Enforces token rotation with a 2-minute grace period to prevent race-condition invalidations while detecting replay attacks.
 
-### 3. `src/lib/sso/` (OAuth 2.0 & OIDC Server Engine)
-Implements the OpenID Connect Identity Provider:
-- **`signing-keys.ts`:** Lazily initializes 2048-bit RSA key pairs (`RS256`), stores them in the `SigningKey` table, and exposes public JWK sets via `/api/oauth/jwks.json`.
-- **`cors.ts`:** Handles cross-origin preflight (`OPTIONS`) and applies permissive yet secure CORS headers (`Access-Control-Allow-Origin: *`) required by OAuth 2.0 token and discovery endpoints.
+### 3. `src/components/profile/profile-skeletons.tsx` (Loading Skeleton Architecture)
+Under Next.js 16 Partial Prefetching (PPR), instant navigation shells rely on accurate fallbacks:
+- Pixel-perfect, zero-layout-shift skeletons matching the exact geometry, flex layouts, and card dimensions of every dynamic component.
+- Skeletons include `ProfileHeaderSkeleton`, `ProfileSidebarSkeleton`, `SectionCardSkeleton`, `PersonalInfoSkeleton`, `SecuritySectionSkeleton`, `ConnectedAccountsSkeleton`, `ApplicationsSkeleton`, `DevicesSkeleton`, `PreferencesSkeleton`, `PrivacySkeleton`, `DangerZoneSkeleton`, `ManagementFormSkeleton`, `PublicProfileCardSkeleton`, `AuthCardSkeleton`, and `ConsentCardSkeleton`.
 
-### 4. `src/actions/auth/` (Server Actions)
-Encapsulates sensitive mutations executed securely on the server:
-- `auth.actions.ts`: Primary credential verification, email/password validation, session dispatching.
-- `passkey.actions.ts`: FIDO2 / WebAuthn registration and authentication challenge creation and assertion verification.
-- `totp.actions.ts`: TOTP enrollment with QR code generation, secret encryption, and verification.
-- `sudo.actions.ts`: Elevation check that requests fresh authentication before executing privileged settings changes.
-- `google-one-tap.actions.ts`: Seamless Google Identity Services One Tap credential verification.
-
-### 5. `src/lib/avatar.ts` (Storage Integration)
-- Connects to **Cloudflare R2** (or any AWS S3-compatible object storage) via `@aws-sdk/client-s3`.
-- Handles avatar uploads after client-side compression (`browser-image-compression`) and cropping (`react-easy-crop`).
-- Provides deterministic SVG avatar fallbacks powered by `@dicebear/core` and `@dicebear/styles`.
+### 4. `src/utils/seo.ts` (Multi-Locale SEO & Google Compliance)
+- Generates canonical URLs and multi-locale `hreflang` alternates (`languages: { en, bn, ko, es, ar, zh, 'x-default' }`) for Google SERP compliance.
+- Guarantees self-referencing canonicals on all pages.
+- Enforces strict character limits: meta titles (15–40 chars in child pages -> 31–56 chars with template) and meta descriptions (120–160 chars).

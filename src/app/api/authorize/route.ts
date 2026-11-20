@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { findOAuthClient, getOAuthConsent } from "@/lib/oauth/clients";
 import { getUserSession } from "@/lib/session";
 import { parseRedirectUris } from "@/lib/oauth/scope-utils";
 import { signAuthRequest } from "@/lib/oauth/auth-request";
@@ -38,10 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 2. Fetch and validate client from database
-  const clientApp = await prisma.oAuthClientConfig.findUnique({
-    where: { client_id: clientId },
-    include: { app: true },
-  });
+  const clientApp = await findOAuthClient(clientId);
 
   if (!clientApp || !clientApp.enabled) {
     const errorUrl = new URL(`/${locale}/signin`, baseUrl);
@@ -105,10 +102,10 @@ export async function GET(request: NextRequest) {
     codeChallenge,
     codeChallengeMethod: codeChallenge ? codeChallengeMethod || "S256" : null,
     nonce,
-    appName: clientApp.app.name,
-    appIcon: clientApp.app.icon,
-    appDescription: clientApp.app.description,
-    appWebsite: clientApp.app.website,
+    appName: clientApp.app?.name || "Application",
+    appIcon: clientApp.app?.icon || null,
+    appDescription: clientApp.app?.description || null,
+    appWebsite: clientApp.app?.website || null,
   });
 
   // 7. Route based on active session existence and prior consent
@@ -132,14 +129,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const existingConsent = await prisma.oAuthConsent.findUnique({
-      where: {
-        user_id_client_id: {
-          user_id: session.user.id,
-          client_id: clientId,
-        },
-      },
-    });
+    const existingConsent = await getOAuthConsent(session.user.id, clientId);
 
     if (existingConsent && !existingConsent.revoked_at) {
       // User has already granted active consent, auto-grant authorization code

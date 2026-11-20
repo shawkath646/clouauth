@@ -351,7 +351,7 @@ export default function SudoVerificationStep({
               Verify using your connected identity provider:
             </p>
 
-            {availableMethods.connectedProviders.map((provider) => (
+            {availableMethods.connectedProviders.map((provider: string) => (
               <Button
                 key={provider}
                 type="button"

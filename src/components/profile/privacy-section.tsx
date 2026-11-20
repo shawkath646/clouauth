@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { SectionCard } from "@/components/profile/section-card";
 import { EditableField } from "@/components/profile/editable-field";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -249,7 +250,7 @@ export function PrivacySection({
                 </Button>
 
                 <Link
-                  href={profilePath}
+                  href={profilePath as Route}
                   target="_blank"
                   className={cn(
                     buttonVariants({ variant: "default", size: "sm" }),

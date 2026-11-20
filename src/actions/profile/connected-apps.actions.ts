@@ -1,6 +1,11 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import {
+  getUserOAuthConsents,
+  getOAuthConsent,
+  revokeOAuthConsent,
+  findOAuthClient,
+} from "@/lib/oauth/clients";
 import { requireUserSession } from "@/actions/auth/helpers";
 import { handleError } from "@/utils/error";
 import { revalidatePath } from "next/cache";
@@ -26,24 +31,10 @@ export async function getConnectedAppsAction(): Promise<{
   try {
     const session = await requireUserSession();
 
-    const consents = await prisma.oAuthConsent.findMany({
-      where: {
-        user_id: session.user.id,
-        revoked_at: null,
-      },
-      include: {
-        client: {
-          include: {
-            app: true,
-          },
-        },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+    const consents = await getUserOAuthConsents(session.user.id);
+    const activeConsents = consents.filter((c) => !c.revoked_at);
 
-    const apps: ConnectedApp[] = consents.map((c) => ({
+    const apps: ConnectedApp[] = activeConsents.map((c) => ({
       id: c.id,
       clientId: c.client_id,
       name: c.client?.app?.name || "Unknown Application",
@@ -51,8 +42,8 @@ export async function getConnectedAppsAction(): Promise<{
       icon: c.client?.app?.icon || null,
       website: c.client?.app?.website || null,
       scopes: c.scopes ? c.scopes.split(/\s+/).filter(Boolean) : [],
-      createdAt: c.created_at.toISOString(),
-      updatedAt: c.updated_at.toISOString(),
+      createdAt: new Date(c.created_at).toISOString(),
+      updatedAt: new Date(c.updated_at).toISOString(),
     }));
 
     return { success: true, apps };
@@ -73,40 +64,17 @@ export async function revokeConnectedAppAction(clientId: string): Promise<{
       return { success: false, error: "Invalid client identifier." };
     }
 
-    const consent = await prisma.oAuthConsent.findUnique({
-      where: {
-        user_id_client_id: {
-          user_id: session.user.id,
-          client_id: clientId,
-        },
-      },
-      include: {
-        client: {
-          include: {
-            app: true,
-          },
-        },
-      },
-    });
+    const consent = await getOAuthConsent(session.user.id, clientId);
 
     if (!consent) {
       return { success: false, error: "Connected application not found." };
     }
 
     // Mark consent as revoked
-    await prisma.oAuthConsent.update({
-      where: {
-        user_id_client_id: {
-          user_id: session.user.id,
-          client_id: clientId,
-        },
-      },
-      data: {
-        revoked_at: new Date(),
-      },
-    });
+    await revokeOAuthConsent(session.user.id, clientId);
 
-    const appName = consent.client?.app?.name || "Application";
+    const client = await findOAuthClient(clientId);
+    const appName = client?.app?.name || "Application";
 
     await recordSecurityActivity({
       userId: session.user.id,

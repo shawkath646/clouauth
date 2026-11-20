@@ -147,5 +147,9 @@
     },
     "copyright": "© {{year}} clouburstlab. All rights reserved.",
     "developedBy": "Developed by"
+  },
+  "meta": {
+    "title": "Identity Platform & Single Sign-On",
+    "description": "Secure authentication, passkeys, and single sign-on for the clouburstlab ecosystem. Fully compliant OIDC & OAuth 2.0 Identity Provider for modern apps."
   }
 }

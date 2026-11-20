@@ -147,5 +147,9 @@
     },
     "copyright": "© {{year}} clouburstlab. 판권 소유.",
     "developedBy": "개발자:"
+  },
+  "meta": {
+    "title": "통합 인증 및 싱글 사인온(SSO) 플랫폼",
+    "description": "clouburstlab 생태계를 위한 안전한 사용자 인증, 패스키 및 SSO 지원. 최신 웹/모바일 앱을 위한 표준 OIDC 및 OAuth 2.0 ID 제공자입니다."
   }
 }

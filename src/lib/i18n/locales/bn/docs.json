@@ -102,5 +102,9 @@
     }
   },
   "oidcCategory": "OAuth / OIDC",
-  "bridgeCategory": "ইন্টার-সার্ভিস ব্রিজ"
+  "bridgeCategory": "ইন্টার-সার্ভিস ব্রিজ",
+  "meta": {
+    "title": "এপিআই ডকুমেন্টেশন ও OIDC রেফারেন্স",
+    "description": "clouburstlab দ্বারা পরিচালিত ClouAuth আইডেন্টিটি প্রভাইডারের অফিশিয়াল API রেফারেন্স, OIDC ডিসকভারি ও ইন্টার-সার্ভিস ব্রিজ ডকুমেন্টেশন।"
+  }
 }

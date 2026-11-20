@@ -1,4 +1,5 @@
 import { locales } from "@/lib/i18n/config";
+import type { Route } from "next";
 
 const AUTH_PATHS = ["/signin", "/signup"];
 const matches = (path: string, prefix: string) =>
@@ -8,8 +9,8 @@ export function getSafeReturnTo(
   raw: string | null | undefined,
   locale: string,
   fallback = "/profile"
-): string {
-  const fallbackUrl = `/${locale}${fallback}`;
+): Route {
+  const fallbackUrl = `/${locale}${fallback}` as Route;
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
     return fallbackUrl;
   }
@@ -30,5 +31,5 @@ export function getSafeReturnTo(
   const target = hasLocale
     ? parsed.pathname
     : `/${locale}${parsed.pathname === "/" ? "" : parsed.pathname}`;
-  return `${target}${parsed.search}${parsed.hash}`;
+  return `${target}${parsed.search}${parsed.hash}` as Route;
 }
